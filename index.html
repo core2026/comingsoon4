@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Idea Vault</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --shadow: rgba(0,0,0,0.2);
+        }
+
+        /* Auto Dark Mode logic */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #121212;
+                --shadow: rgba(0,0,0,0.6);
+            }
+            img {
+                filter: invert(0.9) hue-rotate(180deg);
+            }
+        }
+
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-color);
+            transition: background-color 0.3s ease;
+        }
+
+        .napkin-container {
+            max-width: 90%;
+            width: 800px;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 2px;
+            box-shadow: 10px 10px 25px var(--shadow);
+        }
+    </style>
+</head>
+<body>
+    <div class="napkin-container">
+        <img src="napkin.png" alt="A hand-drawn napkin placeholder">
+    </div>
+
+    <script>
+        console.log("%c💡 Great minds think alike.", "color: #ff9900; font-size: 20px; font-weight: bold;");
+        console.log("This space is currently reserved for a future breakthrough. Check back soon.");
+    </script>
+</body>
+</html>
