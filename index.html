@@ -3,31 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar Pro | Fair Oaks Ranch</title>
+    <title>Cedar Radar Pro | Universal Edition</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.03); }
+        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.04); }
         body { background: var(--bg); color: white; margin: 0; padding: 15px; font-family: 'Inter', sans-serif; display: flex; justify-content: center; }
         
+        /* Bento Layout */
         .dashboard { display: grid; width: 100%; max-width: 450px; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 20px; backdrop-filter: blur(10px); }
+        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 20px; backdrop-filter: blur(12px); overflow: hidden; position: relative; }
         .full { grid-column: span 2; }
         
         h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
         .big-num { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
         
-        /* Map Styling */
-        #map { height: 150px; border-radius: 18px; margin-top: 10px; z-index: 1; }
+        /* Map Enhancements */
+        #map { height: 200px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; }
         
-        /* Button Styling */
-        .share-btn { 
-            width: 100%; padding: 12px; border-radius: 15px; border: none; 
-            background: var(--accent); color: white; font-weight: bold; cursor: pointer;
-            margin-top: 10px; transition: transform 0.2s;
+        /* Radar Sweep Animation */
+        .radar-sweep {
+            position: absolute; width: 200%; height: 200%;
+            top: -50%; left: -50%;
+            background: conic-gradient(from 0deg, rgba(16,185,129,0.15) 0deg, rgba(16,185,129,0) 60deg);
+            border-radius: 50%; animation: rotate-radar 4s linear infinite;
+            pointer-events: none; z-index: 1000;
         }
-        .share-btn:active { transform: scale(0.98); }
-        
-        .chart-container { height: 100px; margin-top: 10px; }
+        @keyframes rotate-radar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        /* Pulse Marker */
+        .pulse {
+            width: 12px; height: 12px; background: var(--accent);
+            border-radius: 50%; box-shadow: 0 0 0 rgba(16,185,129, 0.4);
+            animation: pulse-ring 1.5s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.5); box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .share-btn { 
+            width: 100%; padding: 14px; border-radius: 18px; border: none; 
+            background: var(--accent); color: white; font-weight: 800; cursor: pointer;
+            margin-top: 5px; transition: 0.2s;
+        }
+        .share-btn:hover { filter: brightness(1.1); }
+        .chart-container { height: 100px; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -35,22 +56,23 @@
 <div class="dashboard">
     <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h2 id="status-text">● Live Status</h2>
-            <div style="font-size: 1.2rem; font-weight:700;">Fair Oaks Ranch, TX</div>
+            <h2 id="status-text">● Live Doppler Radar</h2>
+            <div id="city-name" style="font-size: 1.2rem; font-weight:700;">Scanning...</div>
         </div>
-        <div id="risk-pill" style="color: var(--accent); font-weight:900; font-size:0.9rem;">LOW</div>
+        <div id="risk-pill" style="color: var(--accent); font-weight:900;">--</div>
     </div>
 
     <div class="tile full">
-        <h2>Cedar Concentration</h2>
+        <h2>Concentration</h2>
         <div class="big-num" id="cedar-val">--</div>
-        <div style="font-size:0.8rem; color:#475569;">grains / cubic meter</div>
+        <div style="font-size:0.8rem; color:#475569;">grains / m<sup>3</sup> (Cedar/Juniper)</div>
         <div class="chart-container"><canvas id="historyChart"></canvas></div>
     </div>
 
-    <div class="tile full">
-        <h2>Regional Coverage</h2>
-        <div id="map"></div>
+    <div class="tile full" style="padding: 10px;">
+        <div id="map">
+            <div class="radar-sweep" id="sweep"></div>
+        </div>
     </div>
 
     <div class="tile">
@@ -63,7 +85,7 @@
     </div>
 
     <div class="tile full">
-        <button class="share-btn" onclick="shareStatus()">Share Report to X</button>
+        <button class="share-btn" onclick="shareStatus()">Broadcast Report</button>
         <p id="timestamp" style="font-size:0.6rem; text-align:center; color:#475569; margin-top:15px;"></p>
     </div>
 </div>
@@ -73,53 +95,82 @@
 
 <script>
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
-    const COORDS = [29.7044, -98.6367];
     let map, historyChart;
 
-    async function init() {
-        // Setup Map
-        map = L.map('map', { zoomControl: false, attributionControl: false }).setView(COORDS, 12);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        let circle = L.circle(COORDS, { radius: 2000, color: '#10b981', fillOpacity: 0.2 }).addTo(map);
+    // 1. Detect Location & Start App
+    window.onload = () => {
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude, longitude } = pos.coords;
+                await updateUI(latitude, longitude);
+            },
+            () => updateUI(29.70, -98.63) // Fallback to TX Region
+        );
+    };
 
+    async function updateUI(lat, lon) {
+        // Reverse Geocode for City Name
         try {
-            const res = await fetch(`${WORKER_URL}?lat=${COORDS[0]}&lon=${COORDS[1]}`);
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const geoData = await geo.json();
+            document.getElementById('city-name').innerText = geoData.address.city || geoData.address.town || "Local Area";
+        } catch(e) { document.getElementById('city-name').innerText = "Current Station"; }
+
+        // Fetch Pollen Data
+        try {
+            const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
             const json = await res.json();
             const data = json.data[0];
 
             const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
             const risk = data.Risk.tree_pollen;
 
-            // Update UI
             document.getElementById('cedar-val').innerText = cedar;
             document.getElementById('risk-pill').innerText = risk.toUpperCase();
             document.getElementById('grass-val').innerText = data.Risk.grass_pollen;
             document.getElementById('weed-val').innerText = data.Risk.weed_pollen;
-            document.getElementById('timestamp').innerText = `STATION DATA UPDATED: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('timestamp').innerText = `DATA SYNCED: ${new Date().toLocaleTimeString()}`;
 
-            // Adjust colors based on Cedar severity
+            // Set dynamic theme color
             let color = '#10b981';
             if (cedar > 100) color = '#f59e0b';
             if (cedar > 500) color = '#ef4444';
-            
             document.documentElement.style.setProperty('--accent', color);
-            circle.setStyle({color: color});
 
+            initMap(lat, lon, color);
             updateHistory(cedar, color);
         } catch (e) { document.getElementById('status-text').innerText = "● OFFLINE"; }
     }
 
+    function initMap(lat, lon, color) {
+        if (map) return; // Prevent re-init
+        
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 12);
+
+        // Dark Basemap (No Labels)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png').addTo(map);
+
+        // Data Layer (Pollen Circle)
+        L.circle([lat, lon], { radius: 3000, color: color, fillOpacity: 0.15, weight: 2 }).addTo(map);
+
+        // Labels Layer (Stay on top)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { pane: 'markerPane' }).addTo(map);
+
+        // Pulse Marker
+        const pulseIcon = L.divIcon({ className: 'custom-div-icon', html: "<div class='pulse'></div>", iconSize: [12, 12] });
+        L.marker([lat, lon], { icon: pulseIcon }).addTo(map);
+    }
+
     function updateHistory(currentVal, color) {
-        let history = JSON.parse(localStorage.getItem('pollen_trend') || "[10, 25, 30]");
-        if (history[history.length-1] !== currentVal) {
+        let history = JSON.parse(localStorage.getItem('pollen_trend') || "[]");
+        if (history.length === 0 || history[history.length-1] !== currentVal) {
             history.push(currentVal);
-            if(history.length > 10) history.shift();
+            if(history.length > 7) history.shift();
             localStorage.setItem('pollen_trend', JSON.stringify(history));
         }
 
         const ctx = document.getElementById('historyChart').getContext('2d');
-        if (historyChart) historyChart.destroy();
-        historyChart = new Chart(ctx, {
+        new Chart(ctx, {
             type: 'line',
             data: {
                 labels: history.map(() => ''),
@@ -138,13 +189,11 @@
     }
 
     function shareStatus() {
+        const city = document.getElementById('city-name').innerText;
         const val = document.getElementById('cedar-val').innerText;
-        const risk = document.getElementById('risk-pill').innerText;
-        const text = encodeURIComponent(`Cedar Fever Alert! 🤧 The Cedar count in Fair Oaks Ranch is currently ${val} (${risk} Risk). Check the live radar here:`);
+        const text = encodeURIComponent(`🚨 Live Cedar Report [${city}]: ${val} gr/m³. Stay ahead of the fever! #CedarFever #WeatherRadar`);
         window.open(`https://twitter.com/intent/tweet?text=${text}`);
     }
-
-    window.onload = init;
 </script>
 </body>
 </html>
