@@ -3,64 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar</title>
+    <title>Cedar Radar Pro</title>
     <style>
-        body { background: #f8fafc; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
-        .card { width: 90%; max-width: 380px; background: white; border-radius: 24px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e2e8f0; }
-        .badge { padding: 15px; border-radius: 12px; font-weight: 800; margin: 20px 0; text-transform: uppercase; }
-        #debug-info { font-size: 0.6rem; color: #cbd5e1; margin-top: 10px; word-break: break-all; }
+        :root { --accent: #10b981; }
+        body { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            color: white; display: flex; justify-content: center; align-items: center; 
+            min-height: 100vh; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .card { 
+            width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px); border-radius: 30px; padding: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .cedar-count { font-size: 3rem; font-weight: 900; margin: 10px 0; text-shadow: 0 0 20px var(--accent); }
+        .badge { 
+            display: inline-block; padding: 8px 20px; border-radius: 100px; 
+            background: var(--accent); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;
+        }
+        .legend { 
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; 
+            margin-top: 25px; font-size: 0.7rem; color: #94a3b8;
+        }
+        .legend-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; }
+        canvas { margin-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 id="title">Pollen Radar</h2>
-    <div class="badge" id="meter" style="background: #f1f5f9;">Connecting...</div>
-    <div style="height:200px"><canvas id="pollenChart"></canvas></div>
-    <div id="debug-info">Checking connection...</div>
+    <div class="badge" id="risk-badge">Low Risk</div>
+    <div class="cedar-count" id="count-val">0</div>
+    <div style="font-size: 0.9rem; opacity: 0.8;">Mountain Cedar ($gr/m^3$)</div>
+    
+    <div class="legend">
+        <div class="legend-item"><b>Grass</b><br><span id="grass-val">-</span></div>
+        <div class="legend-item"><b>Weeds</b><br><span id="weed-val">-</span></div>
+        <div class="legend-item"><b>Air Quality</b><br>Good</div>
+    </div>
+
+    <canvas id="pollenChart" height="150"></canvas>
+    <p id="timestamp" style="font-size: 0.6rem; opacity: 0.4; margin-top: 20px;"></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // We remove the trailing slash and add a cache-buster
-    const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev'; 
+    const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
 
-    async function fetchData() {
-        const meter = document.getElementById('meter');
-        const debug = document.getElementById('debug-info');
-        
-        try {
-            // The "Hammer" Fetch: added 'cors' mode and specific headers
-            const res = await fetch(`${WORKER_URL}?lat=29.70&lon=-98.63&t=${Date.now()}`, {
-                method: 'GET',
-                mode: 'cors', 
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
+    async function updateApp() {
+        const res = await fetch(`${WORKER_URL}?lat=29.70&lon=-98.63`);
+        const result = await res.json();
+        const info = result.data[0];
 
-            if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const cedar = info.Species.Tree["Cypress / Juniper / Cedar"] || 0;
+        const risk = info.Risk.tree_pollen;
 
-            const result = await res.json();
-            const info = result.data[0];
-            
-            debug.innerText = "Connection Successful";
-            updateUI(info.Risk.tree_pollen, info.Species.Tree["Cypress / Juniper / Cedar"]);
-        } catch (e) {
-            console.error(e);
-            meter.innerText = "Connection Failed";
-            debug.innerText = "Error: " + e.message + " | Check browser console (F12)";
-        }
+        // UI Updates
+        document.getElementById('count-val').innerText = cedar;
+        document.getElementById('risk-badge').innerText = `${risk} Risk`;
+        document.getElementById('grass-val').innerText = info.Risk.grass_pollen;
+        document.getElementById('weed-val').innerText = info.Risk.weed_pollen;
+        document.getElementById('timestamp').innerText = `Last sync: ${new Date().toLocaleTimeString()}`;
+
+        // Change color based on risk
+        const root = document.querySelector(':root');
+        if (risk === "High" || cedar > 100) root.style.setProperty('--accent', '#ef4444');
+        else if (risk === "Moderate") root.style.setProperty('--accent', '#f59e0b');
+        else root.style.setProperty('--accent', '#10b981');
     }
 
-    function updateUI(risk, cedarCount) {
-        const meter = document.getElementById('meter');
-        meter.innerText = `${risk} Risk (${cedarCount} Cedar)`;
-        meter.style.background = risk === "High" ? "#ef4444" : "#10b981";
-        // ... (Chart code omitted for brevity, but keep yours)
-    }
-
-    window.onload = fetchData;
+    window.onload = updateApp;
 </script>
 </body>
 </html>
