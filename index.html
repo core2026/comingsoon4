@@ -35,6 +35,15 @@
         }
         .status-live { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .status-cached { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+        .status-offline { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+
+        /* Offline Alert UI */
+        #offline-notice { 
+            display: none; width: 100%; max-width: 400px; background: rgba(245, 158, 11, 0.1); 
+            border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; 
+            padding: 10px; margin-bottom: 10px; font-size: 0.75rem; text-align: center; color: #f59e0b;
+        }
+        .retry-link { text-decoration: underline; cursor: pointer; font-weight: 800; margin-left: 5px; }
 
         .search-container {
             position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1001;
@@ -43,16 +52,8 @@
         #map-search {
             flex-grow: 1; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.2);
             border-radius: 12px; padding: 10px 15px; color: white; font-size: 0.8rem; outline: none;
-            backdrop-filter: blur(5px);
         }
         .search-btn { background: var(--accent); border: none; border-radius: 12px; color: white; padding: 0 15px; cursor: pointer; font-weight: 700; }
-
-        .recenter-btn {
-            position: absolute; bottom: 15px; right: 15px; z-index: 1001;
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 10px; color: white; padding: 8px 12px; font-size: 0.6rem;
-            cursor: pointer; backdrop-filter: blur(5px);
-        }
 
         .radar-sweep {
             position: absolute; width: 250%; height: 250%; top: -75%; left: -75%;
@@ -62,9 +63,8 @@
         }
         @keyframes rotate-radar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; transition: 0.3s; }
-        .share-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .btn-small { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; padding: 12px; font-size: 0.7rem; cursor: pointer; }
+        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; }
+        .btn-small { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; padding: 12px; font-size: 0.7rem; cursor: pointer; flex: 1; }
         
         #timestamp { font-size: 0.6rem; text-align: center; color: #475569; margin-top: 15px; }
         .pulse { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; animation: pulse-ring 1.5s infinite; }
@@ -77,10 +77,14 @@
 </head>
 <body>
 
+<div id="offline-notice">
+    ⚠️ Station Limit Reached. Showing last known data. <span class="retry-link" onclick="location.reload()">Retry Now</span>
+</div>
+
 <div id="capture-area" class="dashboard">
     <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h2 id="status-text">● Radar Analytics</h2>
+            <h2>● Radar Analytics</h2>
             <div style="display: flex; align-items: center;">
                 <span id="city-name" style="font-size: 1.2rem; font-weight:700;">Scanning...</span>
                 <span id="data-source-badge">...</span>
@@ -103,7 +107,6 @@
                 <button class="search-btn" onclick="searchLocation()">Go</button>
             </div>
             <div class="radar-sweep"></div>
-            <button class="recenter-btn" onclick="recenterMap()">MY LOCATION</button>
         </div>
     </div>
 
@@ -119,7 +122,7 @@
 
 <div style="width: 100%; max-width: 450px; padding: 15px;">
     <button class="btn-main" id="snap-btn" onclick="takeSnapshot()">📸 Save Dashboard Snapshot</button>
-    <div class="share-grid">
+    <div style="display: flex; gap: 8px; margin-top: 10px;">
         <button class="btn-small" onclick="window.open('https://twitter.com/intent/tweet?url='+encodeURIComponent(window.location.href))">X</button>
         <button class="btn-small" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(window.location.href))">FB</button>
         <button class="btn-small" onclick="handleShare()">SHARE LINK</button>
@@ -129,7 +132,7 @@
 
 <script>
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
-    let map, historyChart, marker, currentLat, currentLon;
+    let map, historyChart, marker, currentLat, currentLon, currentCircle;
 
     window.onload = () => {
         navigator.geolocation.getCurrentPosition(
@@ -150,57 +153,100 @@
             const results = await res.json();
             if (results.length > 0) {
                 const { lat, lon } = results[0];
-                map.flyTo([lat, lon], 10);
-                updateUI(lat, lon);
+                currentLat = parseFloat(lat);
+                currentLon = parseFloat(lon);
+                map.flyTo([currentLat, currentLon], 10);
+                updateUI(currentLat, currentLon);
             }
         } catch (e) { console.error("Search failed"); }
     }
 
     async function updateUI(lat, lon) {
         try {
+            // Get Location Name first
             const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             const geoData = await geo.json();
-            document.getElementById('city-name').innerText = geoData.address.city || geoData.address.town || "Local Area";
+            const cityName = geoData.address.city || geoData.address.town || "Local Area";
+            document.getElementById('city-name').innerText = cityName;
 
+            // Fetch from Proxy
             const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
-            const source = res.headers.get("X-Data-Source");
-            const badge = document.getElementById('data-source-badge');
-            badge.innerText = source === "Cloudflare-Cache" ? "CACHED" : "LIVE";
-            badge.className = source === "Cloudflare-Cache" ? "status-cached" : "status-live";
+            
+            if (!res.ok) throw new Error("API_ERROR");
 
             const json = await res.json();
             const data = json.data[0];
-            const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
 
-            document.getElementById('cedar-val').innerText = cedar;
-            document.getElementById('risk-pill').innerText = data.Risk.tree_pollen.toUpperCase();
-            document.getElementById('grass-val').innerText = data.Risk.grass_pollen;
-            document.getElementById('weed-val').innerText = data.Risk.weed_pollen;
-            document.getElementById('timestamp').innerText = `DATA SYNCED: ${new Date().toLocaleTimeString()}`;
+            // SAVE FOR FALLBACK
+            localStorage.setItem('last_known_pollen', JSON.stringify({
+                data: data,
+                city: cityName,
+                time: new Date().toLocaleTimeString(),
+                lat: lat,
+                lon: lon
+            }));
 
-            let color = '#10b981';
-            if (cedar > 100) color = '#f59e0b';
-            if (cedar > 500) color = '#ef4444';
-            document.documentElement.style.setProperty('--accent', color);
+            renderDashboard(data, res.headers.get("X-Data-Source"));
+            document.getElementById('offline-notice').style.display = 'none';
 
-            initMap(lat, lon, color);
-            renderHistory(cedar, color);
-        } catch (e) { console.error(e); }
-    }
-
-    function initMap(lat, lon, color) {
-        if (!map) {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 10);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png').addTo(map);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { pane: 'markerPane' }).addTo(map);
+        } catch (e) {
+            console.warn("Fallback Mode Triggered");
+            handleFallback();
         }
-        if (marker) map.removeLayer(marker);
-        const pulseIcon = L.divIcon({ className: 'p-icon', html: "<div class='pulse'></div>", iconSize: [14, 14] });
-        marker = L.marker([lat, lon], { icon: pulseIcon }).addTo(map);
-        L.circle([lat, lon], { radius: 8000, color: color, fillOpacity: 0.1, weight: 1 }).addTo(map);
     }
 
-    function recenterMap() { if(currentLat) { map.flyTo([currentLat, currentLon], 10); updateUI(currentLat, currentLon); } }
+    function renderDashboard(data, source) {
+        const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
+        const badge = document.getElementById('data-source-badge');
+        
+        document.getElementById('cedar-val').innerText = cedar;
+        document.getElementById('risk-pill').innerText = (data.Risk.tree_pollen || "Low").toUpperCase();
+        document.getElementById('grass-val').innerText = data.Risk.grass_pollen || "Low";
+        document.getElementById('weed-val').innerText = data.Risk.weed_pollen || "Low";
+        
+        if (source === "Cloudflare-Cache") {
+            badge.innerText = "CACHED";
+            badge.className = "status-cached";
+        } else if (source === "OFFLINE") {
+            badge.innerText = "OFFLINE";
+            badge.className = "status-offline";
+        } else {
+            badge.innerText = "LIVE";
+            badge.className = "status-live";
+        }
+
+        let color = '#10b981';
+        if (cedar > 100) color = '#f59e0b';
+        if (cedar > 500) color = '#ef4444';
+        document.documentElement.style.setProperty('--accent', color);
+
+        if (!map) {
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 10);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        }
+
+        if (marker) map.removeLayer(marker);
+        if (currentCircle) map.removeLayer(currentCircle);
+
+        const pulseIcon = L.divIcon({ className: 'p-icon', html: "<div class='pulse'></div>", iconSize: [14, 14] });
+        marker = L.marker([currentLat, currentLon], { icon: pulseIcon }).addTo(map);
+        currentCircle = L.circle([currentLat, currentLon], { radius: 8000, color: color, fillOpacity: 0.1, weight: 1 }).addTo(map);
+
+        renderHistory(cedar, color);
+    }
+
+    function handleFallback() {
+        const saved = localStorage.getItem('last_known_pollen');
+        if (saved) {
+            const backup = JSON.parse(saved);
+            document.getElementById('offline-notice').style.display = 'block';
+            document.getElementById('timestamp').innerText = `STATION OFFLINE. Data from ${backup.time}`;
+            renderDashboard(backup.data, "OFFLINE");
+        } else {
+            document.getElementById('cedar-val').innerText = "---";
+            document.getElementById('data-source-badge').innerText = "ERROR";
+        }
+    }
 
     function renderHistory(val, color) {
         let history = JSON.parse(localStorage.getItem('p_history') || "[0,0,0]");
@@ -223,36 +269,23 @@
     function takeSnapshot() {
         const btn = document.getElementById('snap-btn');
         btn.innerText = "Generating PNG...";
-        document.querySelector('.search-container').style.display = 'none';
-        document.querySelector('.recenter-btn').style.display = 'none';
-        
         html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true, scale: 2 }).then(canvas => {
             const link = document.createElement('a');
             link.download = `CedarRadar-${document.getElementById('city-name').innerText}.png`;
             link.href = canvas.toDataURL();
             link.click();
-            
-            btn.innerText = "✅ Saved! Share it now.";
-            setTimeout(() => { btn.innerText = "📸 Save Dashboard Snapshot"; }, 3000);
-            document.querySelector('.search-container').style.display = 'flex';
-            document.querySelector('.recenter-btn').style.display = 'block';
+            btn.innerText = "📸 Save Dashboard Snapshot";
         });
     }
 
     async function handleShare() {
-        const city = document.getElementById('city-name').innerText;
         const shareData = {
-            title: 'Cedar Radar Pro',
-            text: `The Cedar count in ${city} is currently ${document.getElementById('cedar-val').innerText} gr/m3.`,
+            title: 'Live Cedar Radar',
+            text: `Cedar count in ${document.getElementById('city-name').innerText} is ${document.getElementById('cedar-val').innerText}!`,
             url: window.location.href
         };
-
-        if (navigator.share) {
-            try { await navigator.share(shareData); } catch (e) {}
-        } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert("Link copied! Paste it in your post.");
-        }
+        if (navigator.share) { try { await navigator.share(shareData); } catch (e) {} }
+        else { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }
     }
 </script>
 </body>
