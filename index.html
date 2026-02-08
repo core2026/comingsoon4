@@ -3,47 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Radar</title>
+    <title>Pollen Radar | Live Local Analytics</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
-        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.04); }
+        /* DESIGN SYSTEM: Colors and Variables */
+        :root { 
+            --accent: #10b981; /* Changes dynamically based on pollen risk (Green/Yellow/Red) */
+            --bg: #020617; 
+            --glass: rgba(255, 255, 255, 0.04); 
+        }
+
+        /* LAYOUT: Main Dashboard Grid */
         body { background: var(--bg); color: white; margin: 0; padding: 15px; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; }
         .dashboard { display: grid; width: 100%; max-width: 450px; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px; background: var(--bg); }
+        
+        /* TILES: The individual "Glass" cards */
         .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 20px; backdrop-filter: blur(12px); overflow: hidden; position: relative; }
         .full { grid-column: span 2; }
+        
+        /* TYPOGRAPHY: Sizing for labels and numbers */
         h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
         .big-num { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
-        #map { height: 300px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; }
+        
+        /* MAP: Map container styling */
+        #map { height: 300px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* STATUS BADGES: Live vs Cached indicators */
         #data-source-badge { font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 8px; border: 1px solid rgba(255,255,255,0.1); }
         .status-live { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .status-cached { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
-        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; }
+
+        /* BUTTONS: Styling for main interaction points */
+        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .btn-small { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; padding: 12px; font-size: 0.7rem; cursor: pointer; flex: 1; text-align: center; }
+        
+        /* ANIMATION: The pulsing dot on the map */
         .pulse { width: 14px; height: 14px; border-radius: 50%; animation: pulse-ring 1.5s infinite; }
-        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+        @keyframes pulse-ring { 
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 
+            70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } 
+        }
     </style>
 </head>
 <body>
 
+<div id="offline-notice" style="display:none; width: 100%; max-width: 400px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 10px; margin-bottom: 10px; font-size: 0.75rem; text-align: center; color: #f59e0b;">
+    ⚠️ Station Limit Reached. Showing last known data. <span style="text-decoration:underline; cursor:pointer" onclick="location.reload()">Retry</span>
+</div>
+
 <div id="capture-area" class="dashboard">
     <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h2 id="status-text">● Radar Analytics</h2>
+            <h2 id="status-text">● Pollen Radar Analytics</h2>
             <div style="display: flex; align-items: center;">
-                <span id="city-name" style="font-size: 1.1rem; font-weight:700;">Fair Oaks Ranch</span>
+                <span id="city-name" style="font-size: 1.1rem; font-weight:700;">Scanning...</span>
                 <span id="data-source-badge" class="status-live">LIVE</span>
             </div>
         </div>
-        <div id="risk-pill" style="color: var(--accent); font-weight:900;">LOW</div>
+        <div id="risk-pill" style="color: var(--accent); font-weight:900; text-transform: uppercase;">--</div>
     </div>
 
     <div class="tile full">
-        <h2>Cedar Concentration</h2>
+        <h2>Primary Allergen (Cedar)</h2>
         <div class="big-num" id="cedar-val">--</div>
         <div style="font-size:0.8rem; color:#475569;">grains / m³</div>
         <div class="chart-container" style="height:60px;"><canvas id="historyChart"></canvas></div>
@@ -52,15 +79,15 @@
     <div class="tile full" style="padding: 0;">
         <div id="map">
             <div style="position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1001; display: flex; gap: 5px;">
-                <input type="text" id="map-search" placeholder="Zip Code (e.g. 78015)" style="flex:1; padding:10px; border-radius:12px; border:none; background:rgba(15,23,42,0.9); color:white;">
-                <button onclick="searchLocation()" style="background:var(--accent); border:none; padding:10px 15px; border-radius:12px; color:white; font-weight:700;">Search</button>
+                <input type="text" id="map-search" placeholder="Enter Zip (e.g. 78015)" style="flex:1; padding:10px; border-radius:12px; border:none; background:rgba(15,23,42,0.9); color:white; outline:none;">
+                <button onclick="searchLocation()" style="background:var(--accent); border:none; padding:10px 15px; border-radius:12px; color:white; font-weight:700; cursor:pointer;">Search</button>
             </div>
         </div>
     </div>
 
     <div class="tile full">
         <h2>Health Action Plan</h2>
-        <div id="health-advice" style="font-size: 0.85rem; line-height:1.4;">Updating...</div>
+        <div id="health-advice" style="font-size: 0.85rem; line-height:1.4;">Waiting for location data...</div>
     </div>
 </div>
 
@@ -70,77 +97,108 @@
         <button class="btn-small" onclick="shareToFacebook()">FACEBOOK APP</button>
         <button class="btn-small" onclick="handleShare()">SHARE LINK</button>
     </div>
+    <p id="timestamp" style="font-size: 0.6rem; text-align: center; color: #475569; margin-top: 15px;"></p>
 </div>
 
 <script>
+    /* CONFIGURATION: Your Cloudflare Worker Address */
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
     let map, historyChart, marker, currentLat, currentLon;
 
+    /* INITIALIZATION: Runs when page loads */
     window.onload = () => {
-        // Check internal cache first (Fixes the .workers.dev caching issue)
+        // INTERNAL CACHE CHECK: Bypasses API if data was fetched in the last hour
         const localCache = JSON.parse(localStorage.getItem('app_cache'));
         const now = Date.now();
 
-        if (localCache && (now - localCache.time < 3600000)) { // 1 Hour
-            console.log("Using internal local cache");
+        if (localCache && (now - localCache.time < 3600000)) { 
+            console.log("Pollen Radar: Using internal local cache");
             currentLat = localCache.lat;
             currentLon = localCache.lon;
+            document.getElementById('city-name').innerText = localCache.city;
             renderDashboard(localCache.data, "INTERNAL_CACHE");
         } else {
+            // Get user GPS or default to Fair Oaks Ranch region
             navigator.geolocation.getCurrentPosition(
                 (pos) => { updateUI(pos.coords.latitude, pos.coords.longitude); },
-                () => { updateUI(29.70, -98.63); }
+                () => { updateUI(29.704, -98.636); }
             );
         }
     };
 
+    /* SEARCH LOGIC: Restricted to USA only */
     async function searchLocation() {
         const query = document.getElementById('map-search').value;
-        // FIX: Add countrycodes=us to force US results only
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=1`);
-        const results = await res.json();
-        if (results.length > 0) {
-            updateUI(parseFloat(results[0].lat), parseFloat(results[0].lon));
-        } else { alert("Location not found in USA."); }
+        if (!query) return;
+        
+        try {
+            // countrycodes=us prevents the map from flying to Europe or Asia
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=1`);
+            const results = await res.json();
+            if (results.length > 0) {
+                updateUI(parseFloat(results[0].lat), parseFloat(results[0].lon));
+            } else { alert("Location not found in USA."); }
+        } catch (e) { console.error("Search failed", e); }
     }
 
+    /* DATA FETCHING: Connects to your Cloudflare Worker */
     async function updateUI(lat, lon) {
         currentLat = lat; currentLon = lon;
         try {
+            // Get city name from coordinates
+            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+            const geoData = await geo.json();
+            const cityName = geoData.address.city || geoData.address.town || geoData.address.village || "Local Area";
+            document.getElementById('city-name').innerText = cityName;
+
+            // Fetch pollen data
             const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
             const json = await res.json();
             const data = json.data[0];
 
-            // Save to internal cache
+            // SAVE TO CACHE: Stores result for 1 hour to stay under API limits
             localStorage.setItem('app_cache', JSON.stringify({
-                data: data, lat: lat, lon: lon, time: Date.now()
+                data: data, city: cityName, lat: lat, lon: lon, time: Date.now()
             }));
 
             renderDashboard(data, "LIVE");
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error("API Fetch Error", e);
+            document.getElementById('offline-notice').style.display = 'block';
+        }
     }
 
+    /* UI RENDERING: Updates the numbers, colors, and map */
     function renderDashboard(data, source) {
         const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
         document.getElementById('cedar-val').innerText = cedar;
+        document.getElementById('risk-pill').innerText = data.Risk.tree_pollen || "Low";
         
+        // CACHE BADGE: Shows user if data is fresh or saved
         const badge = document.getElementById('data-source-badge');
         badge.innerText = source === "LIVE" ? "LIVE" : "CACHED";
         badge.className = source === "LIVE" ? "status-live" : "status-cached";
 
+        // DYNAMIC COLORING: Green (Safe) -> Yellow (Caution) -> Red (High)
         let color = '#10b981';
-        if (cedar > 500) color = '#ef4444';
-        else if (cedar > 100) color = '#f59e0b';
+        let advice = "<b>Safe:</b> Pollen levels are low. Enjoy the fresh air!";
+        
+        if (cedar > 500) {
+            color = '#ef4444';
+            advice = "<b>Warning:</b> High Cedar levels. Avoid outdoors and keep windows shut.";
+        } else if (cedar > 100) {
+            color = '#f59e0b';
+            advice = "<b>Moderate:</b> Cedar is present. Sensitive groups should use caution.";
+        }
         
         document.documentElement.style.setProperty('--accent', color);
-        document.getElementById('health-advice').innerHTML = cedar > 500 ? 
-            "<b>Warning:</b> Cedar is high. Keep windows closed and avoid outdoor exercise." : 
-            "<b>Safe:</b> Pollen levels are low. Great day for outdoors.";
+        document.getElementById('health-advice').innerHTML = advice;
 
+        // MAP UPDATE: Fly to location and drop pulsing marker
         if (!map) {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 11);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        } else { map.setView([currentLat, currentLon]); }
+        } else { map.flyTo([currentLat, currentLon], 11); }
 
         if (marker) map.removeLayer(marker);
         const icon = L.divIcon({ className: 'p-icon', html: `<div class='pulse' style='background:${color}'></div>` });
@@ -149,42 +207,48 @@
         renderHistory(cedar, color);
     }
 
-    // FIX: iPhone Deep Link for Facebook
+    /* CHART LOGIC: Draws the trend graph */
+    function renderHistory(val, color) {
+        if (historyChart) historyChart.destroy();
+        historyChart = new Chart(document.getElementById('historyChart'), {
+            type: 'line',
+            data: { labels: [1,2,3,4,5], datasets: [{ data: [0, val*0.3, val*0.6, val*0.9, val], borderColor: color, fill: true, tension: 0.4, backgroundColor: 'rgba(16,185,129,0.05)', pointRadius: 0 }] },
+            options: { maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x:{display:false}, y:{display:false}} }
+        });
+    }
+
+    /* SHARING: iPhone Native Facebook App Deep Link */
     function shareToFacebook() {
         const url = window.location.href;
         const fbAppUrl = `fb://facewebmodal/f?href=https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
         const fbWebUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
         
-        // Try opening the app
-        window.location.href = fbAppUrl;
-        
-        // Fallback to web if app doesn't open within 2 seconds
-        setTimeout(() => { window.open(fbWebUrl, '_blank'); }, 2000);
+        window.location.href = fbAppUrl; // Attempt to open app
+        setTimeout(() => { window.open(fbWebUrl, '_blank'); }, 2000); // Fallback to browser
     }
 
+    /* SNAPSHOT: Converts HTML grid to PNG for sharing */
     function takeSnapshot() {
-        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true }).then(canvas => {
+        const btn = document.getElementById('snap-btn');
+        btn.innerText = "Generating Image...";
+        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true, scale: 2 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `CedarRadar.png`;
+            link.download = `PollenRadar-Report.png`;
             link.href = canvas.toDataURL();
             link.click();
+            btn.innerText = "📸 Save Dashboard Snapshot";
         });
     }
 
-    function renderHistory(val, color) {
-        if (historyChart) historyChart.destroy();
-        historyChart = new Chart(document.getElementById('historyChart'), {
-            type: 'line',
-            data: { labels: [1,2,3,4,5], datasets: [{ data: [0, 50, val/2, val*0.8, val], borderColor: color, fill: true, tension: 0.4 }] },
-            options: { maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x:{display:false}, y:{display:false}} }
-        });
-    }
-
+    /* UNIVERSAL SHARE: Uses phone's native share menu (if available) */
     async function handleShare() {
-        if (navigator.share) { navigator.share({ title: 'Cedar Radar', url: window.location.href }); }
-        else { alert("Link copied!"); }
+        if (navigator.share) { 
+            navigator.share({ title: 'Pollen Radar Pro', text: 'Check the live cedar levels in our area!', url: window.location.href }); 
+        } else { 
+            navigator.clipboard.writeText(window.location.href); 
+            alert("Link copied to clipboard!"); 
+        }
     }
 </script>
 </body>
 </html>
-
