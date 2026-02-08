@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar Pro | Interactive</title>
+    <title>Cedar Radar | Search & Track</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -21,19 +21,33 @@
         h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
         .big-num { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
         
-        #map { height: 280px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; position: relative; cursor: crosshair; }
+        #map { height: 320px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; position: relative; }
         
-        /* Map Controls */
+        /* Search Bar Styling */
+        .search-container {
+            position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1001;
+            display: flex; gap: 5px;
+        }
+        #map-search {
+            flex-grow: 1; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px; padding: 10px 15px; color: white; font-size: 0.8rem; outline: none;
+            backdrop-filter: blur(5px);
+        }
+        .search-btn {
+            background: var(--accent); border: none; border-radius: 12px; color: white;
+            padding: 0 15px; cursor: pointer; font-weight: 700;
+        }
+
         .recenter-btn {
-            position: absolute; bottom: 10px; right: 10px; z-index: 1001;
-            background: var(--accent); border: none; border-radius: 8px;
-            color: white; padding: 8px 12px; font-size: 0.7rem; font-weight: 700;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            position: absolute; bottom: 15px; right: 15px; z-index: 1001;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px; color: white; padding: 8px 12px; font-size: 0.6rem;
+            cursor: pointer; backdrop-filter: blur(5px);
         }
 
         .radar-sweep {
             position: absolute; width: 250%; height: 250%; top: -75%; left: -75%;
-            background: conic-gradient(from 0deg, rgba(16,185,129,0.08) 0deg, rgba(16,185,129,0) 60deg);
+            background: conic-gradient(from 0deg, rgba(16,185,129,0.06) 0deg, rgba(16,185,129,0) 60deg);
             border-radius: 50%; animation: rotate-radar 4s linear infinite;
             pointer-events: none; z-index: 1000;
         }
@@ -41,15 +55,11 @@
 
         .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; }
         .share-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .btn-small { border: none; border-radius: 14px; color: white; font-weight: 800; cursor: pointer; padding: 12px; font-size: 0.7rem; text-align: center; text-decoration: none; }
+        .btn-small { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; padding: 12px; font-size: 0.7rem; cursor: pointer; }
         
-        .chart-container { height: 80px; margin-top: 10px; }
         #timestamp { font-size: 0.6rem; text-align: center; color: #475569; margin-top: 15px; }
 
-        .pulse {
-            width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
-            animation: pulse-ring 1.5s infinite;
-        }
+        .pulse { width: 14px; height: 14px; background: var(--accent); border-radius: 50%; animation: pulse-ring 1.5s infinite; }
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
             70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
@@ -62,8 +72,8 @@
 <div id="capture-area" class="dashboard">
     <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h2 id="status-text">● Interactive Radar</h2>
-            <div id="city-name" style="font-size: 1.2rem; font-weight:700;">Connecting...</div>
+            <h2 id="status-text">● Live Radar Station</h2>
+            <div id="city-name" style="font-size: 1.2rem; font-weight:700;">Localizing...</div>
         </div>
         <div id="risk-pill" style="color: var(--accent); font-weight:900;">--</div>
     </div>
@@ -72,13 +82,17 @@
         <h2>Cedar Concentration</h2>
         <div class="big-num" id="cedar-val">--</div>
         <div style="font-size:0.8rem; color:#475569;">grains / m³</div>
-        <div class="chart-container"><canvas id="historyChart"></canvas></div>
+        <div class="chart-container" style="height:60px;"><canvas id="historyChart"></canvas></div>
     </div>
 
-    <div class="tile full" style="padding: 10px;">
+    <div class="tile full" style="padding: 0;">
         <div id="map">
+            <div class="search-container">
+                <input type="text" id="map-search" placeholder="Search City (e.g. Austin, TX)" onkeypress="if(event.key==='Enter') searchLocation()">
+                <button class="search-btn" onclick="searchLocation()">Go</button>
+            </div>
             <div class="radar-sweep"></div>
-            <button class="recenter-btn" onclick="recenterMap()">RECENTER</button>
+            <button class="recenter-btn" onclick="recenterMap()">GPS RECENTER</button>
         </div>
     </div>
 
@@ -93,19 +107,18 @@
 </div>
 
 <div style="width: 100%; max-width: 450px; padding: 15px;">
-    <button class="btn-main" onclick="takeSnapshot()">📸 Save Dashboard Image</button>
-    
+    <button class="btn-main" onclick="takeSnapshot()">📸 Save Dashboard Snapshot</button>
     <div class="share-grid">
-        <button class="btn-small" style="background: #000;" onclick="shareX()">X</button>
-        <button class="btn-small" style="background: #1877f2;" onclick="shareFB()">FB</button>
-        <button class="btn-small" style="background: #e4405f;" onclick="copyLink()">LINK</button>
+        <button class="btn-small" onclick="shareX()">X</button>
+        <button class="btn-small" onclick="shareFB()">FB</button>
+        <button class="btn-small" onclick="copyLink()">LINK</button>
     </div>
     <p id="timestamp"></p>
 </div>
 
 <script>
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
-    let map, historyChart, currentLat, currentLon;
+    let map, historyChart, marker, currentLat, currentLon;
 
     window.onload = () => {
         navigator.geolocation.getCurrentPosition(
@@ -114,19 +127,30 @@
                 currentLon = pos.coords.longitude;
                 updateUI(currentLat, currentLon);
             },
-            () => {
-                currentLat = 29.70; currentLon = -98.63;
-                updateUI(currentLat, currentLon);
-            }
+            () => { updateUI(29.70, -98.63); }
         );
     };
+
+    async function searchLocation() {
+        const query = document.getElementById('map-search').value;
+        if (!query) return;
+        
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+            const results = await res.json();
+            if (results.length > 0) {
+                const { lat, lon } = results[0];
+                map.flyTo([lat, lon], 11);
+                updateUI(lat, lon);
+            } else { alert("Location not found."); }
+        } catch (e) { alert("Search error."); }
+    }
 
     async function updateUI(lat, lon) {
         try {
             const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             const geoData = await geo.json();
-            const addr = geoData.address;
-            document.getElementById('city-name').innerText = addr.city || addr.town || addr.suburb || addr.village || "Local Area";
+            document.getElementById('city-name').innerText = geoData.address.city || geoData.address.town || geoData.address.village || "Target Area";
 
             const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
             const json = await res.json();
@@ -148,33 +172,25 @@
 
             initMap(lat, lon, color);
             renderHistory(cedar, color);
-        } catch (e) { document.getElementById('status-text').innerText = "● OFFLINE"; }
+        } catch (e) { console.error(e); }
     }
 
     function initMap(lat, lon, color) {
-        if (map) return;
+        if (!map) {
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 10);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png').addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { pane: 'markerPane' }).addTo(map);
+        }
         
-        // Interactive Settings
-        map = L.map('map', { 
-            zoomControl: true, 
-            attributionControl: false,
-            scrollWheelZoom: false, // Prevents page-scroll interference
-            dragging: true 
-        }).setView([lat, lon], 10);
-        
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png').addTo(map);
-        L.circle([lat, lon], { radius: 8000, color: color, fillOpacity: 0.15, weight: 2 }).addTo(map);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { pane: 'markerPane' }).addTo(map);
-        
+        if (marker) map.removeLayer(marker);
         const pulseIcon = L.divIcon({ className: 'p-icon', html: "<div class='pulse'></div>", iconSize: [14, 14] });
-        L.marker([lat, lon], { icon: pulseIcon }).addTo(map);
+        marker = L.marker([lat, lon], { icon: pulseIcon }).addTo(map);
+        
+        // Dynamic Circle for Search
+        L.circle([lat, lon], { radius: 8000, color: color, fillOpacity: 0.1, weight: 1 }).addTo(map);
     }
 
-    function recenterMap() {
-        if (map && currentLat) {
-            map.flyTo([currentLat, currentLon], 10, { duration: 1.5 });
-        }
-    }
+    function recenterMap() { if(currentLat) { map.flyTo([currentLat, currentLon], 10); updateUI(currentLat, currentLon); } }
 
     function renderHistory(val, color) {
         let history = JSON.parse(localStorage.getItem('p_history') || "[0,0,0]");
@@ -183,9 +199,8 @@
             if(history.length > 7) history.shift();
             localStorage.setItem('p_history', JSON.stringify(history));
         }
-        const ctx = document.getElementById('historyChart');
         if (historyChart) historyChart.destroy();
-        historyChart = new Chart(ctx, {
+        historyChart = new Chart(document.getElementById('historyChart'), {
             type: 'line',
             data: {
                 labels: history.map(() => ''),
@@ -198,30 +213,24 @@
     function takeSnapshot() {
         const btn = document.querySelector('.btn-main');
         btn.innerText = "Capturing...";
-        // Hide UI elements that shouldn't be in the photo
+        document.querySelector('.search-container').style.display = 'none';
         document.querySelector('.recenter-btn').style.display = 'none';
         
-        html2canvas(document.querySelector("#capture-area"), { 
-            backgroundColor: "#020617", 
-            useCORS: true, 
-            scale: 2 
-        }).then(canvas => {
+        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true, scale: 2 }).then(canvas => {
             const link = document.createElement('a');
             link.download = `Cedar-Radar-${document.getElementById('city-name').innerText}.png`;
             link.href = canvas.toDataURL();
             link.click();
-            btn.innerText = "📸 Save Dashboard Image";
+            btn.innerText = "📸 Save Dashboard Snapshot";
+            document.querySelector('.search-container').style.display = 'flex';
             document.querySelector('.recenter-btn').style.display = 'block';
         });
     }
 
     function shareX() {
         const city = document.getElementById('city-name').innerText;
-        const val = document.getElementById('cedar-val').innerText;
-        const text = encodeURIComponent(`🚨 Cedar Doppler for ${city}: ${val} gr/m³. Explore the interactive map here:`);
-        window.open(`https://twitter.com/intent/tweet?text=${text}&url=${window.location.href}`);
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Live Cedar Doppler for ' + city)}&url=${window.location.href}`);
     }
-
     function shareFB() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`); }
     function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }
 </script>
