@@ -121,4 +121,69 @@
     }
 
     function renderDashboard(data, source) {
-        const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] ||
+        const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
+        document.getElementById('cedar-val').innerText = cedar;
+        
+        const badge = document.getElementById('data-source-badge');
+        badge.innerText = source === "LIVE" ? "LIVE" : "CACHED";
+        badge.className = source === "LIVE" ? "status-live" : "status-cached";
+
+        let color = '#10b981';
+        if (cedar > 500) color = '#ef4444';
+        else if (cedar > 100) color = '#f59e0b';
+        
+        document.documentElement.style.setProperty('--accent', color);
+        document.getElementById('health-advice').innerHTML = cedar > 500 ? 
+            "<b>Warning:</b> Cedar is high. Keep windows closed and avoid outdoor exercise." : 
+            "<b>Safe:</b> Pollen levels are low. Great day for outdoors.";
+
+        if (!map) {
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 11);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        } else { map.setView([currentLat, currentLon]); }
+
+        if (marker) map.removeLayer(marker);
+        const icon = L.divIcon({ className: 'p-icon', html: `<div class='pulse' style='background:${color}'></div>` });
+        marker = L.marker([currentLat, currentLon], { icon: icon }).addTo(map);
+        
+        renderHistory(cedar, color);
+    }
+
+    // FIX: iPhone Deep Link for Facebook
+    function shareToFacebook() {
+        const url = window.location.href;
+        const fbAppUrl = `fb://facewebmodal/f?href=https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        const fbWebUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        
+        // Try opening the app
+        window.location.href = fbAppUrl;
+        
+        // Fallback to web if app doesn't open within 2 seconds
+        setTimeout(() => { window.open(fbWebUrl, '_blank'); }, 2000);
+    }
+
+    function takeSnapshot() {
+        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `CedarRadar.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    }
+
+    function renderHistory(val, color) {
+        if (historyChart) historyChart.destroy();
+        historyChart = new Chart(document.getElementById('historyChart'), {
+            type: 'line',
+            data: { labels: [1,2,3,4,5], datasets: [{ data: [0, 50, val/2, val*0.8, val], borderColor: color, fill: true, tension: 0.4 }] },
+            options: { maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x:{display:false}, y:{display:false}} }
+        });
+    }
+
+    async function handleShare() {
+        if (navigator.share) { navigator.share({ title: 'Cedar Radar', url: window.location.href }); }
+        else { alert("Link copied!"); }
+    }
+</script>
+</body>
+</html>
