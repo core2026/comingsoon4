@@ -3,167 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Tracker Pro | Fair Oaks Ranch</title>
+    <title>Cedar Radar Pro | Fair Oaks Ranch</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --accent: #10b981; --glass: rgba(15, 23, 42, 0.8); }
-        body { 
-            background: #0f172a; 
-            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                              radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                              radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            color: white; display: flex; justify-content: center; align-items: center; 
-            min-height: 100vh; margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        .card { 
-            width: 95%; max-width: 420px; background: var(--glass);
-            backdrop-filter: blur(20px); border-radius: 40px; padding: 40px;
-            border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); position: relative;
-            overflow: hidden;
-        }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .location-box { text-align: left; }
-        .location-box h1 { margin: 0; font-size: 1.2rem; letter-spacing: -0.5px; }
-        .location-box p { margin: 0; font-size: 0.75rem; color: #94a3b8; }
+        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.03); }
+        body { background: var(--bg); color: white; margin: 0; padding: 15px; font-family: 'Inter', sans-serif; display: flex; justify-content: center; }
         
-        .main-display { margin: 30px 0; }
-        .cedar-value { font-size: 4.5rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
-        .unit { font-size: 1rem; color: #94a3b8; font-weight: 400; margin-bottom: 10px; }
+        .dashboard { display: grid; width: 100%; max-width: 450px; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 20px; backdrop-filter: blur(10px); }
+        .full { grid-column: span 2; }
         
-        .risk-pill { 
-            display: inline-block; padding: 6px 16px; border-radius: 100px; 
-            background: var(--accent); font-size: 0.75rem; font-weight: 700; 
-            text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 0 20px var(--accent);
+        h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
+        .big-num { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+        
+        /* Map Styling */
+        #map { height: 150px; border-radius: 18px; margin-top: 10px; z-index: 1; }
+        
+        /* Button Styling */
+        .share-btn { 
+            width: 100%; padding: 12px; border-radius: 15px; border: none; 
+            background: var(--accent); color: white; font-weight: bold; cursor: pointer;
+            margin-top: 10px; transition: transform 0.2s;
         }
-
-        .stats-grid { 
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; 
-            margin: 30px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 25px;
-        }
-        .stat-card { background: rgba(255,255,255,0.03); padding: 15px 10px; border-radius: 20px; }
-        .stat-card span { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
-        .stat-card div { font-size: 1rem; font-weight: 700; margin-top: 5px; }
-
-        .forecast-row { 
-            background: rgba(255,255,255,0.05); padding: 15px 20px; border-radius: 20px;
-            display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;
-        }
-        #timestamp { font-size: 0.65rem; color: #475569; margin-top: 25px; }
+        .share-btn:active { transform: scale(0.98); }
+        
+        .chart-container { height: 100px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <div class="header">
-        <div class="location-box">
-            <h1>Fair Oaks Ranch</h1>
-            <p id="date-today">Saturday, Feb 7</p>
+<div class="dashboard">
+    <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h2 id="status-text">● Live Status</h2>
+            <div style="font-size: 1.2rem; font-weight:700;">Fair Oaks Ranch, TX</div>
         </div>
-        <div id="weather-icon" style="font-size: 1.5rem;">🌵</div>
+        <div id="risk-pill" style="color: var(--accent); font-weight:900; font-size:0.9rem;">LOW</div>
     </div>
 
-    <div class="main-display">
-        <div class="risk-pill" id="risk-badge">Analyzing...</div>
-        <div class="cedar-value" id="count-val">0</div>
-        <div class="unit">gr/m³ (Mountain Cedar)</div>
+    <div class="tile full">
+        <h2>Cedar Concentration</h2>
+        <div class="big-num" id="cedar-val">--</div>
+        <div style="font-size:0.8rem; color:#475569;">grains / cubic meter</div>
+        <div class="chart-container"><canvas id="historyChart"></canvas></div>
     </div>
 
-    <div class="forecast-row">
-        <span><b>Primary Allergen</b></span>
-        <span id="top-species" style="color: var(--accent)">Calculating...</span>
+    <div class="tile full">
+        <h2>Regional Coverage</h2>
+        <div id="map"></div>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <span>Grass</span>
-            <div id="grass-val">-</div>
-        </div>
-        <div class="stat-card">
-            <span>Weeds</span>
-            <div id="weed-val">-</div>
-        </div>
-        <div class="stat-card">
-            <span>Trees</span>
-            <div id="tree-val">-</div>
-        </div>
+    <div class="tile">
+        <h2>Grass</h2>
+        <div style="font-size:1.4rem; font-weight:700;" id="grass-val">--</div>
+    </div>
+    <div class="tile">
+        <h2>Weeds</h2>
+        <div style="font-size:1.4rem; font-weight:700;" id="weed-val">--</div>
     </div>
 
-    <canvas id="miniChart" height="100"></canvas>
-    
-    <p id="timestamp"></p>
+    <div class="tile full">
+        <button class="share-btn" onclick="shareStatus()">Share Report to X</button>
+        <p id="timestamp" style="font-size:0.6rem; text-align:center; color:#475569; margin-top:15px;"></p>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
+    const COORDS = [29.7044, -98.6367];
+    let map, historyChart;
 
     async function init() {
-        // Set Today's Date
-        const options = { weekday: 'long', month: 'short', day: 'numeric' };
-        document.getElementById('date-today').innerText = new Date().toLocaleDateString('en-US', options);
+        // Setup Map
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView(COORDS, 12);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        let circle = L.circle(COORDS, { radius: 2000, color: '#10b981', fillOpacity: 0.2 }).addTo(map);
 
         try {
-            const res = await fetch(`${WORKER_URL}?lat=29.70&lon=-98.63`);
-            const result = await res.json();
-            const data = result.data[0];
+            const res = await fetch(`${WORKER_URL}?lat=${COORDS[0]}&lon=${COORDS[1]}`);
+            const json = await res.json();
+            const data = json.data[0];
 
-            // Core Values
             const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
-            const treeRisk = data.Risk.tree_pollen;
-            
-            // UI Updates
-            document.getElementById('count-val').innerText = cedar;
-            document.getElementById('risk-badge').innerText = `${treeRisk} Risk`;
+            const risk = data.Risk.tree_pollen;
+
+            // Update UI
+            document.getElementById('cedar-val').innerText = cedar;
+            document.getElementById('risk-pill').innerText = risk.toUpperCase();
             document.getElementById('grass-val').innerText = data.Risk.grass_pollen;
             document.getElementById('weed-val').innerText = data.Risk.weed_pollen;
-            document.getElementById('tree-val').innerText = treeRisk;
-            document.getElementById('top-species').innerText = cedar > 0 ? "Mountain Cedar" : "Other Trees";
-            document.getElementById('timestamp').innerText = `DATA SYNCED AT ${new Date().toLocaleTimeString()}`;
+            document.getElementById('timestamp').innerText = `STATION DATA UPDATED: ${new Date().toLocaleTimeString()}`;
 
-            // Weather Theme Logic
-            const root = document.querySelector(':root');
-            if (cedar > 500) {
-                root.style.setProperty('--accent', '#ef4444');
-                document.getElementById('weather-icon').innerText = '🚨';
-            } else if (cedar > 100) {
-                root.style.setProperty('--accent', '#f59e0b');
-                document.getElementById('weather-icon').innerText = '🤧';
-            } else {
-                root.style.setProperty('--accent', '#10b981');
-                document.getElementById('weather-icon').innerText = '🤠';
-            }
+            // Adjust colors based on Cedar severity
+            let color = '#10b981';
+            if (cedar > 100) color = '#f59e0b';
+            if (cedar > 500) color = '#ef4444';
+            
+            document.documentElement.style.setProperty('--accent', color);
+            circle.setStyle({color: color});
 
-            renderChart(data.Risk);
-        } catch (e) {
-            document.getElementById('risk-badge').innerText = "OFFLINE";
-        }
+            updateHistory(cedar, color);
+        } catch (e) { document.getElementById('status-text').innerText = "● OFFLINE"; }
     }
 
-    function renderChart(risks) {
-        const ctx = document.getElementById('miniChart').getContext('2d');
-        const riskMap = { "Low": 1, "Moderate": 2, "High": 3, "Very High": 4 };
-        
-        new Chart(ctx, {
+    function updateHistory(currentVal, color) {
+        let history = JSON.parse(localStorage.getItem('pollen_trend') || "[10, 25, 30]");
+        if (history[history.length-1] !== currentVal) {
+            history.push(currentVal);
+            if(history.length > 10) history.shift();
+            localStorage.setItem('pollen_trend', JSON.stringify(history));
+        }
+
+        const ctx = document.getElementById('historyChart').getContext('2d');
+        if (historyChart) historyChart.destroy();
+        historyChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: ['Grass', 'Weeds', 'Trees'],
+                labels: history.map(() => ''),
                 datasets: [{
-                    label: 'Risk Level',
-                    data: [riskMap[risks.grass_pollen], riskMap[risks.weed_pollen], riskMap[risks.tree_pollen]],
-                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent'),
-                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    data: history,
+                    borderColor: color,
+                    borderWidth: 3,
+                    tension: 0.4,
                     fill: true,
-                    tension: 0.4
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    pointRadius: 0
                 }]
             },
-            options: {
-                plugins: { legend: { display: false } },
-                scales: { 
-                    y: { display: false, max: 5 },
-                    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }
-                }
-            }
+            options: { maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x:{display:false}, y:{display:false}} }
         });
+    }
+
+    function shareStatus() {
+        const val = document.getElementById('cedar-val').innerText;
+        const risk = document.getElementById('risk-pill').innerText;
+        const text = encodeURIComponent(`Cedar Fever Alert! 🤧 The Cedar count in Fair Oaks Ranch is currently ${val} (${risk} Risk). Check the live radar here:`);
+        window.open(`https://twitter.com/intent/tweet?text=${text}`);
     }
 
     window.onload = init;
