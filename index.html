@@ -3,72 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar</title>
+    <title>Cedar Radar | Fair Oaks Ranch</title>
     <style>
-        body { background: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
-        .card { width: 350px; background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
-        .badge { padding: 15px; border-radius: 12px; font-weight: bold; margin: 20px 0; font-size: 0.85rem; }
-        #timestamp { font-size: 0.7rem; color: #94a3b8; margin-bottom: 10px; }
+        :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --sub: #64748b; }
+        body { background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+        .card { width: 90%; max-width: 380px; background: var(--card); border-radius: 24px; padding: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e2e8f0; }
+        .badge { padding: 15px; border-radius: 12px; font-weight: 800; margin: 20px 0; text-transform: uppercase; font-size: 0.9rem; }
+        .chart-box { height: 200px; }
+        #timestamp { font-size: 0.7rem; color: #94a3b8; margin: 10px 0; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 id="title">Pollen Radar</h2>
-    <p id="loc" style="color:#64748b">Locating...</p>
+    <h2 id="title" style="margin:0; color: var(--text);">Pollen Radar</h2>
+    <p id="loc-display" style="color: var(--sub); font-size: 0.85rem; margin-top: 5px;">📍 Fair Oaks Ranch Area</p>
     <p id="timestamp"></p>
-    <div class="badge" id="meter" style="background:#e2e8f0">Initializing...</div>
-    <canvas id="pollenChart" height="200"></canvas>
+    
+    <div class="badge" id="meter" style="background: #f1f5f9; color: var(--sub);">Connecting to Worker...</div>
+    
+    <div class="chart-box">
+        <canvas id="pollenChart"></canvas>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev'; 
+    const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev/'; 
+    let myChart = null;
 
     window.onload = () => {
-        navigator.geolocation.getCurrentPosition(
-            p => fetchPollen(p.coords.latitude, p.coords.longitude),
-            e => fetchPollen(29.70, -98.63) // Default to Fair Oaks Ranch
-        );
+        // We use the coordinates you just confirmed work
+        fetchData(29.70, -98.63);
     };
 
-    async function fetchPollen(lat, lon) {
+    async function fetchData(lat, lon) {
         const meter = document.getElementById('meter');
-        document.getElementById('loc').innerText = "📍 Fair Oaks Ranch Area";
-        
         try {
             const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
+            const result = await res.json();
             
-            // DIAGNOSTIC: If the worker returns an error, show it!
-            if (!res.ok) {
-                const errData = await res.json();
-                meter.innerText = `Error ${res.status}: ${errData.error || 'Check Console'}`;
-                meter.style.background = "#fee2e2";
-                return;
+            // Ambee data is nested in a 'data' array
+            const info = result.data[0];
+
+            // 1. Update Timestamp
+            document.getElementById('timestamp').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+
+            // 2. Extract Data (Using the exact uppercase keys from your JSON)
+            const treeRisk = info.Risk.tree_pollen;
+            const grassRisk = info.Risk.grass_pollen;
+            const weedRisk = info.Risk.weed_pollen;
+
+            // 3. Check for Cedar (In your JSON it is "Cypress / Juniper / Cedar")
+            const cedarCount = info.Species.Tree["Cypress / Juniper / Cedar"] || 0;
+            
+            if(cedarCount > 0) {
+                document.getElementById('title').innerText = "Cedar Radar";
+                document.getElementById('title').style.color = "#b91c1c";
             }
 
-            const result = await res.json();
-            const data = result.data[0];
-
-            // Success Logic
-            document.getElementById('timestamp').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
-            const species = data.species.Tree || [];
-            const isCedar = species.some(s => s.name === "Juniper");
-            if(isCedar) document.getElementById('title').innerText = "Cedar Radar";
-            
-            updateUI(data.Risk.tree_pollen, data.Risk.grass_pollen, data.Risk.weed_pollen, isCedar);
+            updateUI(treeRisk, grassRisk, weedRisk, cedarCount > 0 ? "Cedar" : "Tree");
         } catch (e) {
-            meter.innerText = "Connection Failed";
+            console.error(e);
+            meter.innerText = "Error: " + e.message;
+            meter.style.background = "#fee2e2";
         }
     }
 
-    function updateUI(tree, grass, weed, isCedar) {
+    function updateUI(tree, grass, weed, label) {
         const meter = document.getElementById('meter');
         const colors = { "High": "#ef4444", "Moderate": "#f59e0b", "Low": "#10b981" };
-        meter.innerText = `${tree} ${isCedar ? 'Cedar' : 'Tree'} Risk`;
-        meter.style.background = colors[tree] || "#e2e8f0";
-        meter.style.color = (tree === "High") ? "white" : "black";
-        // (Chart logic remains same as previous)
+        const vals = { "Low": 1, "Moderate": 2, "High": 3, "Very High": 4 };
+
+        meter.innerText = `${tree} ${label} Risk`;
+        meter.style.backgroundColor = colors[tree] || "#e2e8f0";
+        meter.style.color = (tree === "High") ? "white" : "#1e293b";
+
+        if(myChart) myChart.destroy();
+        myChart = new Chart(document.getElementById('pollenChart'), {
+            type: 'bar',
+            data: {
+                labels: [label, 'Grass', 'Ragweed'],
+                datasets: [{
+                    data: [vals[tree]||1, vals[grass]||1, vals[weed]||1],
+                    backgroundColor: [colors[tree]||'#94a3b8', '#10b981', '#f59e0b'],
+                    borderRadius: 8
+                }]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { max: 4, beginAtZero: true, ticks: { display: false } } }
+            }
+        });
     }
 </script>
 </body>
