@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar Pro | Live & Cached</title>
-    
+    <title>Cedar Radar Pro | Live Analytics</title>
+
+    <meta property="og:title" content="Live Cedar Radar Report" />
+    <meta property="og:description" content="Check the real-time pollen count and radar for my area." />
+    <meta property="og:image" content="social-preview.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -23,7 +29,6 @@
         
         #map { height: 320px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; position: relative; }
         
-        /* Data Status Badge */
         #data-source-badge {
             font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;
             margin-left: 8px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.1);
@@ -40,10 +45,7 @@
             border-radius: 12px; padding: 10px 15px; color: white; font-size: 0.8rem; outline: none;
             backdrop-filter: blur(5px);
         }
-        .search-btn {
-            background: var(--accent); border: none; border-radius: 12px; color: white;
-            padding: 0 15px; cursor: pointer; font-weight: 700;
-        }
+        .search-btn { background: var(--accent); border: none; border-radius: 12px; color: white; padding: 0 15px; cursor: pointer; font-weight: 700; }
 
         .recenter-btn {
             position: absolute; bottom: 15px; right: 15px; z-index: 1001;
@@ -60,7 +62,7 @@
         }
         @keyframes rotate-radar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; }
+        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; transition: 0.3s; }
         .share-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
         .btn-small { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; padding: 12px; font-size: 0.7rem; cursor: pointer; }
         
@@ -97,7 +99,7 @@
     <div class="tile full" style="padding: 0;">
         <div id="map">
             <div class="search-container">
-                <input type="text" id="map-search" placeholder="Enter City or Zip" onkeypress="if(event.key==='Enter') searchLocation()">
+                <input type="text" id="map-search" placeholder="City or Zip" onkeypress="if(event.key==='Enter') searchLocation()">
                 <button class="search-btn" onclick="searchLocation()">Go</button>
             </div>
             <div class="radar-sweep"></div>
@@ -116,11 +118,11 @@
 </div>
 
 <div style="width: 100%; max-width: 450px; padding: 15px;">
-    <button class="btn-main" onclick="takeSnapshot()">📸 Save Dashboard Snapshot</button>
+    <button class="btn-main" id="snap-btn" onclick="takeSnapshot()">📸 Save Dashboard Snapshot</button>
     <div class="share-grid">
-        <button class="btn-small" onclick="shareX()">X</button>
-        <button class="btn-small" onclick="shareFB()">FB</button>
-        <button class="btn-small" onclick="copyLink()">LINK</button>
+        <button class="btn-small" onclick="window.open('https://twitter.com/intent/tweet?url='+encodeURIComponent(window.location.href))">X</button>
+        <button class="btn-small" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(window.location.href))">FB</button>
+        <button class="btn-small" onclick="handleShare()">SHARE LINK</button>
     </div>
     <p id="timestamp"></p>
 </div>
@@ -150,40 +152,28 @@
                 const { lat, lon } = results[0];
                 map.flyTo([lat, lon], 10);
                 updateUI(lat, lon);
-            } else { alert("Location not found."); }
-        } catch (e) { alert("Search error."); }
+            }
+        } catch (e) { console.error("Search failed"); }
     }
 
     async function updateUI(lat, lon) {
         try {
-            // Get Display Name
             const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             const geoData = await geo.json();
-            const addr = geoData.address;
-            document.getElementById('city-name').innerText = addr.city || addr.town || addr.suburb || addr.village || "Target Area";
+            document.getElementById('city-name').innerText = geoData.address.city || geoData.address.town || "Local Area";
 
-            // Get Data from Worker
             const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
-            
-            // Handle Data Status Badge
             const source = res.headers.get("X-Data-Source");
             const badge = document.getElementById('data-source-badge');
-            if(source === "Cloudflare-Cache") {
-                badge.innerText = "CACHED";
-                badge.className = "status-cached";
-            } else {
-                badge.innerText = "LIVE";
-                badge.className = "status-live";
-            }
+            badge.innerText = source === "Cloudflare-Cache" ? "CACHED" : "LIVE";
+            badge.className = source === "Cloudflare-Cache" ? "status-cached" : "status-live";
 
             const json = await res.json();
             const data = json.data[0];
-
             const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
-            const risk = data.Risk.tree_pollen;
 
             document.getElementById('cedar-val').innerText = cedar;
-            document.getElementById('risk-pill').innerText = risk.toUpperCase();
+            document.getElementById('risk-pill').innerText = data.Risk.tree_pollen.toUpperCase();
             document.getElementById('grass-val').innerText = data.Risk.grass_pollen;
             document.getElementById('weed-val').innerText = data.Risk.weed_pollen;
             document.getElementById('timestamp').innerText = `DATA SYNCED: ${new Date().toLocaleTimeString()}`;
@@ -231,7 +221,7 @@
     }
 
     function takeSnapshot() {
-        const btn = document.querySelector('.btn-main');
+        const btn = document.getElementById('snap-btn');
         btn.innerText = "Generating PNG...";
         document.querySelector('.search-container').style.display = 'none';
         document.querySelector('.recenter-btn').style.display = 'none';
@@ -241,18 +231,29 @@
             link.download = `CedarRadar-${document.getElementById('city-name').innerText}.png`;
             link.href = canvas.toDataURL();
             link.click();
-            btn.innerText = "📸 Save Dashboard Snapshot";
+            
+            btn.innerText = "✅ Saved! Share it now.";
+            setTimeout(() => { btn.innerText = "📸 Save Dashboard Snapshot"; }, 3000);
             document.querySelector('.search-container').style.display = 'flex';
             document.querySelector('.recenter-btn').style.display = 'block';
         });
     }
 
-    function shareX() {
+    async function handleShare() {
         const city = document.getElementById('city-name').innerText;
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('Current Cedar Report for ' + city)}&url=${window.location.href}`);
+        const shareData = {
+            title: 'Cedar Radar Pro',
+            text: `The Cedar count in ${city} is currently ${document.getElementById('cedar-val').innerText} gr/m3.`,
+            url: window.location.href
+        };
+
+        if (navigator.share) {
+            try { await navigator.share(shareData); } catch (e) {}
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert("Link copied! Paste it in your post.");
+        }
     }
-    function shareFB() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`); }
-    function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Link copied!"); }
 </script>
 </body>
 </html>
