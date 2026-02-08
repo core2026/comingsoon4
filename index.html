@@ -11,7 +11,6 @@
         input { flex: 1; padding: 12px; border: 2px solid #edf2f7; border-radius: 12px; font-size: 1rem; outline: none; }
         button { padding: 12px 18px; background: #007aff; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.2s; }
         button:hover { background: #0056b3; }
-        .secondary-btn { background: #636e72; font-size: 0.8rem; padding: 8px 12px; margin-top: 10px; }
         .status-badge { background: #dfe6e9; padding: 12px; border-radius: 12px; font-weight: 800; margin: 20px 0; text-transform: uppercase; }
         .chart-container { position: relative; height: 250px; }
         #debug-info { font-size: 0.65rem; color: #b2bec3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
@@ -24,7 +23,7 @@
     <p id="loc-display" style="color:#636e72; font-size:0.9rem; margin:10px 0;">Detecting location...</p>
     
     <div class="input-group">
-        <input type="text" id="zipInput" placeholder="Enter Zip (e.g. 78015)">
+        <input type="text" id="zipInput" placeholder="Enter Zip Code">
         <button onclick="searchByZip()">GO</button>
     </div>
 
@@ -34,7 +33,7 @@
         <canvas id="pollenChart"></canvas>
     </div>
 
-    <button class="secondary-btn" onclick="initGPS()">📍 Re-Sync My GPS</button>
+    <button style="background:#636e72; font-size:0.8rem; margin-top:10px;" onclick="initGPS()">📍 Use My GPS</button>
     
     <div id="debug-info">System: Waiting for data...</div>
 </div>
@@ -43,7 +42,6 @@
 <script>
     let myChart = null;
 
-    // Start GPS on load
     window.onload = initGPS;
 
     function initGPS() {
@@ -51,8 +49,8 @@
         navigator.geolocation.getCurrentPosition(
             (pos) => getPollen(pos.coords.latitude, pos.coords.longitude, "Your Location"),
             (err) => { 
-                document.getElementById('loc-display').innerText = "Location access denied. Use Zip.";
-                updateDebug("Geolocation Error: " + err.message);
+                document.getElementById('loc-display').innerText = "Location denied. Enter zip.";
+                updateDebug("GPS Denied");
             }
         );
     }
@@ -70,25 +68,26 @@
 
     async function getPollen(lat, lon, name) {
         document.getElementById('loc-display').innerText = "📍 " + name;
-        updateDebug(`Fetching lat:${lat.toFixed(2)} lon:${lon.toFixed(2)}`);
+        updateDebug("Fetching hourly data...");
 
         try {
-            // Updated URL: Using 'daily' instead of 'current' for more reliable data delivery
-            const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&daily=alder_pollen,birch_pollen,grass_pollen,ragweed_pollen&timezone=auto`;
+            // FIX: Changed from 'daily' to 'hourly' to fix the "ForecastVariableDaily" error
+            const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=alder_pollen,birch_pollen,grass_pollen,ragweed_pollen&timezone=auto&forecast_days=1`;
             
             const res = await fetch(url);
             const data = await res.json();
 
-            if (!data.daily) throw new Error("API returned no daily data");
+            if (!data.hourly) throw new Error("No data found at this location");
 
-            // Grabbing the first day's forecast (today)
-            const d = data.daily;
-            const tree = (d.alder_pollen[0] || 0) + (d.birch_pollen[0] || 0);
-            const grass = d.grass_pollen[0] || 0;
-            const weed = d.ragweed_pollen[0] || 0;
+            // Calculate "Today's Max" from the hourly arrays
+            const getMax = (arr) => Math.max(...arr.filter(v => v != null));
+            
+            const treeMax = getMax(data.hourly.alder_pollen) + getMax(data.hourly.birch_pollen);
+            const grassMax = getMax(data.hourly.grass_pollen);
+            const weedMax = getMax(data.hourly.ragweed_pollen);
 
-            updateDebug(`Data Received: Tree(${tree}) Grass(${grass}) Weed(${weed})`);
-            drawUI(tree, grass, weed);
+            updateDebug(`Today's Peak: Tree(${treeMax}) Grass(${grassMax})`);
+            drawUI(treeMax, grassMax, weedMax);
 
         } catch (err) {
             updateDebug("Error: " + err.message);
@@ -99,17 +98,16 @@
     function drawUI(tree, grass, weed) {
         const meter = document.getElementById('sneeze-meter');
         
-        // Rating Logic
-        if (tree > 50) {
-            meter.innerText = "🚨 CEDAR APOCALYPSE";
+        if (tree > 60) {
+            meter.innerText = "🚨 High Pollen Alert";
             meter.style.background = "#ff7675";
             meter.style.color = "white";
-        } else if (tree > 10) {
-            meter.innerText = "⚠️ HIGH SNEEZE RISK";
+        } else if (tree > 15) {
+            meter.innerText = "⚠️ Moderate Levels";
             meter.style.background = "#fdcb6e";
             meter.style.color = "black";
         } else {
-            meter.innerText = "🤠 CLEAR SKIES";
+            meter.innerText = "🤠 Clear Skies";
             meter.style.background = "#55efc4";
             meter.style.color = "black";
         }
@@ -120,7 +118,7 @@
         myChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: ['Cedar/Tree', 'Grass', 'Ragweed'],
+                labels: ['Tree', 'Grass', 'Ragweed'],
                 datasets: [{
                     data: [tree, grass, weed],
                     backgroundColor: ['#d63031', '#00b894', '#fdcb6e'],
@@ -143,4 +141,3 @@
 
 </body>
 </html>
-
