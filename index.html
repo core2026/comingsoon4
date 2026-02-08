@@ -3,77 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar Pro</title>
+    <title>Cedar Tracker Pro | Fair Oaks Ranch</title>
     <style>
-        :root { --accent: #10b981; }
+        :root { --accent: #10b981; --glass: rgba(15, 23, 42, 0.8); }
         body { 
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            background: #0f172a; 
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                              radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                              radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
             color: white; display: flex; justify-content: center; align-items: center; 
-            min-height: 100vh; margin: 0; font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh; margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
         .card { 
-            width: 90%; max-width: 400px; background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(12px); border-radius: 30px; padding: 35px;
+            width: 95%; max-width: 420px; background: var(--glass);
+            backdrop-filter: blur(20px); border-radius: 40px; padding: 40px;
             border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); position: relative;
+            overflow: hidden;
         }
-        .cedar-count { font-size: 3rem; font-weight: 900; margin: 10px 0; text-shadow: 0 0 20px var(--accent); }
-        .badge { 
-            display: inline-block; padding: 8px 20px; border-radius: 100px; 
-            background: var(--accent); font-size: 0.8rem; font-weight: bold; text-transform: uppercase;
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .location-box { text-align: left; }
+        .location-box h1 { margin: 0; font-size: 1.2rem; letter-spacing: -0.5px; }
+        .location-box p { margin: 0; font-size: 0.75rem; color: #94a3b8; }
+        
+        .main-display { margin: 30px 0; }
+        .cedar-value { font-size: 4.5rem; font-weight: 800; line-height: 1; letter-spacing: -2px; }
+        .unit { font-size: 1rem; color: #94a3b8; font-weight: 400; margin-bottom: 10px; }
+        
+        .risk-pill { 
+            display: inline-block; padding: 6px 16px; border-radius: 100px; 
+            background: var(--accent); font-size: 0.75rem; font-weight: 700; 
+            text-transform: uppercase; margin-bottom: 20px; box-shadow: 0 0 20px var(--accent);
         }
-        .legend { 
-            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; 
-            margin-top: 25px; font-size: 0.7rem; color: #94a3b8;
+
+        .stats-grid { 
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; 
+            margin: 30px 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 25px;
         }
-        .legend-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; }
-        canvas { margin-top: 20px; }
+        .stat-card { background: rgba(255,255,255,0.03); padding: 15px 10px; border-radius: 20px; }
+        .stat-card span { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; font-weight: 600; }
+        .stat-card div { font-size: 1rem; font-weight: 700; margin-top: 5px; }
+
+        .forecast-row { 
+            background: rgba(255,255,255,0.05); padding: 15px 20px; border-radius: 20px;
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem;
+        }
+        #timestamp { font-size: 0.65rem; color: #475569; margin-top: 25px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <div class="badge" id="risk-badge">Low Risk</div>
-    <div class="cedar-count" id="count-val">0</div>
-    <div style="font-size: 0.9rem; opacity: 0.8;">Mountain Cedar ($gr/m^3$)</div>
-    
-    <div class="legend">
-        <div class="legend-item"><b>Grass</b><br><span id="grass-val">-</span></div>
-        <div class="legend-item"><b>Weeds</b><br><span id="weed-val">-</span></div>
-        <div class="legend-item"><b>Air Quality</b><br>Good</div>
+    <div class="header">
+        <div class="location-box">
+            <h1>Fair Oaks Ranch</h1>
+            <p id="date-today">Saturday, Feb 7</p>
+        </div>
+        <div id="weather-icon" style="font-size: 1.5rem;">🌵</div>
     </div>
 
-    <canvas id="pollenChart" height="150"></canvas>
-    <p id="timestamp" style="font-size: 0.6rem; opacity: 0.4; margin-top: 20px;"></p>
+    <div class="main-display">
+        <div class="risk-pill" id="risk-badge">Analyzing...</div>
+        <div class="cedar-value" id="count-val">0</div>
+        <div class="unit">gr/m³ (Mountain Cedar)</div>
+    </div>
+
+    <div class="forecast-row">
+        <span><b>Primary Allergen</b></span>
+        <span id="top-species" style="color: var(--accent)">Calculating...</span>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span>Grass</span>
+            <div id="grass-val">-</div>
+        </div>
+        <div class="stat-card">
+            <span>Weeds</span>
+            <div id="weed-val">-</div>
+        </div>
+        <div class="stat-card">
+            <span>Trees</span>
+            <div id="tree-val">-</div>
+        </div>
+    </div>
+
+    <canvas id="miniChart" height="100"></canvas>
+    
+    <p id="timestamp"></p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
 
-    async function updateApp() {
-        const res = await fetch(`${WORKER_URL}?lat=29.70&lon=-98.63`);
-        const result = await res.json();
-        const info = result.data[0];
+    async function init() {
+        // Set Today's Date
+        const options = { weekday: 'long', month: 'short', day: 'numeric' };
+        document.getElementById('date-today').innerText = new Date().toLocaleDateString('en-US', options);
 
-        const cedar = info.Species.Tree["Cypress / Juniper / Cedar"] || 0;
-        const risk = info.Risk.tree_pollen;
+        try {
+            const res = await fetch(`${WORKER_URL}?lat=29.70&lon=-98.63`);
+            const result = await res.json();
+            const data = result.data[0];
 
-        // UI Updates
-        document.getElementById('count-val').innerText = cedar;
-        document.getElementById('risk-badge').innerText = `${risk} Risk`;
-        document.getElementById('grass-val').innerText = info.Risk.grass_pollen;
-        document.getElementById('weed-val').innerText = info.Risk.weed_pollen;
-        document.getElementById('timestamp').innerText = `Last sync: ${new Date().toLocaleTimeString()}`;
+            // Core Values
+            const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
+            const treeRisk = data.Risk.tree_pollen;
+            
+            // UI Updates
+            document.getElementById('count-val').innerText = cedar;
+            document.getElementById('risk-badge').innerText = `${treeRisk} Risk`;
+            document.getElementById('grass-val').innerText = data.Risk.grass_pollen;
+            document.getElementById('weed-val').innerText = data.Risk.weed_pollen;
+            document.getElementById('tree-val').innerText = treeRisk;
+            document.getElementById('top-species').innerText = cedar > 0 ? "Mountain Cedar" : "Other Trees";
+            document.getElementById('timestamp').innerText = `DATA SYNCED AT ${new Date().toLocaleTimeString()}`;
 
-        // Change color based on risk
-        const root = document.querySelector(':root');
-        if (risk === "High" || cedar > 100) root.style.setProperty('--accent', '#ef4444');
-        else if (risk === "Moderate") root.style.setProperty('--accent', '#f59e0b');
-        else root.style.setProperty('--accent', '#10b981');
+            // Weather Theme Logic
+            const root = document.querySelector(':root');
+            if (cedar > 500) {
+                root.style.setProperty('--accent', '#ef4444');
+                document.getElementById('weather-icon').innerText = '🚨';
+            } else if (cedar > 100) {
+                root.style.setProperty('--accent', '#f59e0b');
+                document.getElementById('weather-icon').innerText = '🤧';
+            } else {
+                root.style.setProperty('--accent', '#10b981');
+                document.getElementById('weather-icon').innerText = '🤠';
+            }
+
+            renderChart(data.Risk);
+        } catch (e) {
+            document.getElementById('risk-badge').innerText = "OFFLINE";
+        }
     }
 
-    window.onload = updateApp;
+    function renderChart(risks) {
+        const ctx = document.getElementById('miniChart').getContext('2d');
+        const riskMap = { "Low": 1, "Moderate": 2, "High": 3, "Very High": 4 };
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['Grass', 'Weeds', 'Trees'],
+                datasets: [{
+                    label: 'Risk Level',
+                    data: [riskMap[risks.grass_pollen], riskMap[risks.weed_pollen], riskMap[risks.tree_pollen]],
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--accent'),
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { 
+                    y: { display: false, max: 5 },
+                    x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    window.onload = init;
 </script>
 </body>
 </html>
