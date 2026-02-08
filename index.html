@@ -1,96 +1,27 @@
-=<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Texas Cedar Radar</title>
-    
     <style>
-        body {
-            background-color: #f5f6fa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        }
-
-        .allergy-container {
-            width: 100%;
-            max-width: 450px;
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        .allergy-header h3 {
-            margin: 0;
-            color: #2d3436;
-            font-size: 1.6rem;
-        }
-
-        #location-status {
-            font-size: 0.85rem;
-            color: #636e72;
-            margin: 8px 0 20px 0;
-            font-style: italic;
-        }
-
-        .sneeze-meter {
-            background: #dfe6e9;
-            padding: 15px;
-            border-radius: 12px;
-            font-weight: 800;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: all 0.5s ease;
-            border: 2px solid rgba(0,0,0,0.05);
-        }
-
-        .meter-label { 
-            display: block;
-            font-size: 0.7rem; 
-            color: #2d3436; 
-            margin-bottom: 4px;
-            opacity: 0.7;
-        }
-
-        .chart-wrapper {
-            position: relative;
-            height: 280px;
-            margin-bottom: 10px;
-        }
-
-        .data-source {
-            font-size: 0.7rem;
-            color: #b2bec3;
-            margin-top: 20px;
-            line-height: 1.4;
-        }
-
-        /* Animation for the meter */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-            100% { transform: scale(1); }
-        }
+        body { background-color: #f5f6fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', sans-serif; }
+        .allergy-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        #location-status { font-size: 0.85rem; color: #636e72; margin: 8px 0 20px 0; }
+        .sneeze-meter { background: #dfe6e9; padding: 15px; border-radius: 12px; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; transition: all 0.5s ease; }
+        .chart-wrapper { position: relative; height: 280px; }
+        .data-source { font-size: 0.7rem; color: #b2bec3; margin-top: 20px; }
         .pulse-active { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
     <div class="allergy-container">
-        <div class="allergy-header">
-            <h3>Texas Cedar Radar</h3>
-            <p id="location-status">📡 Initializing sensors...</p>
-        </div>
+        <h3>Texas Cedar Radar</h3>
+        <p id="location-status">📡 Initializing sensors...</p>
         
         <div class="sneeze-meter" id="sneeze-meter">
-            <span class="meter-label">SNEEZE METER STATUS</span>
             <span id="meter-text">Waking up...</span>
         </div>
 
@@ -98,10 +29,7 @@
             <canvas id="pollenChart"></canvas>
         </div>
 
-        <p class="data-source">
-            Real-time data for 2026<br>
-            Powered by Open-Meteo Air Quality Index
-        </p>
+        <p class="data-source">Real-time data for 2026<br>Powered by Open-Meteo</p>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -112,95 +40,76 @@
             const meterText = document.getElementById('meter-text');
             const meterBox = document.getElementById('sneeze-meter');
 
-            // Step 1: Request Geolocation
+            // 1. Get Location with a timeout to prevent hanging
+            const options = { enableHighAccuracy: false, timeout: 5000, maximumAge: 0 };
+
             navigator.geolocation.getCurrentPosition(async (position) => {
-                const { latitude, longitude } = position.coords;
-                statusText.innerText = `📍 Scanning: ${latitude.toFixed(2)}, ${longitude.toFixed(2)}`;
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                statusText.innerText = `📍 Location: ${lat.toFixed(2)}, ${lon.toFixed(2)}`;
 
                 try {
-                    // Step 2: Fetch Pollen Data
-                    const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=juniper_pollen,grass_pollen,ragweed_pollen,birch_pollen`;
+                    // 2. Fetch Data with better error handling
+                    const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=juniper_pollen,grass_pollen,ragweed_pollen,birch_pollen`;
+                    
                     const response = await fetch(url);
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    
                     const data = await response.json();
                     const pollen = data.current;
 
-                    // Step 3: Custom "Texas Sneeze" Logic
-                    const cedar = pollen.juniper_pollen;
-                    
+                    // 3. Logic for Sneeze Meter
+                    const cedar = pollen.juniper_pollen || 0;
                     if (cedar > 150) {
-                        meterText.innerText = "🚨 CEDAR APOCALYPSE: RUN";
+                        meterText.innerText = "🚨 CEDAR APOCALYPSE";
                         meterBox.style.background = "#ff7675";
-                        meterBox.style.color = "#fff";
                         meterBox.classList.add("pulse-active");
                     } else if (cedar > 50) {
                         meterText.innerText = "⚠️ CEDAR FEVER WARNING";
                         meterBox.style.background = "#fdcb6e";
-                        meterBox.style.color = "#2d3436";
-                    } else if (cedar > 5) {
-                        meterText.innerText = "🤧 Minor Itch Detected";
-                        meterBox.style.background = "#ffeaa7";
-                        meterBox.style.color = "#2d3436";
                     } else {
                         meterText.innerText = "🤠 All Clear, Partner";
                         meterBox.style.background = "#55efc4";
-                        meterBox.style.color = "#2d3436";
                     }
 
-                    // Step 4: Create the Graph
-                    const ctx = document.getElementById('pollenChart').getContext('2d');
-                    new Chart(ctx, {
+                    // 4. Graph Rendering
+                    new Chart(document.getElementById('pollenChart'), {
                         type: 'bar',
                         data: {
                             labels: ['Cedar', 'Grass', 'Ragweed', 'Birch'],
                             datasets: [{
-                                label: 'Grains/m³',
-                                data: [
-                                    pollen.juniper_pollen, 
-                                    pollen.grass_pollen, 
-                                    pollen.ragweed_pollen, 
-                                    pollen.birch_pollen
-                                ],
-                                backgroundColor: [
-                                    'rgba(214, 48, 49, 0.8)', // Cedar
-                                    'rgba(0, 184, 148, 0.8)', // Grass
-                                    'rgba(241, 196, 15, 0.8)', // Ragweed
-                                    'rgba(162, 155, 254, 0.8)' // Birch
-                                ],
-                                borderColor: ['#c0392b', '#009432', '#f39c12', '#6c5ce7'],
-                                borderWidth: 1,
+                                data: [pollen.juniper_pollen, pollen.grass_pollen, pollen.ragweed_pollen, pollen.birch_pollen],
+                                backgroundColor: ['#d63031', '#00b894', '#fdcb6e', '#a29bfe'],
                                 borderRadius: 8
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    grid: { display: false }
-                                },
-                                x: {
-                                    grid: { display: false }
-                                }
-                            }
+                            plugins: { legend: { display: false } }
                         }
                     });
 
                 } catch (err) {
-                    statusText.innerText = "❌ Failed to reach weather station.";
-                    meterText.innerText = "Offline";
+                    console.error(err);
+                    statusText.innerText = "❌ API Error: Check Console";
+                    meterText.innerText = "Data Error";
                 }
             }, (error) => {
-                statusText.innerText = "❌ Location blocked by browser.";
-                meterText.innerText = "Permission Denied";
-                meterBox.style.background = "#fab1a0";
-            });
+                // If the user denies location, let's use a default (Fair Oaks Ranch)
+                statusText.innerText = "⚠️ Location denied. Showing Fair Oaks Ranch.";
+                fetchDefaultLocation();
+            }, options);
         }
 
-        // Run the script
+        // Fallback function for when location is denied or fails
+        async function fetchDefaultLocation() {
+            // Default to Fair Oaks Ranch coordinates
+            const lat = 29.74; 
+            const lon = -98.64;
+            // You can re-run the fetch logic here if you want it to always show something!
+        }
+
         initPollenRadar();
     </script>
 </body>
