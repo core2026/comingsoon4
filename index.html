@@ -8,24 +8,24 @@
         :root { --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --sub: #64748b; }
         body { background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .card { width: 90%; max-width: 400px; background: var(--card); border-radius: 24px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); text-align: center; border: 1px solid #e2e8f0; }
-        .badge { padding: 16px; border-radius: 16px; font-weight: 800; margin: 24px 0; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; }
+        .badge { padding: 16px; border-radius: 16px; font-weight: 800; margin: 24px 0; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.9rem; transition: all 0.3s ease; }
         .chart-box { height: 250px; position: relative; }
         #loc-display { color: var(--sub); font-size: 0.85rem; margin-top: 8px; font-weight: 500; }
+        #timestamp { font-size: 0.7rem; color: #94a3b8; margin-top: 5px; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h2 id="title" style="margin:0; color: var(--text); font-size: 1.5rem;">Pollen Radar</h2>
-    <p id="loc-display">Detecting your location...</p>
-    
-    <div class="badge" id="meter" style="background: #f1f5f9; color: var(--sub);">Analyzing Air Quality...</div>
+    <p id="loc-display">Detecting location...</p>
+    <p id="timestamp"></p> <div class="badge" id="meter" style="background: #f1f5f9; color: var(--sub);">Analyzing Air...</div>
     
     <div class="chart-box">
         <canvas id="pollenChart"></canvas>
     </div>
     
-    <p style="font-size: 0.7rem; color: #cbd5e1; margin-top: 20px;">Hyperlocal Data via Cloudflare Proxy</p>
+    <p style="font-size: 0.7rem; color: #cbd5e1; margin-top: 20px;">Secured via Cloudflare Worker Proxy</p>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -36,11 +36,7 @@
     window.onload = () => {
         navigator.geolocation.getCurrentPosition(
             pos => fetchData(pos.coords.latitude, pos.coords.longitude),
-            err => {
-                document.getElementById('loc-display').innerText = "Location access required.";
-                // Fallback to Fair Oaks Ranch coordinates if GPS is blocked
-                fetchData(29.75, -98.63); 
-            }
+            err => fetchData(29.75, -98.63) // Fallback for Fair Oaks Ranch
         );
     };
 
@@ -53,12 +49,17 @@
             const result = await res.json();
             const data = result.data[0];
 
-            // Extract Data
-            const treeRisk = data.Risk.tree_pollen || "Low";
-            const grassRisk = data.Risk.grass_pollen || "Low";
-            const weedRisk = data.Risk.weed_pollen || "Low";
+            // Update Timestamp
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+            document.getElementById('timestamp').innerText = `Updated: Today at ${timeStr}`;
 
-            // Check specifically for Mountain Cedar (Juniper)
+            // Extract Risk levels
+            const tree = data.Risk.tree_pollen || "Low";
+            const grass = data.Risk.grass_pollen || "Low";
+            const weed = data.Risk.weed_pollen || "Low";
+
+            // Identify Cedar
             const species = data.species.Tree || [];
             const isCedar = species.some(s => s.name === "Juniper");
             
@@ -67,10 +68,9 @@
                 document.getElementById('title').style.color = "#b91c1c";
             }
 
-            updateUI(treeRisk, grassRisk, weedRisk, isCedar ? "Mountain Cedar" : "Trees");
+            updateUI(tree, grass, weed, isCedar ? "Mountain Cedar" : "Trees");
         } catch (e) {
-            console.error(e);
-            document.getElementById('meter').innerText = "Data Temporarily Offline";
+            document.getElementById('meter').innerText = "Update Error";
         }
     }
 
