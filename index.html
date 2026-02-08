@@ -3,142 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Texas Cedar Radar</title>
+    <title>Pollen Radar</title>
     <style>
-        body { background-color: #f5f6fa; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', sans-serif; }
-        .allergy-container { width: 100%; max-width: 450px; background: #ffffff; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
-        .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
-        input { flex: 1; padding: 12px; border: 2px solid #eee; border-radius: 10px; font-size: 1rem; outline: none; transition: border 0.3s; }
-        input:focus { border-color: #0984e3; }
-        button { padding: 10px 15px; background: #0984e3; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .loc-btn { background: #6c5ce7; margin-bottom: 20px; width: 100%; }
-        .sneeze-meter { background: #dfe6e9; padding: 15px; border-radius: 12px; font-weight: 800; margin-bottom: 25px; text-transform: uppercase; border: 2px solid rgba(0,0,0,0.05); }
-        .chart-wrapper { position: relative; height: 250px; }
-        #location-label { font-size: 0.9rem; color: #636e72; margin-bottom: 10px; font-weight: bold; min-height: 1.2em; }
-        .loading-spinner { display: none; margin-bottom: 10px; color: #0984e3; font-weight: bold; }
+        body { background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: 'Segoe UI', sans-serif; }
+        .card { width: 100%; max-width: 420px; background: white; border-radius: 24px; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); text-align: center; }
+        .input-group { display: flex; gap: 8px; margin: 15px 0; }
+        input { flex: 1; padding: 12px; border: 2px solid #edf2f7; border-radius: 12px; font-size: 1rem; outline: none; }
+        button { padding: 12px 18px; background: #007aff; color: white; border: none; border-radius: 12px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        button:hover { background: #0056b3; }
+        .secondary-btn { background: #636e72; font-size: 0.8rem; padding: 8px 12px; margin-top: 10px; }
+        .status-badge { background: #dfe6e9; padding: 12px; border-radius: 12px; font-weight: 800; margin: 20px 0; text-transform: uppercase; }
+        .chart-container { position: relative; height: 250px; }
+        #debug-info { font-size: 0.65rem; color: #b2bec3; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="allergy-container">
-    <h3>Texas Cedar Radar</h3>
+<div class="card">
+    <h2 style="margin:0; color:#2d3436;">Cedar Radar</h2>
+    <p id="loc-display" style="color:#636e72; font-size:0.9rem; margin:10px 0;">Detecting location...</p>
     
-    <button class="loc-btn" onclick="useGPS()">📍 Use Current Location</button>
-
     <div class="input-group">
-        <input type="text" id="zipInput" placeholder="Or enter Zip Code...">
-        <button onclick="searchByZip()">Go</button>
+        <input type="text" id="zipInput" placeholder="Enter Zip (e.g. 78015)">
+        <button onclick="searchByZip()">GO</button>
     </div>
 
-    <div id="location-label">Waiting for location...</div>
-    <div id="loader" class="loading-spinner">Fetching Pollen Data...</div>
-    
-    <div class="sneeze-meter" id="sneeze-meter">
-        <span id="meter-text">Status: Idle</span>
-    </div>
+    <div class="status-badge" id="sneeze-meter">Ready</div>
 
-    <div class="chart-wrapper">
+    <div class="chart-container">
         <canvas id="pollenChart"></canvas>
     </div>
 
-    <p style="font-size: 0.7rem; color: #b2bec3; margin-top: 20px;">Real-time 2026 Hill Country Forecast</p>
+    <button class="secondary-btn" onclick="initGPS()">📍 Re-Sync My GPS</button>
+    
+    <div id="debug-info">System: Waiting for data...</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    let pollenChart = null;
+    let myChart = null;
 
-    // Trigger GPS automatically on load
-    window.onload = useGPS;
+    // Start GPS on load
+    window.onload = initGPS;
 
-    async function useGPS() {
-        if (!navigator.geolocation) return alert("Geolocation not supported");
-        document.getElementById('location-label').innerText = "📡 Requesting GPS...";
-        
+    function initGPS() {
+        if (!navigator.geolocation) return updateDebug("GPS not supported");
         navigator.geolocation.getCurrentPosition(
-            (pos) => fetchPollen(pos.coords.latitude, pos.coords.longitude, "Your Location"),
-            (err) => document.getElementById('location-label').innerText = "❌ Location denied. Use Zip Code."
+            (pos) => getPollen(pos.coords.latitude, pos.coords.longitude, "Your Location"),
+            (err) => { 
+                document.getElementById('loc-display').innerText = "Location access denied. Use Zip.";
+                updateDebug("Geolocation Error: " + err.message);
+            }
         );
     }
 
     async function searchByZip() {
         const zip = document.getElementById('zipInput').value;
-        if (zip.length < 5) return alert("Enter a valid zip");
-        
+        if (zip.length < 5) return;
         try {
-            const resp = await fetch(`https://api.zippopotam.us/us/${zip}`);
-            const data = await resp.json();
+            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+            const data = await res.json();
             const place = data.places[0];
-            fetchPollen(place.latitude, place.longitude, `${place['place name']}, ${place['state abbreviation']}`);
-        } catch (e) { alert("Zip code not found"); }
+            getPollen(place.latitude, place.longitude, `${place['place name']}, ${place['state abbreviation']}`);
+        } catch (e) { updateDebug("Zip not found"); }
     }
 
-    async function fetchPollen(lat, lon, name) {
-        document.getElementById('loader').style.display = "block";
-        document.getElementById('location-label').innerText = "📍 " + name;
+    async function getPollen(lat, lon, name) {
+        document.getElementById('loc-display').innerText = "📍 " + name;
+        updateDebug(`Fetching lat:${lat.toFixed(2)} lon:${lon.toFixed(2)}`);
 
         try {
-            // FIX: We fetch 'hourly' data and take the first value to ensure we get actual numbers
-            const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=alder_pollen,birch_pollen,grass_pollen,ragweed_pollen&timezone=auto`;
+            // Updated URL: Using 'daily' instead of 'current' for more reliable data delivery
+            const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&daily=alder_pollen,birch_pollen,grass_pollen,ragweed_pollen&timezone=auto`;
             
-            const resp = await fetch(url);
-            const data = await resp.json();
-            
-            // Get the first index of hourly data (current hour)
-            const h = data.hourly;
-            const tree = (h.alder_pollen[0] || 0) + (h.birch_pollen[0] || 0);
-            const grass = h.grass_pollen[0] || 0;
-            const weed = h.ragweed_pollen[0] || 0;
+            const res = await fetch(url);
+            const data = await res.json();
 
-            updateUI(tree, grass, weed);
+            if (!data.daily) throw new Error("API returned no daily data");
+
+            // Grabbing the first day's forecast (today)
+            const d = data.daily;
+            const tree = (d.alder_pollen[0] || 0) + (d.birch_pollen[0] || 0);
+            const grass = d.grass_pollen[0] || 0;
+            const weed = d.ragweed_pollen[0] || 0;
+
+            updateDebug(`Data Received: Tree(${tree}) Grass(${grass}) Weed(${weed})`);
+            drawUI(tree, grass, weed);
+
         } catch (err) {
-            console.error(err);
-            document.getElementById('meter-text').innerText = "API Error";
-        } finally {
-            document.getElementById('loader').style.display = "none";
+            updateDebug("Error: " + err.message);
+            document.getElementById('sneeze-meter').innerText = "Data Unavailable";
         }
     }
 
-    function updateUI(tree, grass, weed) {
-        const meterText = document.getElementById('meter-text');
-        const meterBox = document.getElementById('sneeze-meter');
-
-        // Logic adjusted for hourly scale (grains per m3)
+    function drawUI(tree, grass, weed) {
+        const meter = document.getElementById('sneeze-meter');
+        
+        // Rating Logic
         if (tree > 50) {
-            meterText.innerText = "🚨 CEDAR APOCALYPSE";
-            meterBox.style.background = "#ff7675";
-            meterBox.style.color = "white";
+            meter.innerText = "🚨 CEDAR APOCALYPSE";
+            meter.style.background = "#ff7675";
+            meter.style.color = "white";
         } else if (tree > 10) {
-            meterText.innerText = "⚠️ High Sneeze Risk";
-            meterBox.style.background = "#fdcb6e";
-            meterBox.style.color = "black";
+            meter.innerText = "⚠️ HIGH SNEEZE RISK";
+            meter.style.background = "#fdcb6e";
+            meter.style.color = "black";
         } else {
-            meterText.innerText = "🤠 Clear Skies";
-            meterBox.style.background = "#55efc4";
-            meterBox.style.color = "black";
+            meter.innerText = "🤠 CLEAR SKIES";
+            meter.style.background = "#55efc4";
+            meter.style.color = "black";
         }
 
         const ctx = document.getElementById('pollenChart').getContext('2d');
-        if (pollenChart) pollenChart.destroy();
+        if (myChart) myChart.destroy();
         
-        pollenChart = new Chart(ctx, {
+        myChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ['Cedar/Tree', 'Grass', 'Ragweed'],
                 datasets: [{
                     data: [tree, grass, weed],
                     backgroundColor: ['#d63031', '#00b894', '#fdcb6e'],
-                    borderRadius: 8
+                    borderRadius: 10
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, title: { display: true, text: 'Grains/m³' } } }
+                scales: { y: { beginAtZero: true } }
             }
         });
     }
+
+    function updateDebug(txt) {
+        document.getElementById('debug-info').innerText = "System: " + txt;
+    }
 </script>
+
 </body>
 </html>
