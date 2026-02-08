@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cedar Radar Pro | Hyper-Local Edition</title>
+    <title>Cedar Radar Pro | City View</title>
     
     <meta property="og:title" content="Live Cedar Radar" />
     <meta property="og:description" content="Real-time Cedar tracking and pollen counts." />
@@ -25,30 +25,29 @@
         h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
         .big-num { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
         
-        #map { height: 180px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; position: relative; }
+        #map { height: 220px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; position: relative; }
         .radar-sweep {
-            position: absolute; width: 200%; height: 200%; top: -50%; left: -50%;
-            background: conic-gradient(from 0deg, rgba(16,185,129,0.15) 0deg, rgba(16,185,129,0) 60deg);
+            position: absolute; width: 250%; height: 250%; top: -75%; left: -75%;
+            background: conic-gradient(from 0deg, rgba(16,185,129,0.12) 0deg, rgba(16,185,129,0) 60deg);
             border-radius: 50%; animation: rotate-radar 4s linear infinite;
             pointer-events: none; z-index: 1000;
         }
         @keyframes rotate-radar { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; transition: 0.2s; }
         .share-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .btn { border: none; border-radius: 14px; color: white; font-weight: 800; cursor: pointer; padding: 12px; transition: 0.2s; font-size: 0.7rem; }
-        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; }
-        .btn:active { transform: scale(0.95); }
+        .btn-small { border: none; border-radius: 14px; color: white; font-weight: 800; cursor: pointer; padding: 12px; font-size: 0.7rem; }
         
         .chart-container { height: 80px; margin-top: 10px; }
         #timestamp { font-size: 0.6rem; text-align: center; color: #475569; margin-top: 15px; }
 
         .pulse {
-            width: 12px; height: 12px; background: var(--accent); border-radius: 50%;
+            width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
             animation: pulse-ring 1.5s infinite;
         }
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+            70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); }
             100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
     </style>
@@ -58,8 +57,8 @@
 <div id="capture-area" class="dashboard">
     <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-            <h2 id="status-text">● Live Doppler Radar</h2>
-            <div id="city-name" style="font-size: 1.2rem; font-weight:700;">Finding Station...</div>
+            <h2 id="status-text">● Doppler Range</h2>
+            <div id="city-name" style="font-size: 1.2rem; font-weight:700;">Scanning Area...</div>
         </div>
         <div id="risk-pill" style="color: var(--accent); font-weight:900;">--</div>
     </div>
@@ -89,9 +88,9 @@
     <button class="btn-main" onclick="takeSnapshot()">📸 Save Dashboard as Image</button>
     
     <div class="share-grid">
-        <button class="btn" style="background: #000;" onclick="shareX()">X</button>
-        <button class="btn" style="background: #1877f2;" onclick="shareFB()">FB</button>
-        <button class="btn" style="background: #e4405f;" onclick="copyLink()">LINK</button>
+        <button class="btn-small" style="background: #000;" onclick="shareX()">X</button>
+        <button class="btn-small" style="background: #1877f2;" onclick="shareFB()">FB</button>
+        <button class="btn-small" style="background: #e4405f;" onclick="copyLink()">LINK</button>
     </div>
     <p id="timestamp"></p>
 </div>
@@ -103,18 +102,15 @@
     window.onload = () => {
         navigator.geolocation.getCurrentPosition(
             async (pos) => updateUI(pos.coords.latitude, pos.coords.longitude),
-            () => updateUI(29.70, -98.63) // Fallback
+            () => updateUI(29.70, -98.63) // Fallback to SATX area
         );
     };
 
     async function updateUI(lat, lon) {
         try {
-            // Hyper-Local Geocoding Logic
             const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             const geoData = await geo.json();
             const addr = geoData.address;
-            
-            // Priority: City -> Town -> Suburb -> Village -> County
             const locationName = addr.city || addr.town || addr.suburb || addr.village || addr.county || "Local Area";
             document.getElementById('city-name').innerText = locationName;
 
@@ -129,7 +125,7 @@
             document.getElementById('risk-pill').innerText = risk.toUpperCase();
             document.getElementById('grass-val').innerText = data.Risk.grass_pollen;
             document.getElementById('weed-val').innerText = data.Risk.weed_pollen;
-            document.getElementById('timestamp').innerText = `STATION ACTIVE: ${new Date().toLocaleTimeString()}`;
+            document.getElementById('timestamp').innerText = `RADAR ACTIVE: ${new Date().toLocaleTimeString()}`;
 
             let color = '#10b981';
             if (cedar > 100) color = '#f59e0b';
@@ -143,11 +139,18 @@
 
     function initMap(lat, lon, color) {
         if (map) return;
-        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 12);
+        
+        // ZOOM LEVEL 10: Shows the entire city and surrounding area names
+        map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 10);
+        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png').addTo(map);
-        L.circle([lat, lon], { radius: 3000, color: color, fillOpacity: 0.15, weight: 2 }).addTo(map);
+        
+        // Increased radius to 8000m so it's visible at the lower zoom level
+        L.circle([lat, lon], { radius: 8000, color: color, fillOpacity: 0.15, weight: 2 }).addTo(map);
+        
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', { pane: 'markerPane' }).addTo(map);
-        const pulseIcon = L.divIcon({ className: 'p-icon', html: "<div class='pulse'></div>", iconSize: [12, 12] });
+        
+        const pulseIcon = L.divIcon({ className: 'p-icon', html: "<div class='pulse'></div>", iconSize: [14, 14] });
         L.marker([lat, lon], { icon: pulseIcon }).addTo(map);
     }
 
@@ -170,15 +173,10 @@
 
     function takeSnapshot() {
         const btn = document.querySelector('.btn-main');
-        btn.innerText = "Processing...";
-        
-        html2canvas(document.querySelector("#capture-area"), {
-            backgroundColor: "#020617",
-            useCORS: true,
-            scale: 2
-        }).then(canvas => {
+        btn.innerText = "Capturing...";
+        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true, scale: 2 }).then(canvas => {
             const link = document.createElement('a');
-            link.download = `Cedar-Report-${document.getElementById('city-name').innerText}.png`;
+            link.download = `Cedar-Radar-${document.getElementById('city-name').innerText}.png`;
             link.href = canvas.toDataURL();
             link.click();
             btn.innerText = "📸 Save Dashboard as Image";
@@ -188,7 +186,7 @@
     function shareX() {
         const city = document.getElementById('city-name').innerText;
         const val = document.getElementById('cedar-val').innerText;
-        const text = encodeURIComponent(`🚨 Cedar Report for ${city}: ${val} gr/m³. #CedarFever #WeatherRadar`);
+        const text = encodeURIComponent(`🚨 Cedar Doppler for ${city}: ${val} gr/m³. #CedarFever #TXWeather`);
         window.open(`https://twitter.com/intent/tweet?text=${text}&url=${window.location.href}`);
     }
 
