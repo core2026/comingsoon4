@@ -4,36 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pollen Radar | Dual-Sync Analytics</title>
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
     <style>
         :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.04); }
-        body { background: var(--bg); color: white; margin: 0; padding: 10px; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; }
-        
+        body { background: var(--bg); color: white; margin: 0; padding: 10px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
         .dashboard { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px; }
         .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; backdrop-filter: blur(12px); position: relative; }
-        
-        /* Side-by-Side Data Row */
         .engine-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
         .data-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; text-align: center; }
-        .engine-name { font-size: 0.5rem; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 2px; }
+        .engine-name { font-size: 0.55rem; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 2px; }
         .engine-val { font-size: 1.3rem; font-weight: 800; color: #f8fafc; }
         .offline { color: #475569; font-size: 0.8rem; font-weight: 400; }
-
-        h2 { font-size: 0.6rem; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; letter-spacing: 1px; }
-        .location-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
-        
-        #map { height: 180px; border-radius: 15px; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; position: relative; }
-        
-        .btn-action { background: var(--accent); width: 100%; border: none; padding: 14px; border-radius: 15px; color: white; font-weight: 800; cursor: pointer; margin-top: 10px; transition: 0.2s; }
-        .btn-action:active { transform: scale(0.98); }
-        .sync-badge { font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; background: rgba(16,185,129,0.15); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
-        
-        .timestamp { font-size: 0.6rem; color: #475569; text-align: center; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        h2 { font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; letter-spacing: 1px; }
+        .location-title { font-size: 1.1rem; font-weight: 700; }
+        #map { height: 180px; border-radius: 15px; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
+        .btn-action { background: var(--accent); width: 100%; border: none; padding: 14px; border-radius: 15px; color: white; font-weight: 800; cursor: pointer; margin-top: 10px; }
+        .btn-sync { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 8px; color: white; font-size: 0.6rem; cursor: pointer; }
+        .timestamp { font-size: 0.6rem; color: #475569; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
@@ -42,13 +31,13 @@
     <div class="tile" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
             <h2>● Multi-Source Pollen Feed</h2>
-            <div id="city-name" class="location-title">Syncing...</div>
+            <div id="city-name" class="location-title">Detecting...</div>
         </div>
-        <span class="sync-badge">DUAL-ENGINE SYNC</span>
+        <button class="btn-sync" onclick="refreshData()">FORCE SYNC</button>
     </div>
 
     <div class="tile">
-        <h2>Mountain Cedar <span style="color:var(--accent); text-transform: none;">(Primary Concern)</span></h2>
+        <h2>Mountain Cedar <span style="color:var(--accent); text-transform: none;">(Primary)</span></h2>
         <div class="engine-row">
             <div class="data-card">
                 <div class="engine-name">Ambee Stream</div>
@@ -67,127 +56,98 @@
             <div style="font-size: 1rem; font-weight: 800; margin-top:5px;">
                 <span id="ambee-grass">--</span> <span style="color:#334155;">/</span> <span id="tomorrow-grass">--</span>
             </div>
-            <div class="engine-name" style="margin-top:2px;">A-Count / T-Index</div>
         </div>
         <div class="tile" style="padding: 12px;">
             <h2>Weeds</h2>
             <div style="font-size: 1rem; font-weight: 800; margin-top:5px;">
                 <span id="ambee-weed">--</span> <span style="color:#334155;">/</span> <span id="tomorrow-weed">--</span>
             </div>
-            <div class="engine-name" style="margin-top:2px;">A-Count / T-Index</div>
         </div>
     </div>
 
-    <div class="tile" style="padding: 5px;">
-        <div style="position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1001; display: flex; gap: 5px;">
-            <input type="text" id="map-search" placeholder="Zip Code (USA)" style="flex:1; padding:8px 12px; border-radius:10px; border:none; background:rgba(15,23,42,0.9); color:white; outline:none; font-size:0.8rem; backdrop-filter: blur(4px);">
-            <button onclick="searchLocation()" style="background:var(--accent); border:none; padding:8px 12px; border-radius:10px; color:white; font-weight:700; cursor:pointer;">Go</button>
-        </div>
-        <div id="map"></div>
-    </div>
+    <div class="tile" style="padding: 5px;"><div id="map"></div></div>
 
     <div class="tile">
-        <h2>Analysis & Recommendation</h2>
-        <div id="health-advice" style="font-size: 0.75rem; color: #94a3b8; line-height:1.4; margin-top:5px;">
-            Cross-referencing sensor data...
-        </div>
+        <h2>Health Analysis</h2>
+        <div id="health-advice" style="font-size: 0.75rem; color: #94a3b8; line-height:1.4;">Syncing dual-sensor data...</div>
     </div>
 </div>
 
 <div style="width: 100%; max-width: 480px; padding: 10px;">
-    <button class="btn-action" onclick="takeSnapshot()">📸 Export Dual-Sync Report</button>
+    <button class="btn-action" onclick="takeSnapshot()">📸 Export Report</button>
     <div id="update-time" class="timestamp">Last Updated: --</div>
 </div>
 
 <script>
-const WORKER_URL = 'https://pollen-api.acekallas.com';
-    let map, marker;
+    const WORKER_URL = 'https://pollen-api.acekallas.com';
+    let map, marker, currentLat, currentLon;
 
     window.onload = () => {
         navigator.geolocation.getCurrentPosition(
-            (p) => updateUI(p.coords.latitude, p.coords.longitude),
-            () => updateUI(29.704, -98.636) 
+            (p) => { currentLat = p.coords.latitude; currentLon = p.coords.longitude; updateUI(); },
+            () => { currentLat = 29.704; currentLon = -98.636; updateUI(); }
         );
     };
 
-    async function searchLocation() {
-        const query = document.getElementById('map-search').value;
-        if (!query) return;
-        try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=1`);
-            const results = await res.json();
-            if (results[0]) updateUI(parseFloat(results[0].lat), parseFloat(results[0].lon));
-            else alert("Location not found.");
-        } catch (e) { console.error(e); }
+    async function refreshData() {
+        document.getElementById('city-name').innerText = "Syncing...";
+        updateUI();
     }
 
-    async function updateUI(lat, lon) {
+    async function updateUI() {
         try {
-            const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-            const g = await geo.json();
-            document.getElementById('city-name').innerText = g.address.city || g.address.town || "Local Area";
+            // FIX: Open-Meteo Geocoding to bypass 425 error
+            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/get?name=city&latitude=${currentLat}&longitude=${currentLon}`);
+            const g = await geoRes.json();
+            document.getElementById('city-name').innerText = g.results?.[0]?.name || "Local Area";
 
-            const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
+            const res = await fetch(`${WORKER_URL}?lat=${currentLat}&lon=${currentLon}`);
             const data = await res.json();
-            
-            render(data, lat, lon);
-            
-            // Set Timestamp
-            const now = new Date();
-            document.getElementById('update-time').innerText = `Last Updated: ${now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
-        } catch (e) { console.error("Sync Error", e); }
+            render(data);
+        } catch (e) { 
+            console.error(e); 
+            document.getElementById('city-name').innerText = "Sync Error (Check Proxy)";
+        }
     }
 
-    function render(results, lat, lon) {
+    function render(results) {
         const a = results.ambee;
-        const aCedar = a ? (a.Species?.Tree["Cypress / Juniper / Cedar"] || 0) : null;
-        document.getElementById('ambee-cedar').innerHTML = a ? aCedar : '<span class="offline">Offline</span>';
-        document.getElementById('ambee-grass').innerText = a ? (a.Count?.grass_pollen || 0) : 'N/A';
-        document.getElementById('ambee-weed').innerText = a ? (a.Count?.weed_pollen || 0) : 'N/A';
-
         const t = results.tomorrow;
-        const tCedar = t ? t.treeValue : null;
-        document.getElementById('tomorrow-cedar').innerHTML = t ? tCedar : '<span class="offline">Offline</span>';
-        document.getElementById('tomorrow-grass').innerText = t ? (t.grassValue || 0) : 'N/A';
-        document.getElementById('tomorrow-weed').innerText = t ? (t.weedValue || 0) : 'N/A';
 
-        const maxCedar = Math.max(aCedar || 0, tCedar || 0);
-        let color = '#10b981';
-        let msg = "🟢 <b>Low Risk:</b> Both sensors agree the air quality is currently safe for most.";
-        
-        if (maxCedar > 800) {
-            color = '#ef4444';
-            msg = "🔴 <b>High Severity:</b> Sensor consensus indicates high Cedar levels. Keep windows closed.";
-        } else if (maxCedar > 200) {
-            color = '#f59e0b';
-            msg = "🟡 <b>Moderate:</b> Allergy triggers detected. Sensitive individuals should take precautions.";
-        }
+        const aCedar = a ? (a.Species?.Tree["Cypress / Juniper / Cedar"] || 0) : 0;
+        const tCedar = t ? t.treeValue : 0;
+
+        document.getElementById('ambee-cedar').innerHTML = a ? Math.round(aCedar) : '<span class="offline">Offline</span>';
+        document.getElementById('tomorrow-cedar').innerHTML = t ? Math.round(tCedar) : '<span class="offline">Offline</span>';
+        document.getElementById('ambee-grass').innerText = a ? a.Count.grass_pollen : 'N/A';
+        document.getElementById('tomorrow-grass').innerText = t ? Math.round(t.grassValue) : 'N/A';
+        document.getElementById('ambee-weed').innerText = a ? a.Count.weed_pollen : 'N/A';
+        document.getElementById('tomorrow-weed').innerText = t ? Math.round(t.weedValue) : 'N/A';
+
+        const maxCedar = Math.max(aCedar, tCedar);
+        let color = '#10b981', msg = "🟢 <b>Low Risk:</b> Sensors report clear conditions.";
+        if (maxCedar > 500) { color = '#ef4444'; msg = "🔴 <b>High Severity:</b> Significant Cedar activity detected."; }
+        else if (maxCedar > 100) { color = '#f59e0b'; msg = "🟡 <b>Moderate:</b> Allergy triggers are present."; }
 
         document.documentElement.style.setProperty('--accent', color);
         document.getElementById('health-advice').innerHTML = msg;
+        document.getElementById('update-time').innerText = `Last Updated: ${new Date().toLocaleTimeString()}`;
 
         if (!map) {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 12);
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 11);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        } else {
-            map.flyTo([lat, lon], 12);
         }
-        
         if (marker) map.removeLayer(marker);
-        marker = L.marker([lat, lon], { 
+        marker = L.marker([currentLat, currentLon], { 
             icon: L.divIcon({ className: 'p-icon', html: `<div style='width:12px;height:12px;border-radius:50%;background:${color};box-shadow:0 0 10px ${color}'></div>` }) 
         }).addTo(map);
     }
 
     function takeSnapshot() {
-        const btn = document.querySelector('.btn-action');
-        btn.innerText = "Generating...";
         html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true }).then(c => {
-            const l = document.createElement('a'); l.download = `PollenRadar-Report.png`; l.href = c.toDataURL(); l.click();
-            btn.innerText = "📸 Export Dual-Sync Report";
+            const l = document.createElement('a'); l.download = `PollenReport.png`; l.href = c.toDataURL(); l.click();
         });
     }
 </script>
 </body>
 </html>
-
