@@ -3,78 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Radar | Dual-Sync Analytics</title>
+    <title>Pollen Radar | AceKallas Intelligence</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
     <style>
-        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.04); }
-        body { background: var(--bg); color: white; margin: 0; padding: 10px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .dashboard { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px; }
-        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; backdrop-filter: blur(12px); position: relative; }
-        .engine-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-        .data-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; text-align: center; }
-        .engine-name { font-size: 0.55rem; text-transform: uppercase; color: #64748b; font-weight: 800; margin-bottom: 2px; }
-        .engine-val { font-size: 1.3rem; font-weight: 800; color: #f8fafc; }
-        .offline { color: #475569; font-size: 0.8rem; font-weight: 400; }
-        h2 { font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; margin: 0 0 4px 0; letter-spacing: 1px; }
-        .location-title { font-size: 1.1rem; font-weight: 700; }
-        #map { height: 180px; border-radius: 15px; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
-        .btn-action { background: var(--accent); width: 100%; border: none; padding: 14px; border-radius: 15px; color: white; font-weight: 800; cursor: pointer; margin-top: 10px; }
-        .btn-sync { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 8px; color: white; font-size: 0.6rem; cursor: pointer; }
-        .timestamp { font-size: 0.6rem; color: #475569; text-align: center; margin-top: 15px; }
+        :root { 
+            --accent: #10b981; 
+            --bg: #020617; 
+            --glass: rgba(255, 255, 255, 0.03); 
+            --border: rgba(255, 255, 255, 0.1);
+        }
+        
+        body { 
+            background: var(--bg); 
+            color: white; 
+            margin: 0; 
+            padding: 10px; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+
+        .dashboard { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* Glassmorphism Tiles */
+        .tile { 
+            background: var(--glass); 
+            border: 1px solid var(--border); 
+            border-radius: 24px; 
+            padding: 20px; 
+            backdrop-filter: blur(20px); 
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .header-tile { display: flex; justify-content: space-between; align-items: center; }
+
+        .location-title { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.5px; }
+        h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 6px 0; letter-spacing: 1.5px; font-weight: 700; }
+
+        /* Data Visualization */
+        .engine-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .data-card { 
+            background: rgba(255,255,255,0.02); 
+            border: 1px solid rgba(255,255,255,0.05); 
+            border-radius: 16px; 
+            padding: 12px; 
+            text-align: center; 
+        }
+        .engine-label { font-size: 0.6rem; text-transform: uppercase; color: #475569; margin-bottom: 4px; }
+        .engine-val { font-size: 1.5rem; font-weight: 900; color: #f8fafc; }
+        
+        .secondary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .stat-val { font-size: 1.1rem; font-weight: 700; color: #cbd5e1; }
+
+        /* Map & UI Controls */
+        #map { height: 160px; border-radius: 18px; background: #000; border: 1px solid var(--border); margin-top: 8px; z-index: 1; }
+        
+        .btn-sync { 
+            background: rgba(255,255,255,0.08); 
+            border: 1px solid var(--border); 
+            padding: 6px 12px; 
+            border-radius: 10px; 
+            color: #94a3b8; 
+            font-size: 0.65rem; 
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-sync:active { transform: scale(0.95); background: var(--accent); color: white; }
+
+        .btn-export { 
+            background: var(--accent); 
+            width: 100%; 
+            border: none; 
+            padding: 16px; 
+            border-radius: 20px; 
+            color: white; 
+            font-weight: 800; 
+            font-size: 1rem;
+            cursor: pointer; 
+            margin-top: 10px; 
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+        }
+
+        .timestamp { font-size: 0.65rem; color: #334155; text-align: center; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .offline { color: #334155; font-style: italic; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div id="capture-area" class="dashboard">
-    <div class="tile" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="tile header-tile">
         <div>
-            <h2>● Multi-Source Pollen Feed</h2>
-            <div id="city-name" class="location-title">Detecting...</div>
+            <h2>Status: Multi-Source Sync</h2>
+            <div id="city-name" class="location-title">Initializing...</div>
         </div>
-        <button class="btn-sync" onclick="refreshData()">FORCE SYNC</button>
+        <button class="btn-sync" onclick="refreshData()">RE-SYNC</button>
     </div>
 
     <div class="tile">
-        <h2>Mountain Cedar <span style="color:var(--accent); text-transform: none;">(Primary)</span></h2>
+        <h2 style="color: var(--accent)">Mountain Cedar <span style="font-weight:400; opacity:0.6;">(PPM)</span></h2>
         <div class="engine-row">
             <div class="data-card">
-                <div class="engine-name">Ambee Stream</div>
+                <div class="engine-label">Ambee Engine</div>
                 <div id="ambee-cedar" class="engine-val">--</div>
             </div>
             <div class="data-card">
-                <div class="engine-name">Tomorrow.io</div>
+                <div class="engine-label">Tomorrow.io</div>
                 <div id="tomorrow-cedar" class="engine-val">--</div>
             </div>
         </div>
     </div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="tile" style="padding: 12px;">
+    <div class="secondary-grid">
+        <div class="tile" style="padding: 15px;">
             <h2>Grass</h2>
-            <div style="font-size: 1rem; font-weight: 800; margin-top:5px;">
-                <span id="ambee-grass">--</span> <span style="color:#334155;">/</span> <span id="tomorrow-grass">--</span>
+            <div class="stat-val">
+                <span id="ambee-grass">--</span> <span style="opacity:0.2">/</span> <span id="tomorrow-grass">--</span>
             </div>
         </div>
-        <div class="tile" style="padding: 12px;">
+        <div class="tile" style="padding: 15px;">
             <h2>Weeds</h2>
-            <div style="font-size: 1rem; font-weight: 800; margin-top:5px;">
-                <span id="ambee-weed">--</span> <span style="color:#334155;">/</span> <span id="tomorrow-weed">--</span>
+            <div class="stat-val">
+                <span id="ambee-weed">--</span> <span style="opacity:0.2">/</span> <span id="tomorrow-weed">--</span>
             </div>
         </div>
     </div>
 
-    <div class="tile" style="padding: 5px;"><div id="map"></div></div>
+    <div class="tile" style="padding: 8px;">
+        <div id="map"></div>
+    </div>
 
     <div class="tile">
-        <h2>Health Analysis</h2>
-        <div id="health-advice" style="font-size: 0.75rem; color: #94a3b8; line-height:1.4;">Syncing dual-sensor data...</div>
+        <h2>Expert Analysis</h2>
+        <div id="health-advice" style="font-size: 0.8rem; color: #94a3b8; line-height:1.5;">
+            Awaiting dual-engine handshake...
+        </div>
     </div>
 </div>
 
 <div style="width: 100%; max-width: 480px; padding: 10px;">
-    <button class="btn-action" onclick="takeSnapshot()">📸 Export Report</button>
+    <button class="btn-export" onclick="takeSnapshot()">SHARE REPORT</button>
     <div id="update-time" class="timestamp">Last Updated: --</div>
 </div>
 
@@ -82,31 +155,44 @@
     const WORKER_URL = 'https://pollen-api.acekallas.com';
     let map, marker, currentLat, currentLon;
 
+    // Start geolocation on load
     window.onload = () => {
-        navigator.geolocation.getCurrentPosition(
-            (p) => { currentLat = p.coords.latitude; currentLon = p.coords.longitude; updateUI(); },
-            () => { currentLat = 29.704; currentLon = -98.636; updateUI(); }
-        );
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => { 
+                    currentLat = pos.coords.latitude; 
+                    currentLon = pos.coords.longitude; 
+                    updateUI(); 
+                },
+                (err) => { 
+                    console.warn("Location denied, using default.");
+                    currentLat = 29.704; currentLon = -98.636; 
+                    updateUI(); 
+                }
+            );
+        }
     };
 
     async function refreshData() {
-        document.getElementById('city-name').innerText = "Syncing...";
+        document.getElementById('city-name').innerText = "Refreshing...";
         updateUI();
     }
 
     async function updateUI() {
         try {
-            // FIX: Open-Meteo Geocoding to bypass 425 error
-            const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/get?name=city&latitude=${currentLat}&longitude=${currentLon}`);
-            const g = await geoRes.json();
-            document.getElementById('city-name').innerText = g.results?.[0]?.name || "Local Area";
+            // SINGLE CALL STRATEGY: One request to your worker handles everything
+            const response = await fetch(`${WORKER_URL}?lat=${currentLat}&lon=${currentLon}`);
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
 
-            const res = await fetch(`${WORKER_URL}?lat=${currentLat}&lon=${currentLon}`);
-            const data = await res.json();
+            // Update City (Handled by Worker)
+            document.getElementById('city-name').innerText = data.city || "Local Area";
+            
             render(data);
         } catch (e) { 
-            console.error(e); 
-            document.getElementById('city-name').innerText = "Sync Error (Check Proxy)";
+            console.error("UI Update Failed:", e); 
+            document.getElementById('city-name').innerText = "Sync Connection Error";
         }
     }
 
@@ -114,40 +200,67 @@
         const a = results.ambee;
         const t = results.tomorrow;
 
+        // Parse Specific Cedar Species from Ambee
         const aCedar = a ? (a.Species?.Tree["Cypress / Juniper / Cedar"] || 0) : 0;
         const tCedar = t ? t.treeValue : 0;
 
-        document.getElementById('ambee-cedar').innerHTML = a ? Math.round(aCedar) : '<span class="offline">Offline</span>';
-        document.getElementById('tomorrow-cedar').innerHTML = t ? Math.round(tCedar) : '<span class="offline">Offline</span>';
-        document.getElementById('ambee-grass').innerText = a ? a.Count.grass_pollen : 'N/A';
-        document.getElementById('tomorrow-grass').innerText = t ? Math.round(t.grassValue) : 'N/A';
-        document.getElementById('ambee-weed').innerText = a ? a.Count.weed_pollen : 'N/A';
-        document.getElementById('tomorrow-weed').innerText = t ? Math.round(t.weedValue) : 'N/A';
+        // Populate Cedar Tiles
+        document.getElementById('ambee-cedar').innerHTML = a ? Math.round(aCedar) : '<span class="offline">Off</span>';
+        document.getElementById('tomorrow-cedar').innerHTML = t ? Math.round(tCedar) : '<span class="offline">Off</span>';
+        
+        // Populate Grass/Weed Tiles
+        document.getElementById('ambee-grass').innerText = a ? a.Count.grass_pollen : '--';
+        document.getElementById('tomorrow-grass').innerText = t ? Math.round(t.grassValue) : '--';
+        document.getElementById('ambee-weed').innerText = a ? a.Count.weed_pollen : '--';
+        document.getElementById('tomorrow-weed').innerText = t ? Math.round(t.weedValue) : '--';
 
+        // Logic for Health Advice & Dynamic Coloring
         const maxCedar = Math.max(aCedar, tCedar);
-        let color = '#10b981', msg = "🟢 <b>Low Risk:</b> Sensors report clear conditions.";
-        if (maxCedar > 500) { color = '#ef4444'; msg = "🔴 <b>High Severity:</b> Significant Cedar activity detected."; }
-        else if (maxCedar > 100) { color = '#f59e0b'; msg = "🟡 <b>Moderate:</b> Allergy triggers are present."; }
+        let statusColor = '#10b981';
+        let advice = "🟢 <b>Optimal:</b> Both sensors report low allergen activity. High-quality outdoor conditions.";
 
-        document.documentElement.style.setProperty('--accent', color);
-        document.getElementById('health-advice').innerHTML = msg;
-        document.getElementById('update-time').innerText = `Last Updated: ${new Date().toLocaleTimeString()}`;
+        if (maxCedar > 500) {
+            statusColor = '#ef4444';
+            advice = "🔴 <b>Critical Cedar Spike:</b> High allergen density detected by both engines. Recommend masking and air filtration.";
+        } else if (maxCedar > 100) {
+            statusColor = '#f59e0b';
+            advice = "🟡 <b>Moderate Activity:</b> Cedar counts are climbing. Sensitive individuals should take precautions.";
+        }
 
+        // Apply UI Colors
+        document.documentElement.style.setProperty('--accent', statusColor);
+        document.getElementById('health-advice').innerHTML = advice;
+        document.getElementById('update-time').innerText = `Last Updated: ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+
+        // Initialize or Update Map
         if (!map) {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 11);
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 12);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
         }
         if (marker) map.removeLayer(marker);
         marker = L.marker([currentLat, currentLon], { 
-            icon: L.divIcon({ className: 'p-icon', html: `<div style='width:12px;height:12px;border-radius:50%;background:${color};box-shadow:0 0 10px ${color}'></div>` }) 
+            icon: L.divIcon({ 
+                className: 'custom-div-icon', 
+                html: `<div style='background-color:${statusColor}; width:14px; height:14px; border:2px solid white; border-radius:50%; box-shadow: 0 0 15px ${statusColor};'></div>` 
+            }) 
         }).addTo(map);
+        map.panTo([currentLat, currentLon]);
     }
 
     function takeSnapshot() {
-        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true }).then(c => {
-            const l = document.createElement('a'); l.download = `PollenReport.png`; l.href = c.toDataURL(); l.click();
+        const area = document.querySelector("#capture-area");
+        html2canvas(area, { 
+            backgroundColor: "#020617", 
+            useCORS: true,
+            scale: 2 
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `AceKallas_Pollen_Report.png`;
+            link.href = canvas.toDataURL("image/png");
+            link.click();
         });
     }
 </script>
+
 </body>
 </html>
