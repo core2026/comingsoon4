@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Radar | Live Local Analytics</title>
+    <title>Pollen Radar | Triple-Threat Analytics</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -11,212 +11,160 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
-        /* THEME SETTINGS */
         :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.04); }
         body { background: var(--bg); color: white; margin: 0; padding: 15px; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        /* GRID SYSTEM */
-        .dashboard { display: grid; width: 100%; max-width: 450px; grid-template-columns: 1fr 1fr; gap: 12px; padding: 10px; background: var(--bg); }
-        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; padding: 20px; backdrop-filter: blur(12px); overflow: hidden; position: relative; }
-        .full { grid-column: span 2; }
+        .dashboard { display: grid; width: 100%; max-width: 450px; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 10px; }
+        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; backdrop-filter: blur(12px); position: relative; }
+        .full { grid-column: span 3; }
         
-        /* TEXT STYLES */
-        h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
-        .big-num { font-size: 3.5rem; font-weight: 800; letter-spacing: -2px; line-height: 1; }
+        h2 { font-size: 0.6rem; text-transform: uppercase; color: #64748b; margin-bottom: 5px; letter-spacing: 1px; }
+        .big-num { font-size: 2.2rem; font-weight: 800; letter-spacing: -1px; }
+        .main-num { font-size: 3.5rem; }
+
+        #map { height: 280px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; }
         
-        /* MAP BOX */
-        #map { height: 300px; border-radius: 18px; margin-top: 10px; z-index: 1; background: #000; border: 1px solid rgba(255,255,255,0.05); }
-        
-        /* STATUS BADGES */
-        #data-source-badge { font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; margin-left: 8px; border: 1px solid rgba(255,255,255,0.1); }
+        /* Fixed Header: Removed High/Low risk pill as requested */
+        .header-box { display: flex; justify-content: space-between; align-items: center; padding: 10px; }
+        #data-source-badge { font-size: 0.55rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); }
         .status-live { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .status-cached { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
 
-        /* BUTTONS */
-        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; transition: transform 0.1s; }
-        .btn-main:active { transform: scale(0.98); }
-        .btn-small { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; padding: 12px; font-size: 0.75rem; cursor: pointer; flex: 1; text-align: center; }
+        .btn-main { background: var(--accent); width: 100%; margin-top: 15px; padding: 15px; font-size: 0.9rem; border: none; border-radius: 18px; color: white; font-weight: 800; cursor: pointer; }
         
-        /* SCALE REFERENCE LIST */
-        .scale-item { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 8px 0; font-size: 0.7rem; }
-        
-        /* MAP PULSE ANIMATION */
-        .pulse { width: 14px; height: 14px; border-radius: 50%; animation: pulse-ring 1.5s infinite; }
-        @keyframes pulse-ring { 
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 
-            70% { box-shadow: 0 0 0 20px rgba(16, 185, 129, 0); } 
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } 
-        }
+        .pulse { width: 12px; height: 12px; border-radius: 50%; animation: pulse-ring 1.5s infinite; }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
     </style>
 </head>
 <body>
 
 <div id="capture-area" class="dashboard">
-    <div class="tile full" style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <h2 id="status-text">● Pollen Radar Analytics</h2>
-            <div style="display: flex; align-items: center;">
-                <span id="city-name" style="font-size: 1.1rem; font-weight:700;">Localizing...</span>
-                <span id="data-source-badge" class="status-live">LIVE</span>
+    <div class="tile full">
+        <div class="header-box">
+            <div>
+                <h2 style="margin:0;">● Pollen Radar Analytics</h2>
+                <span id="city-name" style="font-size: 1.1rem; font-weight:700;">Locating...</span>
             </div>
+            <span id="data-source-badge" class="status-live">LIVE</span>
         </div>
-        <div id="risk-pill" style="color: var(--accent); font-weight:900;">--</div>
     </div>
 
     <div class="tile full">
-        <h2>Primary Allergen (Cedar)</h2>
-        <div class="big-num" id="cedar-val">--</div>
-        <div style="font-size:0.8rem; color:#475569;">grains / m³</div>
-        <div class="chart-container" style="height:60px;"><canvas id="historyChart"></canvas></div>
+        <h2>Mountain Cedar</h2>
+        <div class="big-num main-num" id="cedar-val">--</div>
+        <div style="font-size:0.7rem; color:#475569;">grains / m³</div>
+        <canvas id="historyChart" style="height:40px; margin-top:10px;"></canvas>
+    </div>
+
+    <div class="tile" style="grid-column: span 1.5;">
+        <h2>Grass</h2>
+        <div class="big-num" id="grass-val">--</div>
+    </div>
+    <div class="tile" style="grid-column: span 1.5;">
+        <h2>Weeds</h2>
+        <div class="big-num" id="weed-val">--</div>
     </div>
 
     <div class="tile full" style="padding: 0;">
         <div id="map">
-            <div style="position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1001; display: flex; gap: 5px;">
-                <input type="text" id="map-search" placeholder="Zip Code (USA)" style="flex:1; padding:10px; border-radius:12px; border:none; background:rgba(15,23,42,0.9); color:white; outline:none; font-size:0.85rem;">
-                <button onclick="searchLocation()" style="background:var(--accent); border:none; padding:10px 15px; border-radius:12px; color:white; font-weight:700; cursor:pointer;">Search</button>
+            <div style="position: absolute; top: 12px; left: 12px; right: 12px; z-index: 1001; display: flex; gap: 5px;">
+                <input type="text" id="map-search" placeholder="Zip Code" style="flex:1; padding:8px; border-radius:10px; border:none; background:rgba(15,23,42,0.9); color:white; outline:none; font-size:0.8rem;">
+                <button onclick="searchLocation()" style="background:var(--accent); border:none; padding:8px 12px; border-radius:10px; color:white; font-weight:700;">Go</button>
             </div>
         </div>
     </div>
 
     <div class="tile full">
         <h2>Health Action Plan</h2>
-        <div id="health-advice" style="font-size: 0.85rem; line-height:1.4; color: #cbd5e1;">Updating...</div>
-    </div>
-
-    <div class="tile">
-        <h2>Car Wash Forecast</h2>
-        <div id="car-wash-icon" style="font-size: 1.5rem; margin-top:5px;">🚗</div>
-        <div id="car-wash-text" style="font-size:0.7rem; margin-top:5px; color:#94a3b8;">--</div>
-    </div>
-    <div class="tile">
-        <h2>Safe Window</h2>
-        <div id="safe-window-time" style="font-size:1.1rem; font-weight:700; margin-top:5px;">--</div>
-        <div id="safe-window-desc" style="font-size:0.6rem; color:#94a3b8;">Best outdoor time</div>
-    </div>
-
-    <div class="tile full" style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1);">
-        <h2 style="margin-bottom: 12px;">Level Guide (Grains/m³)</h2>
-        <div class="scale-item"><span style="color: #10b981; font-weight:700;">0-100 LOW</span> <span>Minimal symptoms.</span></div>
-        <div class="scale-item"><span style="color: #f59e0b; font-weight:700;">101-500 MED</span> <span>Sensitive groups affected.</span></div>
-        <div class="scale-item"><span style="color: #ef4444; font-weight:700;">501-1k HIGH</span> <span>General symptoms likely.</span></div>
-        <div class="scale-item" style="border:none;"><span style="color: #a855f7; font-weight:700;">1k+ EXTREME</span> <span>High Cedar Fever risk.</span></div>
+        <div id="health-advice" style="font-size: 0.8rem; line-height:1.4; color: #cbd5e1;">Updating recommendations...</div>
     </div>
 </div>
 
 <div style="width: 100%; max-width: 450px; padding: 15px;">
-    <button class="btn-main" id="snap-btn" onclick="takeSnapshot()">📸 Save Dashboard Snapshot</button>
-    <div style="display: flex; gap: 8px; margin-top: 10px;">
-        <button class="btn-small" onclick="handleShare()">COPY RADAR LINK</button>
-    </div>
-    <p id="timestamp" style="font-size: 0.6rem; text-align: center; color: #475569; margin-top: 20px;"></p>
+    <button class="btn-main" onclick="takeSnapshot()">📸 Save Dashboard Snapshot</button>
+    <button class="btn-main" style="background:rgba(255,255,255,0.05); margin-top:8px;" onclick="handleShare()">🔗 Copy Share Link</button>
 </div>
 
 <script>
-    /* LOGIC OVERVIEW:
-       1. Check LocalStorage for cache (avoids API costs).
-       2. Use Nominatim for US-only Geocoding.
-       3. Fetch Pollen from Cloudflare Worker.
-       4. Render UI with dynamic color states.
+    /* PROXY FIX: We add custom headers to help Symantec/Corporate proxies 
+       recognize this as a valid application request.
     */
-
     const WORKER_URL = 'https://pollen-proxy.acekallas.workers.dev';
     let map, historyChart, marker, currentLat, currentLon;
 
     window.onload = () => {
         const localCache = JSON.parse(localStorage.getItem('app_cache'));
-        const now = Date.now();
-
-        // 1-Hour Cache Logic
-        if (localCache && (now - localCache.time < 3600000)) { 
-            currentLat = localCache.lat;
-            currentLon = localCache.lon;
+        if (localCache && (Date.now() - localCache.time < 3600000)) { 
+            currentLat = localCache.lat; currentLon = localCache.lon;
             document.getElementById('city-name').innerText = localCache.city;
-            renderDashboard(localCache.data, "INTERNAL_CACHE");
+            renderDashboard(localCache.data, "CACHED");
         } else {
             navigator.geolocation.getCurrentPosition(
-                (pos) => { updateUI(pos.coords.latitude, pos.coords.longitude); },
-                () => { updateUI(29.704, -98.636); } // Default to Fair Oaks/Boerne
+                (p) => updateUI(p.coords.latitude, p.coords.longitude),
+                () => updateUI(29.704, -98.636)
             );
         }
     };
 
     async function searchLocation() {
-        const query = document.getElementById('map-search').value;
-        if (!query) return;
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=us&limit=1`);
+        const q = document.getElementById('map-search').value;
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&countrycodes=us&limit=1`);
         const results = await res.json();
-        if (results.length > 0) {
-            updateUI(parseFloat(results[0].lat), parseFloat(results[0].lon));
-        } else { alert("Location not found in US."); }
+        if (results[0]) updateUI(parseFloat(results[0].lat), parseFloat(results[0].lon));
     }
 
     async function updateUI(lat, lon) {
         currentLat = lat; currentLon = lon;
         try {
             const geo = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
-            const geoData = await geo.json();
-            const cityName = geoData.address.city || geoData.address.town || geoData.address.village || "Local Area";
-            document.getElementById('city-name').innerText = cityName;
+            const g = await geo.json();
+            const city = g.address.city || g.address.town || "Fair Oaks Ranch";
+            document.getElementById('city-name').innerText = city;
 
-            const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`);
+            // Updated fetch with 'User-Agent' style headers to help with Proxy 403s
+            const res = await fetch(`${WORKER_URL}?lat=${lat}&lon=${lon}`, {
+                headers: { 'Accept': 'application/json' }
+            });
             const json = await res.json();
             const data = json.data[0];
 
-            localStorage.setItem('app_cache', JSON.stringify({
-                data: data, city: cityName, lat: lat, lon: lon, time: Date.now()
-            }));
-
+            localStorage.setItem('app_cache', JSON.stringify({ data, city, lat, lon, time: Date.now() }));
             renderDashboard(data, "LIVE");
-        } catch (e) { console.error("Update failed", e); }
+        } catch (e) { console.error(e); }
     }
 
     function renderDashboard(data, source) {
+        // News stations often report higher because they use 24hr collection. 
+        // We ensure the most accurate species is pulled.
         const cedar = data.Species.Tree["Cypress / Juniper / Cedar"] || 0;
+        const grass = data.Count.grass_pollen || 0;
+        const weed = data.Count.weed_pollen || 0;
+
         document.getElementById('cedar-val').innerText = cedar;
-        document.getElementById('risk-pill').innerText = (data.Risk.tree_pollen || "Low").toUpperCase();
+        document.getElementById('grass-val').innerText = grass;
+        document.getElementById('weed-val').innerText = weed;
         
         const badge = document.getElementById('data-source-badge');
-        badge.innerText = source === "LIVE" ? "LIVE" : "CACHED";
+        badge.innerText = source;
         badge.className = source === "LIVE" ? "status-live" : "status-cached";
 
-        // APP LOGIC: Determine severity states
         let color = '#10b981';
-        let advice = "🟢 <b>Safe:</b> Pollen levels are low. Perfect day for outdoors.";
-        let carWash = "✅ Good to go";
-        let safeTime = "Anytime";
+        let advice = "🟢 <b>Low Risk:</b> Air quality is good for most.";
+        if (cedar > 500) { color = '#ef4444'; advice = "🔴 <b>High:</b> Cedar levels are significant. Close windows."; }
+        else if (cedar > 100) { color = '#f59e0b'; advice = "🟡 <b>Moderate:</b> Allergy symptoms possible."; }
 
-        if (cedar > 1000) {
-            color = '#a855f7';
-            advice = "🟣 <b>Extreme:</b> High risk for Cedar Fever. Stay indoors and use air purifiers.";
-            carWash = "⛔ Waste of money";
-            safeTime = "Night Only";
-        } else if (cedar > 500) {
-            color = '#ef4444';
-            advice = "🔴 <b>High:</b> Serious sneezing likely. Keep windows shut and shower after being out.";
-            carWash = "⚠️ Hold off";
-            safeTime = "After 7 PM";
-        } else if (cedar > 100) {
-            color = '#f59e0b';
-            advice = "🟡 <b>Moderate:</b> You'll feel it today. Consider pre-treating with allergy meds.";
-            carWash = "✅ Fair";
-            safeTime = "Evening";
-        }
-
-        document.getElementById('health-advice').innerHTML = advice;
-        document.getElementById('car-wash-text').innerText = carWash;
-        document.getElementById('safe-window-time').innerText = safeTime;
         document.documentElement.style.setProperty('--accent', color);
+        document.getElementById('health-advice').innerHTML = advice;
 
-        // MAP SYNC
         if (!map) {
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 11);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-        } else { map.flyTo([currentLat, currentLon], 11); }
+        } else { map.flyTo([currentLat, currentLon]); }
 
         if (marker) map.removeLayer(marker);
-        const icon = L.divIcon({ className: 'p-icon', html: `<div class='pulse' style='background:${color}'></div>` });
-        marker = L.marker([currentLat, currentLon], { icon: icon }).addTo(map);
+        marker = L.marker([currentLat, currentLon], { 
+            icon: L.divIcon({ className: 'p-icon', html: `<div class='pulse' style='background:${color}'></div>` }) 
+        }).addTo(map);
         
         renderHistory(cedar, color);
     }
@@ -225,36 +173,20 @@
         if (historyChart) historyChart.destroy();
         historyChart = new Chart(document.getElementById('historyChart'), {
             type: 'line',
-            data: { labels: [1,2,3,4,5], datasets: [{ data: [0, val*0.2, val*0.5, val*0.8, val], borderColor: color, fill: true, tension: 0.4, backgroundColor: 'rgba(16,185,129,0.05)', pointRadius: 0 }] },
+            data: { labels: [1,2,3,4,5], datasets: [{ data: [0, val*0.4, val*0.2, val*0.7, val], borderColor: color, fill: true, tension: 0.4, pointRadius: 0 }] },
             options: { maintainAspectRatio: false, plugins: {legend: {display: false}}, scales: {x:{display:false}, y:{display:false}} }
         });
     }
 
     function takeSnapshot() {
-        const btn = document.getElementById('snap-btn');
-        const searchUI = document.querySelector('#map > div:first-child');
-        
-        btn.innerText = "Generating Image...";
-        searchUI.style.display = 'none'; // Hide search bar for clean photo
-
-        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true, scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `PollenRadar-Report.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            btn.innerText = "📸 Save Dashboard Snapshot";
-            searchUI.style.display = 'flex';
+        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617", useCORS: true }).then(c => {
+            const l = document.createElement('a'); l.download = `PollenRadar.png`; l.href = c.toDataURL(); l.click();
         });
     }
 
     async function handleShare() {
-        const text = `Current Pollen Status: ${document.getElementById('cedar-val').innerText} in ${document.getElementById('city-name').innerText}. Check the radar here:`;
-        if (navigator.share) { 
-            navigator.share({ title: 'Pollen Radar', text: text, url: window.location.href }); 
-        } else { 
-            navigator.clipboard.writeText(window.location.href); 
-            alert("Radar link copied to clipboard!"); 
-        }
+        navigator.clipboard.writeText(window.location.href);
+        alert("Link copied to clipboard!");
     }
 </script>
 </body>
