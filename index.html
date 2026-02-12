@@ -1,1 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollen Radar | AceKallas</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.05); }
+        body { background: var(--bg); color: white; font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
+        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }
+        .city { font-size: 1.6rem; font-weight: 800; color: #f8fafc; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .card { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .val { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
+        h2 { font-size: 0.65rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 10px 0; letter-spacing: 1px; }
+        #map { height: 160px; border-radius: 15px; margin-top: 10px; border: 1px solid rgba(255,255,255,0.1); }
+        .btn { background: var(--accent); color: white; border: none; width: 100%; padding: 16px; border-radius: 15px; font-weight: 800; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.97); }
+        .tag { font-size: 0.5rem; background: #ef4444; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 8px; font-weight: bold; }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <div class="tile">
+        <h2>Active Surveillance Location</h2>
+        <div class="city" id="city">Locating...</div>
+    </div>
+
+    <div class="tile">
+        <h2 style="color:var(--accent)">Tree Pollen (PPM) <span id="est-tag" class="tag" style="display:none">ESTIMATE</span></h2>
+        <div class="grid">
+            <div class="card"><h2>Ambee</h2><div id="ambee" class="val">--</div></div>
+            <div class="card"><h2>Tomorrow</h2><div id="tomorrow" class="val">--</div></div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="tile"><h2>Grass Index</h2><div id="grass" style="font-size: 1.2rem; font-weight:800;">--</div></div>
+        <div class="tile"><h2>Weed Index</h2><div id="weed" style="font-size: 1.2rem; font-weight:800;">--</div></div>
+    </div>
+
+    <div id="map"></div>
+    <button class="btn" onclick="getLocation()">RE-SYNC LOCAL SENSORS</button>
+</div>
+
+<script>
+    let map, marker;
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => {
+                fetchData(pos.coords.latitude, pos.coords.longitude);
+            }, () => fetchData(29.704, -98.636)); // Fallback to Fair Oaks
+        } else { fetchData(29.704, -98.636); }
+    }
+
+    async function fetchData(lat, lon) {
+        document.getElementById('city').innerText = "Syncing...";
+        try {
+            const res = await fetch(`/api?lat=${lat}&lon=${lon}`);
+            const data = await res.json();
+            
+            document.getElementById('city').innerText = data.city;
+            document.getElementById('ambee').innerText = Math.round(data.ambee);
+            document.getElementById('tomorrow').innerText = Math.round(data.tomorrow);
+            document.getElementById('grass').innerText = data.grass > 0 ? data.grass : "Low";
+            document.getElementById('weed').innerText = data.weed > 0 ? data.weed : "Low";
+            document.getElementById('est-tag').style.display = data.isEstimate ? 'inline' : 'none';
+
+            const max = Math.max(data.ambee, data.tomorrow);
+            const color = max > 100 ? "#ef4444" : (max > 20 ? "#f59e0b" : "#10b981");
+            document.documentElement.style.setProperty('--accent', color);
+            
+            updateMap(lat, lon, color);
+        } catch (e) { document.getElementById('city').innerText = "Connection Error"; }
+    }
+
+    function updateMap(lat, lon, color) {
+        if(!map) {
+            map = L.map('map', {zoomControl: false, attributionControl: false}).setView([lat, lon], 11);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        }
+        if(marker) map.removeLayer(marker);
+        marker = L.circleMarker([lat, lon], {color: color, radius: 10, fillOpacity: 0.5}).addTo(map);
+        map.panTo([lat, lon]);
+    }
+
+    window.onload = getLocation;
+</script>
+</body>
+</html>
