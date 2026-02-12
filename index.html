@@ -8,44 +8,53 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root { --accent: #10b981; --bg: #020617; }
-        body { background: var(--bg); color: white; font-family: system-ui; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
+        body { background: var(--bg); color: white; font-family: system-ui; display: flex; justify-content: center; padding: 15px; margin: 0; }
+        .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
         .tile { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; }
         .city { font-size: 1.5rem; font-weight: 800; color: #f8fafc; }
         .val { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; }
-        h2 { font-size: 0.65rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 8px 0; }
-        #map { height: 160px; border-radius: 15px; }
+        .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.6rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 5px 0; letter-spacing: 1px; }
+        #map { height: 150px; border-radius: 15px; margin-top: 5px; }
         .leaflet-control-attribution { display: none !important; }
         .btn { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .tag-active { background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; animation: blink 2s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 10px; width: 60%; outline: none; }
-        .advice-box { border-left: 3px solid var(--accent); padding-left: 12px; margin-top: 10px; font-size: 0.85rem; color: #94a3b8; }
+        input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 12px; width: 60%; outline: none; font-size: 1rem; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="tile" style="display:flex; gap:10px;">
+    <div class="tile" style="display:flex; gap:10px; align-items:center;">
         <input type="text" id="zipInput" placeholder="Enter Zip...">
-        <button id="goBtn" onclick="searchZip()" style="flex:1; border-radius:10px; background:var(--accent); color:white; border:none; font-weight:bold;">GO</button>
+        <button onclick="searchZip()" style="flex:1; height:45px; border-radius:12px; background:var(--accent); color:white; border:none; font-weight:bold; cursor:pointer;">SEARCH</button>
     </div>
-    <div class="tile"><h2>Active Location</h2><div class="city" id="city">Finding GPS...</div></div>
+    
+    <div class="tile">
+        <h2>Location Detected</h2>
+        <div class="city" id="city">Finding GPS...</div>
+    </div>
+
     <div class="tile">
         <h2 style="color:var(--accent)">Tree Pollen (PPM) <span id="est-tag"></span></h2>
         <div class="grid">
             <div class="card"><h2>Ambee</h2><div id="ambee" class="val">--</div></div>
             <div class="card"><h2>Tomorrow</h2><div id="tomorrow" class="val">--</div></div>
         </div>
-        <div id="advice" class="advice-box">Awaiting data...</div>
     </div>
+
     <div class="grid">
-        <div class="tile"><h2>Grass</h2><div id="grass" style="font-weight:bold">--</div></div>
-        <div class="tile"><h2>Weeds</h2><div id="weed" style="font-weight:bold">--</div></div>
+        <div class="tile"><h2>Grass</h2><div id="grass" style="font-weight:bold; font-size:1.1rem;">--</div></div>
+        <div class="tile"><h2>Weeds</h2><div id="weed" style="font-weight:bold; font-size:1.1rem;">--</div></div>
     </div>
+
+    <div class="tile" id="advice" style="font-size: 0.85rem; color: #94a3b8; border-left: 3px solid var(--accent);">
+        Awaiting local sensor data...
+    </div>
+
     <div id="map"></div>
-    <button class="btn" onclick="getLocation()">REFRESH SENSORS</button>
+    <button class="btn" onclick="getLocation()">RE-SYNC GPS</button>
 </div>
 
 <script>
@@ -54,27 +63,30 @@
     async function searchZip() {
         const zip = document.getElementById('zipInput').value;
         if(!zip) return;
-        document.getElementById('city').innerText = "Syncing Zip...";
+        document.getElementById('city').innerText = "Locating Zip...";
         try {
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-            if(!res.ok) throw new Error();
             const data = await res.json();
-            const place = data.places[0];
-            fetchData(parseFloat(place.latitude), parseFloat(place.longitude));
-        } catch(e) { document.getElementById('city').innerText = "Zip Not Found"; }
+            const lat = parseFloat(data.places[0].latitude);
+            const lon = parseFloat(data.places[0].longitude);
+            fetchData(lat, lon);
+        } catch(e) { document.getElementById('city').innerText = "Invalid Zip"; }
     }
 
     function getLocation() {
-        navigator.geolocation.getCurrentPosition(
-            p => fetchData(p.coords.latitude, p.coords.longitude),
-            () => fetchData(29.704, -98.636)
-        );
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                p => fetchData(p.coords.latitude, p.coords.longitude),
+                () => fetchData(29.704, -98.636)
+            );
+        } else { fetchData(29.704, -98.636); }
     }
 
     async function fetchData(lat, lon) {
         try {
             const res = await fetch(`/api?lat=${lat}&lon=${lon}`);
             const data = await res.json();
+            
             document.getElementById('city').innerText = data.city;
             document.getElementById('ambee').innerText = Math.round(data.ambee);
             document.getElementById('tomorrow').innerText = Math.round(data.tomorrow);
@@ -82,12 +94,12 @@
             document.getElementById('weed').innerText = data.weed;
             
             const max = Math.max(data.ambee, data.tomorrow);
-            const tag = document.getElementById('est-tag');
             const advice = document.getElementById('advice');
+            const tag = document.getElementById('est-tag');
 
-            if(max > 200) advice.innerText = "Extreme Pollen: Keep car windows up and wash hair after being outside.";
-            else if(max > 50) advice.innerText = "Moderate Levels: Perfect for a car wash, but keep an eye on allergies.";
-            else advice.innerText = "Clear Skies: Great day for outdoor activities!";
+            if(max > 300) advice.innerText = "Extreme: Cedar is peaking. Wash hair/car and stay indoors if possible.";
+            else if(max > 50) advice.innerText = "Moderate: You may see yellow dust on cars. Good for a quick wash.";
+            else advice.innerText = "Low: Perfect day for outdoor activities and car maintenance.";
 
             if(data.isEstimate) { tag.innerText = "ESTIMATE"; tag.className = "tag-active"; }
             else { tag.innerText = ""; tag.className = ""; }
@@ -102,6 +114,7 @@
             if(marker) map.removeLayer(marker);
             marker = L.circleMarker([lat, lon], {color: color, radius: 10, fillOpacity: 0.6}).addTo(map);
             map.panTo([lat, lon]);
+
         } catch(e) { console.error(e); }
     }
     window.onload = getLocation;
