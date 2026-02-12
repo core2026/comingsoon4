@@ -3,128 +3,105 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Radar | AceKallas Intelligence</title>
-    
+    <title>Pollen Surveillance | AceKallas</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
-
     <style>
-        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.03); --border: rgba(255, 255, 255, 0.1); }
-        body { background: var(--bg); color: white; margin: 0; padding: 10px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
-        .dashboard { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 12px; }
-        .tile { background: var(--glass); border: 1px solid var(--border); border-radius: 24px; padding: 20px; backdrop-filter: blur(20px); }
-        .header-tile { display: flex; justify-content: space-between; align-items: center; }
-        .location-title { font-size: 1.25rem; font-weight: 800; }
-        h2 { font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin: 0 0 6px 0; letter-spacing: 1.5px; }
-        .engine-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-        .data-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 12px; text-align: center; }
-        .engine-label { font-size: 0.6rem; text-transform: uppercase; color: #475569; }
-        .engine-val { font-size: 1.5rem; font-weight: 900; }
-        .stat-val { font-size: 1.1rem; font-weight: 700; color: #cbd5e1; }
-        #map { height: 160px; border-radius: 18px; background: #000; border: 1px solid var(--border); margin-top: 8px; z-index: 1; }
-        .btn-sync { background: rgba(255,255,255,0.08); border: 1px solid var(--border); padding: 6px 12px; border-radius: 10px; color: #94a3b8; font-size: 0.65rem; cursor: pointer; }
-        .btn-export { background: var(--accent); width: 100%; border: none; padding: 16px; border-radius: 20px; color: white; font-weight: 800; cursor: pointer; margin-top: 10px; }
-        .timestamp { font-size: 0.65rem; color: #334155; text-align: center; margin-top: 20px; }
+        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
+        body { background: var(--bg); color: white; font-family: -apple-system, sans-serif; display: flex; justify-content: center; padding: 15px; margin: 0; }
+        .dashboard { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 12px; }
+        .tile { background: var(--glass); border: 1px solid var(--border); border-radius: 20px; padding: 18px; backdrop-filter: blur(10px); }
+        .city { font-size: 1.4rem; font-weight: 800; }
+        h2 { font-size: 0.6rem; text-transform: uppercase; color: #64748b; margin: 0 0 8px 0; letter-spacing: 1px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.03); }
+        .val { font-size: 1.8rem; font-weight: 900; color: var(--accent); }
+        .secondary-val { font-size: 1.1rem; font-weight: 700; color: #f8fafc; }
+        #map { height: 160px; border-radius: 15px; margin-top: 5px; border: 1px solid var(--border); }
+        .btn { background: var(--accent); color: white; border: none; width: 100%; padding: 16px; border-radius: 15px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+        .btn:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
-<div id="capture-area" class="dashboard">
-    <div class="tile header-tile">
-        <div>
-            <h2>Dual-Engine Pollen Feed</h2>
-            <div id="city-name" class="location-title">Locating...</div>
-        </div>
-        <button class="btn-sync" onclick="updateUI()">RE-SYNC</button>
+<div class="dashboard">
+    <div class="tile">
+        <h2>Live Intelligence</h2>
+        <div id="city" class="city">Detecting...</div>
     </div>
 
     <div class="tile">
         <h2 style="color: var(--accent)">Mountain Cedar (PPM)</h2>
-        <div class="engine-row">
-            <div class="data-card">
-                <div class="engine-label">Ambee</div>
-                <div id="ambee-cedar" class="engine-val">--</div>
-            </div>
-            <div class="data-card">
-                <div class="engine-label">Tomorrow</div>
-                <div id="tomorrow-cedar" class="engine-val">--</div>
-            </div>
+        <div class="grid">
+            <div class="card"><h2>Ambee</h2><div id="ambee-val" class="val">--</div></div>
+            <div class="card"><h2>Tomorrow</h2><div id="tomorrow-val" class="val">--</div></div>
         </div>
     </div>
 
-    <div class="tile" style="padding: 8px;"><div id="map"></div></div>
-
-    <div class="tile">
-        <h2>Advisory</h2>
-        <div id="health-advice" style="font-size: 0.8rem; color: #94a3b8;">Awaiting sync...</div>
+    <div class="grid">
+        <div class="tile">
+            <h2>Grass</h2>
+            <div id="grass-val" class="secondary-val">--</div>
+        </div>
+        <div class="tile">
+            <h2>Weeds</h2>
+            <div id="weed-val" class="secondary-val">--</div>
+        </div>
     </div>
+
+    <div class="tile" style="padding: 10px;"><div id="map"></div></div>
+
+    <button class="btn" onclick="updateUI()">RE-SYNC SENSORS</button>
+    <div id="status" style="font-size: 0.6rem; text-align: center; opacity: 0.4;">Awaiting data...</div>
 </div>
 
-<button class="btn-export" onclick="takeSnapshot()">SAVE REPORT</button>
-<div id="update-time" class="timestamp">--</div>
-
 <script>
-    // CRITICAL: Point to the internal bridge we built in GitHub /functions/api.js
-    const WORKER_URL = '/api'; 
-    let map, marker, currentLat = 29.704, currentLon = -98.636;
-
-    window.onload = () => {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => {
-                currentLat = pos.coords.latitude;
-                currentLon = pos.coords.longitude;
-                updateUI();
-            }, () => updateUI());
-        } else { updateUI(); }
-    };
+    const API_URL = '/api'; 
+    let map, marker, lat = 29.704, lon = -98.636;
 
     async function updateUI() {
-        document.getElementById('city-name').innerText = "Syncing...";
+        document.getElementById('status').innerText = "Syncing...";
         try {
-            const res = await fetch(`${WORKER_URL}?lat=${currentLat}&lon=${currentLon}`);
+            const res = await fetch(`${API_URL}?lat=${lat}&lon=${lon}`);
             const data = await res.json();
             
-            document.getElementById('city-name').innerText = data.city;
-            document.getElementById('ambee-cedar').innerText = Math.round(data.ambee.tree);
-            document.getElementById('tomorrow-cedar').innerText = Math.round(data.tomorrow.tree);
+            document.getElementById('city').innerText = data.city;
+            document.getElementById('ambee-val').innerText = Math.round(data.ambee.tree);
+            document.getElementById('tomorrow-val').innerText = Math.round(data.tomorrow.tree);
             
-            const maxVal = Math.max(data.ambee.tree, data.tomorrow.tree);
-            let color = "#10b981";
-            let advice = "Conditions look clear today.";
+            // Display Grass/Weed
+            document.getElementById('grass-val').innerText = data.ambee.grass > 0 ? data.ambee.grass : "Low";
+            document.getElementById('weed-val').innerText = data.ambee.weed > 0 ? data.ambee.weed : "Low";
             
-            if(maxVal > 100) { color = "#ef4444"; advice = "High Cedar levels. Stay indoors."; }
-            else if(maxVal > 20) { color = "#f59e0b"; advice = "Moderate activity detected."; }
-            
+            const max = Math.max(data.ambee.tree, data.tomorrow.tree);
+            const color = max > 100 ? "#ef4444" : (max > 20 ? "#f59e0b" : "#10b981");
             document.documentElement.style.setProperty('--accent', color);
-            document.getElementById('health-advice').innerText = advice;
-            document.getElementById('update-time').innerText = "Last Updated: " + new Date().toLocaleTimeString();
-
+            
+            document.getElementById('status').innerText = "Last Update: " + new Date().toLocaleTimeString();
             updateMap(color);
         } catch (e) {
-            document.getElementById('city-name').innerText = "Sync Error";
-            console.error(e);
+            document.getElementById('city').innerText = "Sync Error";
         }
     }
 
     function updateMap(color) {
         if (!map) {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([currentLat, currentLon], 11);
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([lat, lon], 11);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
         }
         if (marker) map.removeLayer(marker);
-        marker = L.circleMarker([currentLat, currentLon], { color: color, radius: 10, fillOpacity: 0.8 }).addTo(map);
-        map.panTo([currentLat, currentLon]);
+        marker = L.circleMarker([lat, lon], { color: color, radius: 10, fillOpacity: 0.6 }).addTo(map);
+        map.panTo([lat, lon]);
     }
 
-    function takeSnapshot() {
-        html2canvas(document.querySelector("#capture-area"), { backgroundColor: "#020617" }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = 'PollenReport.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        });
-    }
+    window.onload = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(p => {
+                lat = p.coords.latitude; lon = p.coords.longitude;
+                updateUI();
+            }, () => updateUI());
+        } else { updateUI(); }
+    };
 </script>
 </body>
 </html>
