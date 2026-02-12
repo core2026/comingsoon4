@@ -3,96 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Surveillance</title>
+    <title>Pollen Surveillance | AceKallas</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        :root { --accent: #10b981; --bg: #020617; }
-        body { background: var(--bg); color: white; font-family: system-ui; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        :root { --accent: #10b981; --bg: #020617; --glass: rgba(255,255,255,0.05); }
+        body { background: var(--bg); color: white; font-family: system-ui, sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 12px; }
-        .tile { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; }
-        .city { font-size: 1.5rem; font-weight: 800; }
+        .tile { background: var(--glass); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; }
+        .city { font-size: 1.5rem; font-weight: 800; color: #f8fafc; }
         .val { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; }
-        h2 { font-size: 0.65rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 8px 0; }
-        #map { height: 160px; border-radius: 15px; }
+        h2 { font-size: 0.65rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 8px 0; letter-spacing: 1px; }
+        #map { height: 160px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
         .btn { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; }
-        
-        /* HIDE LEAFLET ATTRIBUTION */
         .leaflet-control-attribution { display: none !important; }
-        
         .tag-active { background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; animation: blink 2s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         
-        input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 10px; width: 65%; }
+        /* NEW SECTIONS */
+        .advice-box { border-left: 4px solid var(--accent); padding-left: 15px; margin-top: 10px; font-size: 0.9rem; line-height: 1.4; color: #cbd5e1; }
+        .guide-item { display: flex; justify-content: space-between; font-size: 0.75rem; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="tile" style="display:flex; gap:10px;">
-        <input type="text" id="zipInput" placeholder="Enter Zip...">
-        <button onclick="searchZip()" style="flex:1; border-radius:10px; background:var(--accent); color:white; border:none; font-weight:bold;">GO</button>
+        <input type="text" id="zipInput" placeholder="Enter Zip..." style="flex:1; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; padding:10px; border-radius:10px;">
+        <button onclick="searchZip()" style="background:var(--accent); color:white; border:none; padding:0 15px; border-radius:10px; font-weight:bold;">GO</button>
     </div>
-    <div class="tile"><h2>Location</h2><div class="city" id="city">Finding GPS...</div></div>
+    <div class="tile"><h2>Active Location</h2><div class="city" id="city">Finding GPS...</div></div>
+
     <div class="tile">
         <h2 style="color:var(--accent)">Tree Pollen (PPM) <span id="est-tag"></span></h2>
         <div class="grid">
             <div class="card"><h2>Ambee</h2><div id="ambee" class="val">--</div></div>
             <div class="card"><h2>Tomorrow</h2><div id="tomorrow" class="val">--</div></div>
         </div>
+        <div class="advice-box" id="pollenAdvice">Calculating advice for your day...</div>
     </div>
+
     <div class="grid">
         <div class="tile"><h2>Grass</h2><div id="grass" style="font-weight:bold">--</div></div>
         <div class="tile"><h2>Weeds</h2><div id="weed" style="font-weight:bold">--</div></div>
     </div>
+
+    <div class="tile">
+        <h2>Pollen Thresholds</h2>
+        <div class="guide-item"><span>0-15 (Low)</span> <span style="color:#10b981">Safe to Wash Car</span></div>
+        <div class="guide-item"><span>15-90 (Moderate)</span> <span style="color:#f59e0b">Mild Sneezing</span></div>
+        <div class="guide-item"><span>90-1,500 (High)</span> <span style="color:#ef4444">Wash Hair After Outside</span></div>
+        <div class="guide-item"><span>1,500+ (Extreme)</span> <span style="font-weight:bold; color:#f43f5e">Stay Indoors</span></div>
+    </div>
+
     <div id="map"></div>
-    <button class="btn" onclick="getLocation()">REFRESH SENSORS</button>
+    <button class="btn" onclick="getLocation()">REFRESH RADAR</button>
 </div>
 
 <script>
     let map, marker;
     async function searchZip() {
         const zip = document.getElementById('zipInput').value;
-        if(!zip) return;
         const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
         if(res.ok) {
             const data = await res.json();
             fetchData(data.places[0].latitude, data.places[0].longitude);
         }
     }
-    function getLocation() {
-        navigator.geolocation.getCurrentPosition(
-            p => fetchData(p.coords.latitude, p.coords.longitude),
-            () => fetchData(29.704, -98.636)
-        );
-    }
+    function getLocation() { navigator.geolocation.getCurrentPosition(p => fetchData(p.coords.latitude, p.coords.longitude), () => fetchData(29.704, -98.636)); }
+    
     async function fetchData(lat, lon) {
-        try {
-            const res = await fetch(`/api?lat=${lat}&lon=${lon}`);
-            const data = await res.json();
-            document.getElementById('city').innerText = data.city;
-            document.getElementById('ambee').innerText = Math.round(data.ambee);
-            document.getElementById('tomorrow').innerText = Math.round(data.tomorrow);
-            document.getElementById('grass').innerText = data.grass;
-            document.getElementById('weed').innerText = data.weed;
-            
-            const tag = document.getElementById('est-tag');
-            if(data.isEstimate) { tag.innerText = "ESTIMATE"; tag.className = "tag-active"; }
-            else { tag.innerText = ""; tag.className = ""; }
+        const res = await fetch(`/api?lat=${lat}&lon=${lon}`);
+        const data = await res.json();
+        
+        document.getElementById('city').innerText = data.city;
+        document.getElementById('ambee').innerText = Math.round(data.ambee);
+        document.getElementById('tomorrow').innerText = Math.round(data.tomorrow);
+        document.getElementById('grass').innerText = data.grass;
+        document.getElementById('weed').innerText = data.weed;
+        
+        const tag = document.getElementById('est-tag');
+        const advice = document.getElementById('pollenAdvice');
+        const max = Math.max(data.ambee, data.tomorrow);
 
-            const max = Math.max(data.ambee, data.tomorrow);
-            const color = max > 100 ? "#ef4444" : (max > 20 ? "#f59e0b" : "#10b981");
-            document.documentElement.style.setProperty('--accent', color);
+        // DYNAMIC ADVICE LOGIC
+        if (max > 200) {
+            advice.innerHTML = "<b>Extreme Pollen:</b> Keep car windows up. Shower immediately after being outdoors. Avoid car washing today.";
+        } else if (max > 50) {
+            advice.innerHTML = "<b>Moderate Levels:</b> Pollen will be visible on dark cars soon. Use antihistamines if sensitive.";
+        } else {
+            advice.innerHTML = "<b>Clear Skies:</b> Perfect day for a car wash or outdoor exercise. Enjoy!";
+        }
 
-            if(!map) {
-                map = L.map('map', {zoomControl: false, attributionControl: false}).setView([lat, lon], 11);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            }
-            if(marker) map.removeLayer(marker);
-            marker = L.circleMarker([lat, lon], {color: color, radius: 10, fillOpacity: 0.6}).addTo(map);
-            map.panTo([lat, lon]);
-        } catch(e) { console.error(e); }
+        if(data.isEstimate) { tag.innerText = "ESTIMATE"; tag.className = "tag-active"; }
+        else { tag.innerText = ""; tag.className = ""; }
+
+        const color = max > 100 ? "#ef4444" : (max > 20 ? "#f59e0b" : "#10b981");
+        document.documentElement.style.setProperty('--accent', color);
+
+        if(!map) {
+            map = L.map('map', {zoomControl: false}).setView([lat, lon], 11);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+        }
+        if(marker) map.removeLayer(marker);
+        marker = L.circleMarker([lat, lon], {color: color, radius: 10, fillOpacity: 0.6}).addTo(map);
+        map.panTo([lat, lon]);
     }
     window.onload = getLocation;
 </script>
