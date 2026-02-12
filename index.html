@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Surveillance</title>
+    <title>Pollen Radar | AceKallas</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root { --accent: #10b981; --bg: #020617; }
-        body { background: var(--bg); color: white; font-family: system-ui; display: flex; justify-content: center; padding: 15px; margin: 0; }
+        body { background: var(--bg); color: white; font-family: system-ui, sans-serif; display: flex; justify-content: center; padding: 15px; margin: 0; }
         .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
         .tile { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; }
         .city { font-size: 1.5rem; font-weight: 800; color: #f8fafc; }
         .val { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; }
         h2 { font-size: 0.6rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 5px 0; letter-spacing: 1px; }
-        #map { height: 150px; border-radius: 15px; margin-top: 5px; }
+        #map { height: 160px; border-radius: 15px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); }
         .leaflet-control-attribution { display: none !important; }
         .btn { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; }
         .tag-active { background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; animation: blink 2s infinite; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 12px; width: 60%; outline: none; font-size: 1rem; }
+        .advice { border-left: 3px solid var(--accent); padding-left: 12px; font-size: 0.85rem; color: #94a3b8; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="tile" style="display:flex; gap:10px; align-items:center;">
-        <input type="text" id="zipInput" placeholder="Enter Zip...">
-        <button onclick="searchZip()" style="flex:1; height:45px; border-radius:12px; background:var(--accent); color:white; border:none; font-weight:bold; cursor:pointer;">SEARCH</button>
+    <div class="tile" style="display:flex; gap:10px;">
+        <input type="text" id="zipInput" placeholder="Enter Zip Code...">
+        <button onclick="searchZip()" style="flex:1; border-radius:12px; background:var(--accent); color:white; border:none; font-weight:bold; cursor:pointer;">GO</button>
     </div>
     
     <div class="tile">
-        <h2>Location Detected</h2>
-        <div class="city" id="city">Finding GPS...</div>
+        <h2>Active Surveillance</h2>
+        <div class="city" id="city">Connecting...</div>
     </div>
 
     <div class="tile">
@@ -45,25 +46,24 @@
     </div>
 
     <div class="grid">
-        <div class="tile"><h2>Grass</h2><div id="grass" style="font-weight:bold; font-size:1.1rem;">--</div></div>
-        <div class="tile"><h2>Weeds</h2><div id="weed" style="font-weight:bold; font-size:1.1rem;">--</div></div>
+        <div class="tile"><h2>Grass</h2><div id="grass" style="font-weight:bold;">--</div></div>
+        <div class="tile"><h2>Weeds</h2><div id="weed" style="font-weight:bold;">--</div></div>
     </div>
 
-    <div class="tile" id="advice" style="font-size: 0.85rem; color: #94a3b8; border-left: 3px solid var(--accent);">
-        Awaiting local sensor data...
-    </div>
+    <div class="tile advice" id="advice">Initializing local sensors...</div>
 
     <div id="map"></div>
-    <button class="btn" onclick="getLocation()">RE-SYNC GPS</button>
+    <button class="btn" onclick="askGPS()">RE-SYNC GPS</button>
 </div>
 
 <script>
     let map, marker;
 
+    // ZIP SEARCH: Bypasses browser GPS restrictions
     async function searchZip() {
         const zip = document.getElementById('zipInput').value;
         if(!zip) return;
-        document.getElementById('city').innerText = "Locating Zip...";
+        document.getElementById('city').innerText = "Syncing Zip...";
         try {
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
             const data = await res.json();
@@ -73,13 +73,14 @@
         } catch(e) { document.getElementById('city').innerText = "Invalid Zip"; }
     }
 
-    function getLocation() {
+    // GPS: Only triggers when button is clicked (fixes 'Violation' error)
+    function askGPS() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 p => fetchData(p.coords.latitude, p.coords.longitude),
-                () => fetchData(29.704, -98.636)
+                () => alert("GPS access denied. Use Zip search instead.")
             );
-        } else { fetchData(29.704, -98.636); }
+        }
     }
 
     async function fetchData(lat, lon) {
@@ -97,9 +98,9 @@
             const advice = document.getElementById('advice');
             const tag = document.getElementById('est-tag');
 
-            if(max > 300) advice.innerText = "Extreme: Cedar is peaking. Wash hair/car and stay indoors if possible.";
-            else if(max > 50) advice.innerText = "Moderate: You may see yellow dust on cars. Good for a quick wash.";
-            else advice.innerText = "Low: Perfect day for outdoor activities and car maintenance.";
+            if(max > 250) advice.innerText = "Extreme: Cedar peaking. Keep car windows up and shower after being outside.";
+            else if(max > 60) advice.innerText = "Moderate: Pollen visible soon. Good day for a quick car wash.";
+            else advice.innerText = "Low: Enjoy the clear air! Great day for outdoor activities.";
 
             if(data.isEstimate) { tag.innerText = "ESTIMATE"; tag.className = "tag-active"; }
             else { tag.innerText = ""; tag.className = ""; }
@@ -110,14 +111,17 @@
             if(!map) {
                 map = L.map('map', {zoomControl: false, attributionControl: false}).setView([lat, lon], 11);
                 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            } else {
+                map.setView([lat, lon], 11);
             }
             if(marker) map.removeLayer(marker);
             marker = L.circleMarker([lat, lon], {color: color, radius: 10, fillOpacity: 0.6}).addTo(map);
-            map.panTo([lat, lon]);
 
-        } catch(e) { console.error(e); }
+        } catch(e) { console.error("Sync Error:", e); }
     }
-    window.onload = getLocation;
+
+    // Start at Fair Oaks by default (prevents page-load violation)
+    window.onload = () => { fetchData(29.704, -98.636); };
 </script>
 </body>
 </html>
