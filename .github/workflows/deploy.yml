@@ -3,7 +3,8 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches:
-      - main
+      - main  # Make sure this matches your actual branch name (main or master)
+  workflow_dispatch: # This allows you to run it manually from the Actions tab
 
 jobs:
   deploy:
@@ -11,6 +12,7 @@ jobs:
     permissions:
       contents: read
       deployments: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -20,6 +22,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # The '--commit-dirty=true' and '--branch=main' flags 
-          # force Cloudflare to accept the upload even if the Git link is messy.
-          command: pages deploy . --project-name="comingsoon4" --branch="main" --commit-dirty=true
+          # 1. Create the project shell (ignoring error if it already exists)
+          # 2. Deploy the current folder (.) to that project
+          command: |
+            pages project create comingsoon4 --production-branch main || true
+            pages deploy . --project-name="comingsoon4" --branch="main" --commit-dirty=true
