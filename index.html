@@ -3,125 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Radar | AceKallas</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Coming Soon | Acekallas</title>
     <style>
-        :root { --accent: #10b981; --bg: #020617; }
-        body { background: var(--bg); color: white; font-family: system-ui, sans-serif; display: flex; justify-content: center; padding: 15px; margin: 0; }
-        .container { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
-        .tile { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 18px; }
-        .city { font-size: 1.5rem; font-weight: 800; color: #f8fafc; }
-        .val { font-size: 2.2rem; font-weight: 900; color: var(--accent); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .card { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; }
-        h2 { font-size: 0.6rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 5px 0; letter-spacing: 1px; }
-        #map { height: 160px; border-radius: 15px; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); }
-        .leaflet-control-attribution { display: none !important; }
-        .btn { background: var(--accent); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 800; cursor: pointer; }
-        .tag-active { background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.6rem; font-weight: bold; animation: blink 2s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 12px; width: 60%; outline: none; font-size: 1rem; }
-        .advice { border-left: 3px solid var(--accent); padding-left: 12px; font-size: 0.85rem; color: #94a3b8; }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f9; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .pollen-box { margin-top: 20px; padding: 10px; border-radius: 8px; background: #eef2ff; }
+        .high { color: #d32f2f; font-weight: bold; }
+        .low { color: #388e3c; }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="tile" style="display:flex; gap:10px;">
-        <input type="text" id="zipInput" placeholder="Enter Zip Code...">
-        <button onclick="searchZip()" style="flex:1; border-radius:12px; background:var(--accent); color:white; border:none; font-weight:bold; cursor:pointer;">GO</button>
-    </div>
+
+<div class="card">
+    <h1>Coming Soon</h1>
+    <p>Something amazing is in the works at <strong>acekallas.com</strong>.</p>
     
-    <div class="tile">
-        <h2>Active Surveillance</h2>
-        <div class="city" id="city">Connecting...</div>
+    <div class="pollen-box" id="pollen-widget">
+        <h3>Local Pollen Levels</h3>
+        <p id="pollen-info">Loading data...</p>
     </div>
-
-    <div class="tile">
-        <h2 style="color:var(--accent)">Tree Pollen (PPM) <span id="est-tag"></span></h2>
-        <div class="grid">
-            <div class="card"><h2>Ambee</h2><div id="ambee" class="val">--</div></div>
-            <div class="card"><h2>Tomorrow</h2><div id="tomorrow" class="val">--</div></div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="tile"><h2>Grass</h2><div id="grass" style="font-weight:bold;">--</div></div>
-        <div class="tile"><h2>Weeds</h2><div id="weed" style="font-weight:bold;">--</div></div>
-    </div>
-
-    <div class="tile advice" id="advice">Initializing local sensors...</div>
-
-    <div id="map"></div>
-    <button class="btn" onclick="askGPS()">RE-SYNC GPS</button>
 </div>
 
 <script>
-    let map, marker;
-
-    // ZIP SEARCH: Bypasses browser GPS restrictions
-    async function searchZip() {
-        const zip = document.getElementById('zipInput').value;
-        if(!zip) return;
-        document.getElementById('city').innerText = "Syncing Zip...";
+    async function fetchPollen() {
+        // Pointing to your NEW custom domain worker
+        const apiURL = "https://pollen-data.acekallas.com";
+        
         try {
-            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-            const data = await res.json();
-            const lat = parseFloat(data.places[0].latitude);
-            const lon = parseFloat(data.places[0].longitude);
-            fetchData(lat, lon);
-        } catch(e) { document.getElementById('city').innerText = "Invalid Zip"; }
-    }
-
-    // GPS: Only triggers when button is clicked (fixes 'Violation' error)
-    function askGPS() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                p => fetchData(p.coords.latitude, p.coords.longitude),
-                () => alert("GPS access denied. Use Zip search instead.")
-            );
+            const response = await fetch(apiURL);
+            const data = await response.json();
+            
+            // Displaying the data from pollen-final
+            document.getElementById('pollen-info').innerHTML = `
+                <div>Cedar: <span class="${data.cedar > 100 ? 'high' : 'low'}">${data.cedar}</span></div>
+                <div>Oak: <span class="${data.oak > 100 ? 'high' : 'low'}">${data.oak}</span></div>
+                <small>Last updated: ${data.updated}</small>
+            `;
+        } catch (error) {
+            document.getElementById('pollen-info').innerText = "Unable to load pollen data.";
+            console.error("Fetch Error:", error);
         }
     }
 
-    async function fetchData(lat, lon) {
-        try {
-            const res = await fetch(`/api?lat=${lat}&lon=${lon}`);
-            const data = await res.json();
-            
-            document.getElementById('city').innerText = data.city;
-            document.getElementById('ambee').innerText = Math.round(data.ambee);
-            document.getElementById('tomorrow').innerText = Math.round(data.tomorrow);
-            document.getElementById('grass').innerText = data.grass;
-            document.getElementById('weed').innerText = data.weed;
-            
-            const max = Math.max(data.ambee, data.tomorrow);
-            const advice = document.getElementById('advice');
-            const tag = document.getElementById('est-tag');
-
-            if(max > 250) advice.innerText = "Extreme: Cedar peaking. Keep car windows up and shower after being outside.";
-            else if(max > 60) advice.innerText = "Moderate: Pollen visible soon. Good day for a quick car wash.";
-            else advice.innerText = "Low: Enjoy the clear air! Great day for outdoor activities.";
-
-            if(data.isEstimate) { tag.innerText = "ESTIMATE"; tag.className = "tag-active"; }
-            else { tag.innerText = ""; tag.className = ""; }
-
-            const color = max > 100 ? "#ef4444" : (max > 20 ? "#f59e0b" : "#10b981");
-            document.documentElement.style.setProperty('--accent', color);
-
-            if(!map) {
-                map = L.map('map', {zoomControl: false, attributionControl: false}).setView([lat, lon], 11);
-                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
-            } else {
-                map.setView([lat, lon], 11);
-            }
-            if(marker) map.removeLayer(marker);
-            marker = L.circleMarker([lat, lon], {color: color, radius: 10, fillOpacity: 0.6}).addTo(map);
-
-        } catch(e) { console.error("Sync Error:", e); }
-    }
-
-    // Start at Fair Oaks by default (prevents page-load violation)
-    window.onload = () => { fetchData(29.704, -98.636); };
+    fetchPollen();
 </script>
+
 </body>
 </html>
