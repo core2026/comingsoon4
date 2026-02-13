@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas | Fair Oaks Ranch Dashboard</title>
+    <title>Acekallas | Fair Oaks Ranch</title>
     <style>
-        :root { --bg: #0f172a; --card: rgba(30, 41, 59, 0.7); --gold: #fbbf24; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; max-width: 800px; width: 90%; }
-        .card { background: var(--card); padding: 30px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
-        .full-width { grid-column: span 2; }
-        h1 { margin: 0 0 20px 0; font-size: 2.5rem; text-align: center; grid-column: span 2; }
-        .val { font-size: 2rem; font-weight: bold; color: var(--gold); display: block; }
-        .label { text-transform: uppercase; font-size: 0.75rem; color: #94a3b8; letter-spacing: 1px; }
-        .fact-text { font-style: italic; color: #cbd5e1; margin-top: 10px; }
+        :root { --bg: #0f172a; --gold: #fbbf24; --text: #f8fafc; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 90%; max-width: 600px; }
+        .card { background: rgba(30, 41, 59, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        .full { grid-column: span 2; }
+        h1 { grid-column: span 2; text-align: center; font-size: 2rem; margin-bottom: 10px; }
+        .val { font-size: 1.8rem; font-weight: bold; color: var(--gold); display: block; margin-top: 5px; }
+        .label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
+        .sub-text { color: #cbd5e1; margin-top: 10px; font-size: 0.9rem; }
+        .footer { grid-column: span 2; text-align: center; font-size: 0.7rem; color: #475569; }
     </style>
 </head>
 <body>
 
-<div class="grid">
-    <h1>Fair Oaks Ranch Dashboard</h1>
+<div class="dashboard">
+    <h1>Fair Oaks Ranch</h1>
 
     <div class="card">
         <span class="label">Cedar Level</span>
@@ -28,41 +29,37 @@
 
     <div class="card">
         <span class="label">Car Wash Index</span>
-        <span class="val" id="car-wash">Checking...</span>
+        <span class="val" id="car-wash">--</span>
     </div>
 
-    <div class="card full-width">
+    <div class="card full">
         <span class="label">When it clears up</span>
-        <p id="forecast">Analyzing weather patterns...</p>
+        <div class="sub-text" id="clearing">Analyzing forecast...</div>
     </div>
 
-    <div class="card full-width">
-        <span class="label">Did you know?</span>
-        <p class="fact-text" id="fun-fact">Loading pollen trivia...</p>
+    <div class="card full">
+        <span class="label">Fun Fact</span>
+        <div class="sub-text" id="fact" style="font-style: italic;">Loading...</div>
     </div>
 
-    <div class="full-width" style="text-align: center; color: #475569; font-size: 0.7rem;" id="update">
-        Syncing with Tomorrow.io API...
-    </div>
+    <div class="footer" id="time">Connecting to Tomorrow.io...</div>
 </div>
 
 <script>
-    async function loadDashboard() {
+    async function updateDash() {
         try {
-            const res = await fetch("https://pollen-data.acekallas.com");
-            const data = await res.json();
-            
-            document.getElementById('cedar').innerText = data.cedar;
-            document.getElementById('car-wash').innerText = data.carWash;
-            document.getElementById('forecast').innerText = data.clearsUp;
-            document.getElementById('fun-fact').innerText = data.funFact;
-            document.getElementById('update').innerText = "Last Updated: " + data.updated;
-        } catch (e) {
-            document.getElementById('update').innerText = "API Connection Error";
+            const r = await fetch("https://pollen-data.acekallas.com");
+            const d = await r.json();
+            document.getElementById('cedar').innerText = d.cedar;
+            document.getElementById('car-wash').innerText = d.carWash;
+            document.getElementById('clearing').innerText = d.clearsUp;
+            document.getElementById('fact').innerText = d.funFact;
+            document.getElementById('time').innerText = "Last Updated: " + d.updated;
+        } catch(e) {
+            document.getElementById('time').innerText = "Check API Key in Worker Settings";
         }
     }
-    loadDashboard();
+    updateDash();
 </script>
-
 </body>
 </html>
