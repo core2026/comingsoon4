@@ -8,62 +8,86 @@
     <style>
         :root { --bg: #0b1120; --gold: #fbbf24; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: radial-gradient(circle at top right, #1e293b, #0b1120); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .container { width: 90%; max-width: 500px; text-align: center; }
+        .container { width: 95%; max-width: 500px; text-align: center; }
         h1 { font-size: 2.2rem; margin-bottom: 25px; letter-spacing: -1px; color: #fff; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; }
-        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; }
+        .card { background: var(--card); padding: 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); transition: background 0.5s ease; }
         .full { grid-column: span 2; }
-        .label { font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
-        .val { font-size: 1.6rem; font-weight: 800; color: #fff; display: block; margin-top: 5px; }
-        .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 5px; display: block; }
+        .label { font-size: 0.6rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
+        .val { font-size: 1.5rem; font-weight: 800; color: #fff; display: block; margin-top: 4px; }
+        .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
+        .uv-guide { font-size: 0.75rem; color: #94a3b8; margin-top: 20px; text-align: left; line-height: 1.5; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: #475569; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 id="city-title">Fair Oaks Ranch</h1>
+    <h1 id="city-title">Locating...</h1>
     
     <div class="grid">
+        <div class="card">
+            <span class="label">Actual Temp</span>
+            <span class="val" id="actual">--°</span>
+        </div>
+        <div class="card" id="feels-card">
+            <span class="label">Feels Like</span>
+            <span class="val" id="feels">--°</span>
+        </div>
         <div class="card">
             <span class="label">Cedar Risk</span>
             <span class="val" id="cedar">--</span>
         </div>
-        <div class="card">
-            <span class="label">Feels Like</span>
-            <span class="val" id="temp">--°</span>
-        </div>
-        <div class="card">
+        <div class="card" id="uv-card">
             <span class="label">UV Index</span>
             <span class="val" id="uv">--</span>
         </div>
-        <div class="card">
-            <span class="label">Car Wash</span>
+        <div class="card full">
+            <span class="label">Car Wash Index</span>
             <span class="status" id="wash">---</span>
         </div>
         <div class="card full">
             <span class="label">Outlook</span>
-            <div id="clears" style="font-size: 0.9rem; margin-top: 5px;">---</div>
+            <div id="clears" style="font-size: 0.85rem; margin-top: 4px; color: #cbd5e1;">---</div>
         </div>
     </div>
+
+    <div class="uv-guide">
+        <strong>UV Safety:</strong> 0-2 (Low), 3-5 (Moderate), 6-7 (High), 8+ (Very High). 
+        <br>High UV can cause skin damage even on cool days.
+    </div>
+
     <div class="footer" id="time">Syncing...</div>
 </div>
 
 <script>
+    function getUVColor(uv) {
+        if (uv <= 2) return "rgba(74, 222, 128, 0.15)"; 
+        if (uv <= 5) return "rgba(250, 204, 21, 0.15)"; 
+        if (uv <= 7) return "rgba(251, 146, 60, 0.2)"; 
+        return "rgba(248, 113, 113, 0.2)"; 
+    }
+
     async function update() {
         try {
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
+            document.getElementById('city-title').innerText = d.location;
+            document.getElementById('actual').innerText = d.actualTemp + "°";
+            document.getElementById('feels').innerText = d.feelsLike + "°";
             document.getElementById('cedar').innerText = d.cedar;
-            document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('uv').innerText = d.uvIndex;
             document.getElementById('wash').innerText = d.carWash;
             document.getElementById('clears').innerText = d.clearsUp;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
-        } catch(e) { 
-            document.getElementById('time').innerText = "Update Failed - Check Worker CORS"; 
-        }
+
+            // Color Coding
+            document.getElementById('uv-card').style.backgroundColor = getUVColor(d.uvIndex);
+            if (d.feelsLike > 90) {
+                document.getElementById('feels-card').style.backgroundColor = "rgba(248, 113, 113, 0.15)";
+            }
+        } catch(e) { document.getElementById('time').innerText = "Sync Failed"; }
     }
     update();
 </script>
