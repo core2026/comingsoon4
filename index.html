@@ -3,72 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas | Fair Oaks Ranch Dash</title>
+    <title>Acekallas | Personal Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0b1120; --gold: #fbbf24; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { width: 90%; max-width: 550px; text-align: center; }
-        h1 { font-size: 2.5rem; margin-bottom: 30px; letter-spacing: -1px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .card { background: var(--card); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(15px); text-align: left; }
+        .container { width: 90%; max-width: 500px; text-align: center; }
+        h1 { font-size: 2.2rem; margin-bottom: 25px; letter-spacing: -1px; color: #fff; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; }
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(12px); }
         .full { grid-column: span 2; }
-        .label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
-        .val { font-size: 1.8rem; font-weight: 800; color: #fff; display: block; margin-top: 5px; }
-        .status { color: var(--gold); font-size: 1.1rem; font-weight: 600; margin-top: 10px; display: block; }
-        .footer { margin-top: 30px; font-size: 0.7rem; color: #475569; }
+        .label { font-size: 0.65rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
+        .val { font-size: 1.6rem; font-weight: 800; color: #fff; display: block; margin-top: 5px; }
+        .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 5px; display: block; }
+        .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: #475569; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Fair Oaks Ranch</h1>
+    <h1 id="city-title">Local Dashboard</h1>
     
     <div class="grid">
         <div class="card">
-            <span class="label">Feels Like</span>
-            <span class="val" id="temp">--°F</span>
+            <span class="label">Cedar Risk</span>
+            <span class="val" id="cedar">--</span>
         </div>
         <div class="card">
-            <span class="label">UV Index</span>
-            <span class="val" id="uv">--</span>
+            <span class="label">Feels Like</span>
+            <span class="val" id="temp">--°</span>
         </div>
         <div class="card full">
             <span class="label">Car Wash Index</span>
-            <span class="status" id="wash">Analyzing dust & rain...</span>
+            <span class="status" id="wash">---</span>
         </div>
         <div class="card full">
-            <span class="label">Outdoor Window</span>
-            <span class="status" id="clears" style="color:#f8fafc; font-size: 0.95rem;">Checking sky conditions...</span>
+            <span class="label">Outlook</span>
+            <div id="clears" style="font-size: 0.9rem; margin-top: 5px;">---</div>
         </div>
         <div class="card full">
             <span class="label">Did you know?</span>
-            <p id="fact" style="font-style: italic; font-size: 0.9rem; color: #94a3b8; margin: 10px 0 0 0;">Loading local trivia...</p>
+            <div id="fact" style="font-size: 0.85rem; color: #94a3b8; font-style: italic; margin-top: 5px;">---</div>
         </div>
     </div>
-
-    <div class="footer" id="time">Connecting to Tomorrow.io...</div>
+    <div class="footer" id="time">Locating...</div>
 </div>
 
 <script>
-    async function updateDash() {
+    async function update() {
         try {
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
-            document.getElementById('temp').innerText = d.feelsLike + "°";
-            document.getElementById('uv').innerText = d.uvIndex;
+            document.getElementById('city-title').innerText = d.location; // Fills in City, State
+            document.getElementById('cedar').innerText = d.cedar;
+            document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('wash').innerText = d.carWash;
             document.getElementById('clears').innerText = d.clearsUp;
             document.getElementById('fact').innerText = d.funFact;
-            document.getElementById('time').innerText = "Last Updated: " + d.updated;
-        } catch(e) {
-            document.getElementById('time').innerText = "Connection Error";
-        }
+            document.getElementById('time').innerText = "Verified Update: " + d.updated;
+        } catch(e) { document.getElementById('time').innerText = "Data Sync Offline"; }
     }
-    updateDash();
-    setInterval(updateDash, 900000); // Update every 15 mins
+    update();
 </script>
-
 </body>
 </html>
