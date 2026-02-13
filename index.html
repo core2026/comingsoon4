@@ -28,11 +28,11 @@
     <div class="grid">
         <div class="card">
             <span class="label">Actual Temp</span>
-            <span class="val" id="actual">--°</span>
+            <span class="val" id="actual">--°F</span>
         </div>
         <div class="card" id="feels-card">
             <span class="label">Feels Like</span>
-            <span class="val" id="feels">--°</span>
+            <span class="val" id="feels">--°F</span>
         </div>
         <div class="card">
             <span class="label">Cedar Risk</span>
@@ -54,7 +54,6 @@
 
     <div class="uv-guide">
         <strong>UV Safety:</strong> 0-2 (Low), 3-5 (Moderate), 6-7 (High), 8+ (Very High). 
-        <br>High UV can cause skin damage even on cool days.
     </div>
 
     <div class="footer" id="time">Syncing...</div>
@@ -82,9 +81,10 @@
             document.getElementById('clears').innerText = d.clearsUp;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
 
-            // Color Coding
             document.getElementById('uv-card').style.backgroundColor = getUVColor(d.uvIndex);
-            if (d.feelsLike > 90) {
+            
+            // Highlight "Feels Like" if it's getting hot
+            if (d.feelsLike >= 85) {
                 document.getElementById('feels-card').style.backgroundColor = "rgba(248, 113, 113, 0.15)";
             }
         } catch(e) { document.getElementById('time').innerText = "Sync Failed"; }
