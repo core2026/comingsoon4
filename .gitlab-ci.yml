@@ -1,0 +1,12 @@
+image: node:latest
+
+stages:
+  - deploy
+
+deploy-job:
+  stage: deploy
+  only:
+    - main  # This ensures it only deploys when you push to the main branch
+  script:
+    - npm install -g wrangler # Installs the Cloudflare tool
+    - wrangler pages deploy . --project-name="comingsoon4" --branch="main"
