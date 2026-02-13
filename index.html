@@ -143,8 +143,8 @@
                 <span class="label">Cedar</span>
             </div>
             <div class="stat">
-                <span class="val" id="oak">--</span>
-                <span class="label">Oak</span>
+                <span class="val" id="Trees">--</span>
+                <span class="label">Trees</span>
             </div>
             <div class="stat">
                 <span class="val" id="ragweed">--</span>
@@ -164,7 +164,7 @@
             const data = await response.json();
             
             updateUI('cedar', data.cedar);
-            updateUI('oak', data.oak);
+            updateUI('Trees', data.Trees);
             updateUI('ragweed', data.ragweed);
             
             timeEl.innerText = "Real-time Update: " + data.updated;
@@ -198,3 +198,4 @@
 
 </body>
 </html>
+
