@@ -18,14 +18,13 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler
 
-      - name: Create Project and Deploy
+      - name: Create and Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          # 1. Manually create the project. If it exists, this safely fails and moves on.
-          wrangler pages project create comingsoon4 --production-branch main || echo "Project already exists"
+          # 1. Create the project shell with explicit account ID
+          wrangler pages project create comingsoon4 --production-branch main --account-id $CLOUDFLARE_ACCOUNT_ID || echo "Project exists or creation skipped"
           
-          # 2. Deploy the current directory. 
-          # Use './' to be explicit about the directory.
-          wrangler pages deploy ./ --project-name="comingsoon4" --branch="main" --commit-dirty=true
+          # 2. Deploy with absolute path and no-interactive flags
+          wrangler pages deploy . --project-name="comingsoon4" --branch="main" --commit-dirty=true --account-id $CLOUDFLARE_ACCOUNT_ID
