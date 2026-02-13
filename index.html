@@ -3,50 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coming Soon | Acekallas</title>
+    <title>Acekallas | Coming Soon</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f9; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
-        .pollen-box { margin-top: 20px; padding: 10px; border-radius: 8px; background: #eef2ff; }
-        .high { color: #d32f2f; font-weight: bold; }
-        .low { color: #388e3c; }
+        :root { --primary: #fbbf24; --bg: #0f172a; }
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: radial-gradient(circle at top right, #1e293b, #0f172a); 
+            color: white; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; height: 100vh; margin: 0; 
+        }
+        .container { text-align: center; }
+        h1 { font-size: 3.5rem; margin-bottom: 0px; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        p { color: #94a3b8; font-size: 1.2rem; margin-top: 10px; }
+        
+        .pollen-card {
+            margin-top: 50px; background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px;
+            border-radius: 24px; backdrop-filter: blur(12px); min-width: 350px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        .levels { display: flex; justify-content: space-around; margin-top: 20px; }
+        .stat { display: flex; flex-direction: column; padding: 0 15px; }
+        .val { font-size: 2rem; font-weight: 800; color: var(--primary); }
+        .label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; letter-spacing: 1px; margin-top: 5px; }
+        .time { font-size: 0.7rem; color: #475569; margin-top: 25px; display: block; }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="container">
     <h1>Coming Soon</h1>
-    <p>Something amazing is in the works at <strong>acekallas.com</strong>.</p>
-    
-    <div class="pollen-box" id="pollen-widget">
-        <h3>Local Pollen Levels</h3>
-        <p id="pollen-info">Loading data...</p>
+    <p>Something special is coming to <strong>acekallas.com</strong></p>
+
+    <div class="pollen-card">
+        <span class="label">Central Texas Pollen Data</span>
+        <div class="levels">
+            <div class="stat">
+                <span class="val" id="cedar">--</span>
+                <span class="label">Cedar</span>
+            </div>
+            <div class="stat">
+                <span class="val" id="oak">--</span>
+                <span class="label">Oak</span>
+            </div>
+            <div class="stat">
+                <span class="val" id="ragweed">--</span>
+                <span class="label">Ragweed</span>
+            </div>
+        </div>
+        <span class="time" id="update-time">Synchronizing with sensors...</span>
     </div>
 </div>
 
 <script>
-    async function fetchPollen() {
-        // Pointing to your NEW custom domain worker
-        const apiURL = "https://pollen-data.acekallas.com";
-        
+    async function getPollen() {
         try {
-            const response = await fetch(apiURL);
-            const data = await response.json();
-            
-            // Displaying the data from pollen-final
-            document.getElementById('pollen-info').innerHTML = `
-                <div>Cedar: <span class="${data.cedar > 100 ? 'high' : 'low'}">${data.cedar}</span></div>
-                <div>Oak: <span class="${data.oak > 100 ? 'high' : 'low'}">${data.oak}</span></div>
-                <small>Last updated: ${data.updated}</small>
-            `;
-        } catch (error) {
-            document.getElementById('pollen-info').innerText = "Unable to load pollen data.";
-            console.error("Fetch Error:", error);
+            const res = await fetch("https://pollen-data.acekallas.com");
+            const data = await res.json();
+            document.getElementById('cedar').innerText = data.cedar;
+            document.getElementById('oak').innerText = data.oak;
+            document.getElementById('ragweed').innerText = data.ragweed;
+            document.getElementById('update-time').innerText = "Last Updated: " + data.updated;
+        } catch (e) {
+            document.getElementById('update-time').innerText = "Service connection error";
         }
     }
-
-    fetchPollen();
+    getPollen();
 </script>
-
 </body>
 </html>
