@@ -62,7 +62,7 @@
             document.getElementById('clears').innerText = d.clearsUp;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
         } catch(e) { 
-            document.getElementById('time').innerText = "Update Failed"; 
+            document.getElementById('time').innerText = "Update Failed - Check Worker CORS"; 
         }
     }
     update();
