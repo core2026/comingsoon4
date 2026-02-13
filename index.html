@@ -3,43 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas | Fair Oaks Ranch</title>
+    <title>Acekallas | Fair Oaks Ranch Dash</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0f172a; --gold: #fbbf24; --text: #f8fafc; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 90%; max-width: 600px; }
-        .card { background: rgba(30, 41, 59, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); }
+        :root { --bg: #0b1120; --gold: #fbbf24; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { width: 90%; max-width: 550px; text-align: center; }
+        h1 { font-size: 2.5rem; margin-bottom: 30px; letter-spacing: -1px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .card { background: var(--card); padding: 25px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(15px); text-align: left; }
         .full { grid-column: span 2; }
-        h1 { grid-column: span 2; text-align: center; font-size: 2rem; margin-bottom: 10px; }
-        .val { font-size: 1.8rem; font-weight: bold; color: var(--gold); display: block; margin-top: 5px; }
-        .label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; }
-        .sub-text { color: #cbd5e1; margin-top: 10px; font-size: 0.9rem; }
-        .footer { grid-column: span 2; text-align: center; font-size: 0.7rem; color: #475569; }
+        .label { font-size: 0.7rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
+        .val { font-size: 1.8rem; font-weight: 800; color: #fff; display: block; margin-top: 5px; }
+        .status { color: var(--gold); font-size: 1.1rem; font-weight: 600; margin-top: 10px; display: block; }
+        .footer { margin-top: 30px; font-size: 0.7rem; color: #475569; }
     </style>
 </head>
 <body>
 
-<div class="dashboard">
+<div class="container">
     <h1>Fair Oaks Ranch</h1>
-
-    <div class="card">
-        <span class="label">Cedar Level</span>
-        <span class="val" id="cedar">--</span>
-    </div>
-
-    <div class="card">
-        <span class="label">Car Wash Index</span>
-        <span class="val" id="car-wash">--</span>
-    </div>
-
-    <div class="card full">
-        <span class="label">When it clears up</span>
-        <div class="sub-text" id="clearing">Analyzing forecast...</div>
-    </div>
-
-    <div class="card full">
-        <span class="label">Fun Fact</span>
-        <div class="sub-text" id="fact" style="font-style: italic;">Loading...</div>
+    
+    <div class="grid">
+        <div class="card">
+            <span class="label">Feels Like</span>
+            <span class="val" id="temp">--°F</span>
+        </div>
+        <div class="card">
+            <span class="label">UV Index</span>
+            <span class="val" id="uv">--</span>
+        </div>
+        <div class="card full">
+            <span class="label">Car Wash Index</span>
+            <span class="status" id="wash">Analyzing dust & rain...</span>
+        </div>
+        <div class="card full">
+            <span class="label">Outdoor Window</span>
+            <span class="status" id="clears" style="color:#f8fafc; font-size: 0.95rem;">Checking sky conditions...</span>
+        </div>
+        <div class="card full">
+            <span class="label">Did you know?</span>
+            <p id="fact" style="font-style: italic; font-size: 0.9rem; color: #94a3b8; margin: 10px 0 0 0;">Loading local trivia...</p>
+        </div>
     </div>
 
     <div class="footer" id="time">Connecting to Tomorrow.io...</div>
@@ -48,18 +53,22 @@
 <script>
     async function updateDash() {
         try {
-            const r = await fetch("https://pollen-data.acekallas.com");
-            const d = await r.json();
-            document.getElementById('cedar').innerText = d.cedar;
-            document.getElementById('car-wash').innerText = d.carWash;
-            document.getElementById('clearing').innerText = d.clearsUp;
+            const res = await fetch("https://pollen-data.acekallas.com");
+            const d = await res.json();
+            
+            document.getElementById('temp').innerText = d.feelsLike + "°";
+            document.getElementById('uv').innerText = d.uvIndex;
+            document.getElementById('wash').innerText = d.carWash;
+            document.getElementById('clears').innerText = d.clearsUp;
             document.getElementById('fact').innerText = d.funFact;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
         } catch(e) {
-            document.getElementById('time').innerText = "Check API Key in Worker Settings";
+            document.getElementById('time').innerText = "Connection Error";
         }
     }
     updateDash();
+    setInterval(updateDash, 900000); // Update every 15 mins
 </script>
+
 </body>
 </html>
