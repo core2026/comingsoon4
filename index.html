@@ -10,7 +10,7 @@
         body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: background 0.3s ease; }
         .container { width: 95%; max-width: 500px; text-align: center; position: relative; }
-        .theme-toggle { position: absolute; top: -50px; right: 0; background: var(--card); border: 1px solid rgba(128,128,128,0.2); padding: 8px 12px; border-radius: 12px; cursor: pointer; color: var(--text); font-size: 0.8rem; }
+        .theme-toggle { position: absolute; top: -50px; right: 0; background: var(--card); border: 1px solid rgba(128,128,128,0.2); padding: 8px 12px; border-radius: 12px; cursor: pointer; color: var(--text); font-size: 0.8rem; font-weight: bold; }
         h1 { font-size: 2.2rem; margin-bottom: 25px; letter-spacing: -1px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; }
         .card { background: var(--card); padding: 18px; border-radius: 20px; border: 1px solid rgba(128,128,128,0.1); backdrop-filter: blur(12px); }
@@ -18,8 +18,7 @@
         .label { font-size: 0.6rem; text-transform: uppercase; color: var(--label); letter-spacing: 1px; font-weight: 700; }
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin-top: 4px; }
         .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
-        .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: var(--label); line-height: 1.6; }
-        #countdown { font-weight: bold; color: var(--gold); }
+        .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: var(--label); }
     </style>
 </head>
 <body>
@@ -30,10 +29,10 @@
     
     <div class="grid">
         <div class="card">
-            <span class="label">Actual Temp</span>
+            <span class="label">Temperature</span>
             <span class="val" id="actual">--°</span>
         </div>
-        <div class="card">
+        <div class="card" id="feels-card">
             <span class="label">Feels Like</span>
             <span class="val" id="feels">--°</span>
         </div>
@@ -49,16 +48,9 @@
             <span class="label">Car Wash</span>
             <span class="status" id="wash">---</span>
         </div>
-        <div class="card full">
-            <span class="label">Outlook</span>
-            <div id="clears" style="font-size: 0.85rem; margin-top: 4px;">---</div>
-        </div>
     </div>
     
-    <div class="footer">
-        <div>Next API sync in: <span id="countdown">--:--</span></div>
-        <div id="time" style="opacity: 0.6;">Syncing...</div>
-    </div>
+    <div class="footer" id="time">Syncing...</div>
 </div>
 
 <script>
@@ -73,44 +65,25 @@
         document.getElementById('theme-btn').innerText = '☀️ Light';
     }
 
-    function startTimer(timestamp) {
-        if (!timestamp) return;
-        const cacheExpiry = timestamp + (15 * 60 * 1000); 
-        
-        const timerInt = setInterval(() => {
-            const now = Date.now();
-            const diff = cacheExpiry - now;
-            
-            if (diff > 0) {
-                const mins = Math.floor(diff / 60000);
-                const secs = Math.floor((diff % 60000) / 1000);
-                document.getElementById('countdown').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-            } else {
-                document.getElementById('countdown').innerText = "Update Ready";
-                // I removed the auto-refresh to stop the loop. 
-                // It will refresh on the next manual page load.
-                clearInterval(timerInt);
-            }
-        }, 1000);
-    }
-
     async function update() {
         try {
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
-            // Fixed IDs to match Worker output
-            document.getElementById('actual').innerText = (d.actualTemp || d.temp || "--") + "°";
-            document.getElementById('feels').innerText = (d.feelsLike || "--") + "°";
+            document.getElementById('actual').innerText = d.actualTemp + "°";
+            
+            // Fix for Feels Like: Only show if it exists and is different from actual
+            const feelsElement = document.getElementById('feels');
+            if (d.feelsLike) {
+                feelsElement.innerText = d.feelsLike + "°";
+            } else {
+                document.getElementById('feels-card').style.display = 'none';
+            }
+
             document.getElementById('cedar').innerText = d.cedar;
             document.getElementById('uv').innerText = d.uvIndex;
             document.getElementById('wash').innerText = d.carWash;
-            document.getElementById('clears').innerText = d.clearsUp;
-            
-            if (d.timestamp) {
-                document.getElementById('time').innerText = "Last API Call: " + new Date(d.timestamp).toLocaleTimeString();
-                startTimer(d.timestamp);
-            }
+            document.getElementById('time').innerText = "Last Updated: " + d.updated;
 
             const uvCard = document.getElementById('uv-card');
             if (d.uvIndex <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
@@ -118,7 +91,7 @@
             else uvCard.style.backgroundColor = "rgba(248, 113, 113, 0.2)";
 
         } catch(e) { 
-            document.getElementById('time').innerText = "API Rate Limited - Cooling Down"; 
+            document.getElementById('time').innerText = "Using Cached Data..."; 
         }
     }
     update();
