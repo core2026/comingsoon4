@@ -6,68 +6,97 @@
     <title>Acekallas | Personal Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; }
-        body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: background 0.3s ease; }
-        .container { width: 95%; max-width: 500px; text-align: center; position: relative; }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; --info: #334155; }
+        body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; --info: #e2e8f0; }
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: 0.3s; }
+        .container { width: 95%; max-width: 600px; text-align: center; position: relative; }
+        
         .theme-toggle { position: absolute; top: -50px; right: 0; background: var(--card); border: 1px solid rgba(128,128,128,0.2); padding: 8px 12px; border-radius: 12px; cursor: pointer; color: var(--text); font-size: 0.8rem; font-weight: bold; }
+        
         h1 { font-size: 2.2rem; margin-bottom: 25px; letter-spacing: -1px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; }
         .card { background: var(--card); padding: 18px; border-radius: 20px; border: 1px solid rgba(128,128,128,0.1); backdrop-filter: blur(12px); }
         .full { grid-column: span 2; }
+        
         .label { font-size: 0.6rem; text-transform: uppercase; color: var(--label); letter-spacing: 1px; font-weight: 700; }
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin-top: 4px; }
         .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
-        .outlook { font-size: 0.85rem; margin-top: 6px; color: var(--text); opacity: 0.9; line-height: 1.4; }
-        .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: var(--label); }
+        
+        .facts-container { margin-top: 25px; text-align: left; background: var(--info); padding: 20px; border-radius: 20px; font-size: 0.8rem; line-height: 1.5; }
+        .facts-container h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--gold); }
+        .fact-item { margin-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 8px; }
+        .fact-item:last-child { border: none; }
+        
+        .footer { text-align: center; margin-top: 20px; font-size: 0.7rem; color: var(--label); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark</button>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
     <h1 id="city-title">Fair Oaks Ranch</h1>
     
     <div class="grid">
         <div class="card">
-            <span class="label">Temperature</span>
+            <span class="label">Actual Temp</span>
             <span class="val" id="actual">--°</span>
         </div>
-        <div class="card" id="feels-card">
+        <div class="card">
             <span class="label">Feels Like</span>
             <span class="val" id="feels">--°</span>
         </div>
         <div class="card">
-            <span class="label">Cedar Risk</span>
-            <span class="val" id="cedar">--</span>
+            <span class="label">Tree (Cedar/Oak/Pine)</span>
+            <span class="val" id="tree">--</span>
         </div>
         <div class="card" id="uv-card">
             <span class="label">UV Index</span>
             <span class="val" id="uv">--</span>
         </div>
+        <div class="card">
+            <span class="label">Grass Pollen</span>
+            <span class="val" id="grass">--</span>
+        </div>
+        <div class="card">
+            <span class="label">Weed Pollen</span>
+            <span class="val" id="weed">--</span>
+        </div>
         <div class="card full">
             <span class="label">Car Wash Recommendation</span>
             <span class="status" id="wash">---</span>
         </div>
-        <div class="card full">
-            <span class="label">Allergy & Sun Outlook</span>
-            <div id="clears" class="outlook">Syncing detailed outlook...</div>
+    </div>
+
+    <div class="facts-container">
+        <h3>Quick Allergy & Health Facts</h3>
+        <div class="fact-item">
+            <strong>Tree Pollen:</strong> Includes <b>Mountain Cedar</b> (dec-feb), <b>Oak</b> (mar-apr), and <b>Pine</b>. These light grains can travel miles in the wind.
+        </div>
+        <div class="fact-item">
+            <strong>Grass Pollen:</strong> Most common in late spring. Includes Bermuda, Timothy, and Orchard grasses. High levels often cause "hay fever."
+        </div>
+        <div class="fact-item">
+            <strong>Weed Pollen:</strong> Typically peaks in late summer/fall. Includes <b>Ragweed</b> and Pigweed. A single plant can produce 1 billion grains.
+        </div>
+        <div class="fact-item">
+            <strong>UV Index:</strong> Measures solar radiation. Levels 6+ require SPF 30+ and eye protection to prevent skin damage.
         </div>
     </div>
     
-    <div class="footer" id="time">Connecting to pollen-data...</div>
+    <div class="footer" id="time">Syncing with Worker...</div>
 </div>
 
 <script>
     function toggleTheme() {
         const isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
-        document.getElementById('theme-btn').innerText = isLight ? '☀️ Light' : '🌙 Dark';
+        document.getElementById('theme-btn').innerText = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
     }
 
     if (localStorage.getItem('theme') === 'light') {
         document.body.classList.add('light-mode');
-        document.getElementById('theme-btn').innerText = '☀️ Light';
+        document.getElementById('theme-btn').innerText = '☀️ Light Mode';
     }
 
     async function update() {
@@ -75,44 +104,22 @@
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
-            // Temperature Display
             document.getElementById('actual').innerText = d.actualTemp + "°";
-            if (d.feelsLike) {
-                document.getElementById('feels').innerText = d.feelsLike + "°";
-            }
-
-            // Core Data
-            document.getElementById('cedar').innerText = d.cedar;
+            document.getElementById('feels').innerText = d.feelsLike + "°";
+            document.getElementById('tree').innerText = d.treePollen;
             document.getElementById('uv').innerText = d.uvIndex;
+            document.getElementById('grass').innerText = d.grassPollen;
+            document.getElementById('weed').innerText = d.weedPollen;
             document.getElementById('wash').innerText = d.carWash;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
 
-            // Restoring Useful Outlook Logic
-            let outlookText = "";
-            if (d.cedar === "High" || d.cedar === "Moderate") {
-                outlookText += "Cedar is active; keep windows closed. ";
-            } else {
-                outlookText += "Pollen levels are currently manageable. ";
-            }
-
-            if (d.uvIndex >= 6) {
-                outlookText += "High UV: Use SPF or seek shade.";
-            } else if (d.uvIndex >= 3) {
-                outlookText += "Moderate UV: Sun protection recommended.";
-            } else {
-                outlookText += "Low UV risk today.";
-            }
-            
-            document.getElementById('clears').innerText = outlookText;
-
-            // Visual UV Coloring
             const uvCard = document.getElementById('uv-card');
             if (d.uvIndex <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
             else if (d.uvIndex <= 5) uvCard.style.backgroundColor = "rgba(250, 204, 21, 0.15)"; 
             else uvCard.style.backgroundColor = "rgba(248, 113, 113, 0.2)";
 
         } catch(e) { 
-            document.getElementById('time').innerText = "Data temporarily unavailable."; 
+            document.getElementById('time').innerText = "API Rate Limited - Using Cached Data"; 
         }
     }
     update();
