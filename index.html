@@ -3,29 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Acekallas | Personal Dashboard</title>
+    <title>Acekallas | Smart Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; --gold: #fbbf24; }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); transition: 0.3s; }
-        .container { width: 100%; max-width: 480px; }
-        .header { margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
-        .city-box h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.5px; }
-        #gps-btn { background: var(--accent); color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 12px 18px; border-radius: 14px; cursor: pointer; margin-top: 10px; animation: pulse-ring 2s infinite; }
-        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); } 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); } }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(15px); transition: transform 0.1s ease; user-select: none; -webkit-tap-highlight-color: transparent; }
-        .card:active { transform: scale(0.96); }
-        .icon-row { display: flex; align-items: center; gap: 8px; color: var(--accent); margin-bottom: 8px; }
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 500px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+        .city-box h1 { margin: 0; font-size: 1.5rem; }
+        
+        /* The Nudge Button */
+        #gps-btn { 
+            background: var(--accent); color: white; border: none; font-size: 0.75rem; font-weight: 800; 
+            padding: 12px; border-radius: 12px; cursor: pointer; margin-top: 8px; width: 100%;
+            animation: pulse 2s infinite; 
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.5); } 70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); } 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); } }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .card { background: var(--card); padding: 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .card:active { transform: scale(0.97); transition: 0.1s; }
+        .full { grid-column: span 2; }
+
+        .val { font-size: 1.3rem; font-weight: 800; display: block; }
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        .val { font-size: 1.4rem; font-weight: 800; display: block; }
-        .sub-val { font-size: 0.7rem; color: var(--label); }
-        .advice-box { margin-top: 20px; background: var(--card); border-radius: 24px; padding: 20px; border-left: 4px solid var(--gold); }
-        .advice-item { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; margin-bottom: 10px; }
-        .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 12px; border-radius: 16px; cursor: pointer; }
-        .footer { text-align: center; margin-top: 30px; font-size: 0.75rem; color: var(--label); }
+        
+        /* Iframe Styles */
+        .iframe-container { width: 100%; border-radius: 15px; overflow: hidden; background: #000; margin-top: 10px; height: 300px; border: 1px solid rgba(255,255,255,0.1); }
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        .theme-btn { background: var(--card); border: none; color: var(--text); padding: 10px; border-radius: 12px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -34,61 +45,47 @@
     <div class="header">
         <div class="city-box">
             <h1 id="city-title">Detecting...</h1>
-            <button id="gps-btn" onclick="getGPS()">📍 Precise Location</button>
+            <button id="gps-btn" onclick="getGPS()">📍 Not in <span id="btn-city">...</span>? Click for Precise Location</button>
         </div>
         <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
     </div>
 
     <div class="grid">
         <div class="card">
-            <div class="icon-row"><i data-lucide="thermometer"></i><span class="label">Temp</span></div>
+            <span class="label">Temperature</span>
             <span class="val" id="temp">--°</span>
-            <span class="sub-val" id="feels">Feels like --°</span>
-        </div>
-        <div class="card" id="uv-card">
-            <div class="icon-row"><i data-lucide="sun"></i><span class="label">UV Index</span></div>
-            <span class="val" id="uv">--</span>
-            <span class="sub-val" id="uv-text">Risk Level</span>
+            <span class="label" id="feels">Feels --°</span>
         </div>
         <div class="card">
-            <div class="icon-row"><i data-lucide="trees"></i><span class="label">Tree</span></div>
+            <span class="label">Pollen (Tree)</span>
             <span class="val" id="tree">--</span>
-            <span class="sub-val">Allergy Risk</span>
-        </div>
-        <div class="card">
-            <div class="icon-row"><i data-lucide="sprout"></i><span class="label">Grass/Weed</span></div>
-            <span class="val" id="pollen-other">--</span>
-            <span class="sub-val">Pollen Levels</span>
-        </div>
-        <div class="card">
-            <div class="icon-row"><i data-lucide="wind"></i><span class="label">Wind</span></div>
-            <span class="val" id="wind">-- mph</span>
-            <span class="sub-val" id="hum">Hum: --%</span>
-        </div>
-        <div class="card">
-            <div class="icon-row"><i data-lucide="droplets"></i><span class="label">Rain</span></div>
-            <span class="val" id="rain">--%</span>
-            <span class="sub-val">Chance today</span>
+            <span class="label">Hill Country Data</span>
         </div>
     </div>
 
-    <div class="advice-box">
-        <div class="advice-item"><i data-lucide="clock" size="18" color="#fbbf24"></i> <span id="daylight">Daylight...</span></div>
-        <div class="advice-item"><i data-lucide="car" size="18" color="#38bdf8"></i> <span id="wash">Car wash check...</span></div>
+    <span class="label">Live Local Radar</span>
+    <div class="iframe-container">
+        <iframe id="radar-frame" src=""></iframe>
     </div>
 
-    <div class="footer" id="updated">Syncing...</div>
+    <span class="label" style="margin-top:20px; display:block;">Air Quality Index</span>
+    <div class="iframe-container" style="height: 230px;">
+        <iframe id="aqi-frame" src=""></iframe>
+    </div>
+
+    <span class="label" style="margin-top:20px; display:block;">Regional Allergy Map</span>
+    <div class="iframe-container">
+        <iframe id="pollen-frame" src=""></iframe>
+    </div>
+
+    <div class="footer" id="updated" style="text-align:center; margin-top:20px; font-size:0.7rem; color:var(--label);">Syncing...</div>
 </div>
-
-
 
 <script>
     function toggleTheme() {
         const isLight = document.body.classList.toggle('light-mode');
-        localStorage.setItem('theme', isLight ? 'light' : 'dark');
         document.getElementById('theme-btn').innerText = isLight ? '☀️' : '🌙';
     }
-    if (localStorage.getItem('theme') === 'light') toggleTheme();
 
     function getGPS() {
         navigator.geolocation.getCurrentPosition(pos => {
@@ -98,44 +95,35 @@
 
     async function update(lat = null, lon = null) {
         try {
-            let url = "https://pollen-data.acekallas.com";
-            if(lat && lon) url += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
-            const res = await fetch(url);
+            let apiUrl = "https://pollen-data.acekallas.com";
+            if(lat && lon) apiUrl += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
+
+            const res = await fetch(apiUrl);
             const d = await res.json();
             
+            // Update UI Text
             document.getElementById('city-title').innerText = d.city;
+            document.getElementById('btn-city').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
-            document.getElementById('feels').innerText = "Feels like " + d.feelsLike + "°";
-            document.getElementById('uv').innerText = d.uv;
+            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
             document.getElementById('tree').innerText = d.tree;
-            document.getElementById('pollen-other').innerText = d.grass + " / " + d.weed;
-            document.getElementById('wind').innerText = d.wind + " mph";
-            document.getElementById('hum').innerText = "Hum: " + d.humidity + "%";
-            document.getElementById('rain').innerText = d.rainProb + "%";
-            document.getElementById('updated').innerText = "Updated " + d.updated;
+            document.getElementById('updated').innerText = "Updated: " + d.updated;
 
-            // UV Color logic
-            const uvCard = document.getElementById('uv-card');
-            const uvText = document.getElementById('uv-text');
-            if (d.uv <= 2) { uvCard.style.borderTop = "4px solid #4ade80"; uvText.innerText = "Low Risk"; }
-            else if (d.uv <= 5) { uvCard.style.borderTop = "4px solid #facc15"; uvText.innerText = "Moderate"; }
-            else { uvCard.style.borderTop = "4px solid #f87171"; uvText.innerText = "High Risk"; }
+            if(d.isPrecise) document.getElementById('gps-btn').style.display = 'none';
 
-            // Daylight Logic (Simplified)
-            const sunset = new Date(); sunset.setHours(18, 35, 0); 
-            const diff = (sunset - new Date()) / (1000 * 60 * 60);
-            document.getElementById('daylight').innerText = diff > 0 ? `${Math.floor(diff)}h ${Math.round((diff%1)*60)}m light left.` : "After sunset.";
+            // 1. Update Windy Radar (Uses Lat/Lon)
+            document.getElementById('radar-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&level=surface&overlay=radar&product=radar&message=true&marker=true&metricWind=mph&metricTemp=%C2%B0F`;
 
-            // Wash Logic
-            document.getElementById('wash').innerText = d.rainProb > 25 ? "Wait to wash." : "Good day for a wash!";
+            // 2. Update AirNow AQI (Uses Zip)
+            document.getElementById('aqi-frame').src = `https://widget.airnow.gov/aq-dial-widget-with-forecast/?z=${d.zip}`;
 
-            const btn = document.getElementById('gps-btn');
-            btn.innerText = d.isPrecise ? "Precise Location Active" : `Not in ${d.city}? Click here for Precise Location`;
-            if(d.isPrecise) btn.style.opacity = "0.5";
+            // 3. Update Pollen Map (Uses Zip)
+            document.getElementById('pollen-frame').src = `https://www.pollen.com/map/pollen/${d.zip}`;
 
             lucide.createIcons();
         } catch(e) { console.error(e); }
     }
+
     update();
 </script>
 </body>
