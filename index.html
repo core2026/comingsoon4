@@ -3,82 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Acekallas | Smart Dashboard</title>
+    <title>Acekallas | Smart Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; --alert: #ef4444; }
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
-        
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 500px; }
-        
-        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
-        .city-box h1 { margin: 0; font-size: 1.5rem; }
-        
-        /* The Nudge Button */
-        #gps-btn { 
-            background: var(--accent); color: white; border: none; font-size: 0.75rem; font-weight: 800; 
-            padding: 12px; border-radius: 12px; cursor: pointer; margin-top: 8px; width: 100%;
-            animation: pulse 2s infinite; 
-        }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.5); } 70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); } 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); } }
-
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-        .card { background: var(--card); padding: 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-        .card:active { transform: scale(0.97); transition: 0.1s; }
-        .full { grid-column: span 2; }
-
-        .val { font-size: 1.3rem; font-weight: 800; display: block; }
+        .container { width: 100%; max-width: 480px; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        #gps-btn { background: var(--accent); color: white; border: none; font-size: 0.7rem; font-weight: 800; padding: 12px; border-radius: 12px; width: 100%; margin-top: 10px; cursor: pointer; transition: 0.3s; }
+        .pulse { animation: p-ring 2s infinite; }
+        @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(56,189,248,0.4); } 70% { box-shadow: 0 0 0 10px rgba(56,189,248,0); } }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); transition: 0.2s; position: relative; overflow: hidden; }
+        .card:active { transform: scale(0.96); }
+        .card.alert-active { border: 2px solid var(--alert); }
+        .alert-tag { position: absolute; top: 0; right: 0; background: var(--alert); color: white; font-size: 9px; padding: 3px 7px; border-bottom-left-radius: 10px; font-weight: 800; display: none; }
+        .alert-active .alert-tag { display: block; }
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        
-        /* Iframe Styles */
-        .iframe-container { width: 100%; border-radius: 15px; overflow: hidden; background: #000; margin-top: 10px; height: 300px; border: 1px solid rgba(255,255,255,0.1); }
-        iframe { width: 100%; height: 100%; border: none; }
-        
-        .theme-btn { background: var(--card); border: none; color: var(--text); padding: 10px; border-radius: 12px; cursor: pointer; }
+        .val { font-size: 1.3rem; font-weight: 800; display: block; margin: 4px 0; }
+        .iframe-wrap { width: 100%; height: 300px; border-radius: 20px; overflow: hidden; margin-top: 15px; border: 1px solid rgba(255,255,255,0.1); }
+        .theme-btn { background: var(--card); border: none; color: var(--text); padding: 12px; border-radius: 12px; }
+        .wash-status { grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 15px; font-weight: 700; border-radius: 18px; font-size: 0.85rem; }
     </style>
 </head>
 <body>
-
 <div class="container">
     <div class="header">
         <div class="city-box">
-            <h1 id="city-title">Detecting...</h1>
-            <button id="gps-btn" onclick="getGPS()">📍 Not in <span id="btn-city">...</span>? Click for Precise Location</button>
+            <h1 id="city-title">...</h1>
+            <button id="gps-btn" class="pulse" onclick="getGPS()">📍 Not in <span id="btn-city">...</span>? Click for Precise Location</button>
         </div>
         <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
     </div>
 
     <div class="grid">
+        <div class="card wash-status" id="wash-card">
+            <i data-lucide="car"></i> <span id="wash-text">Checking conditions...</span>
+        </div>
         <div class="card">
-            <span class="label">Temperature</span>
+            <span class="label">Temp</span>
             <span class="val" id="temp">--°</span>
             <span class="label" id="feels">Feels --°</span>
         </div>
         <div class="card">
-            <span class="label">Pollen (Tree)</span>
+            <span class="label">Comfort</span>
+            <span class="val" id="hum-val">--%</span>
+            <span class="label" id="hum-desc">--</span>
+        </div>
+        <div class="card" id="tree-card">
+            <div class="alert-tag">TX SEASON ALERT</div>
+            <span class="label">Tree Pollen</span>
             <span class="val" id="tree">--</span>
-            <span class="label">Hill Country Data</span>
+            <span class="label" id="pollen-sub">Loading...</span>
+        </div>
+        <div class="card">
+            <span class="label">UV Index</span>
+            <span class="val" id="uv">--</span>
+            <span class="label">Sun Risk</span>
         </div>
     </div>
 
-    <span class="label">Live Local Radar</span>
-    <div class="iframe-container">
-        <iframe id="radar-frame" src=""></iframe>
-    </div>
-
-    <span class="label" style="margin-top:20px; display:block;">Air Quality Index</span>
-    <div class="iframe-container" style="height: 230px;">
-        <iframe id="aqi-frame" src=""></iframe>
-    </div>
-
-    <span class="label" style="margin-top:20px; display:block;">Regional Allergy Map</span>
-    <div class="iframe-container">
-        <iframe id="pollen-frame" src=""></iframe>
-    </div>
-
-    <div class="footer" id="updated" style="text-align:center; margin-top:20px; font-size:0.7rem; color:var(--label);">Syncing...</div>
+    <div class="iframe-wrap"><iframe id="radar-frame"></iframe></div>
+    <div id="updated" style="text-align:center; margin-top:20px; font-size:10px; color:var(--label);">...</div>
 </div>
 
 <script>
@@ -88,42 +76,58 @@
     }
 
     function getGPS() {
-        navigator.geolocation.getCurrentPosition(pos => {
-            update(pos.coords.latitude, pos.coords.longitude);
-        });
+        navigator.geolocation.getCurrentPosition(p => update(p.coords.latitude, p.coords.longitude));
     }
 
     async function update(lat = null, lon = null) {
         try {
-            let apiUrl = "https://pollen-data.acekallas.com";
-            if(lat && lon) apiUrl += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
-
-            const res = await fetch(apiUrl);
-            const d = await res.json();
+            let url = "https://pollen-data.acekallas.com";
+            if(lat) url += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
             
-            // Update UI Text
+            const r = await fetch(url);
+            const d = await r.json();
+            
             document.getElementById('city-title').innerText = d.city;
-            document.getElementById('btn-city').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
+            document.getElementById('hum-val').innerText = d.humidity + "%";
+            document.getElementById('hum-desc').innerText = d.humDesc;
             document.getElementById('tree').innerText = d.tree;
-            document.getElementById('updated').innerText = "Updated: " + d.updated;
+            document.getElementById('uv').innerText = d.uv;
+            document.getElementById('updated').innerText = "Verified " + d.updated;
 
-            if(d.isPrecise) document.getElementById('gps-btn').style.display = 'none';
+            // Car Wash Card
+            const washCard = document.getElementById('wash-card');
+            washCard.style.background = d.washColor + "22"; // Add transparency
+            washCard.style.color = d.washColor;
+            document.getElementById('wash-text').innerText = d.washAdvice;
 
-            // 1. Update Windy Radar (Uses Lat/Lon)
-            document.getElementById('radar-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&level=surface&overlay=radar&product=radar&message=true&marker=true&metricWind=mph&metricTemp=%C2%B0F`;
+            // Texas-Only Alerts
+            const treeCard = document.getElementById('tree-card');
+            const pollenSub = document.getElementById('pollen-sub');
+            if (d.isTexas) {
+                pollenSub.innerText = "Texas Hill Country";
+                if (d.pollenAlert) treeCard.classList.add('alert-active');
+            } else {
+                pollenSub.innerText = "Regional Data";
+                treeCard.querySelector('.alert-tag').style.display = 'none';
+            }
 
-            // 2. Update AirNow AQI (Uses Zip)
-            document.getElementById('aqi-frame').src = `https://widget.airnow.gov/aq-dial-widget-with-forecast/?z=${d.zip}`;
+            // Button Success State
+            const btn = document.getElementById('gps-btn');
+            if(d.isPrecise) {
+                btn.innerHTML = `✅ Precise Location: ${d.city}`;
+                btn.style.background = "#22c55e";
+                btn.classList.remove('pulse');
+                btn.onclick = null;
+            } else {
+                document.getElementById('btn-city').innerText = d.city;
+            }
 
-            // 3. Update Pollen Map (Uses Zip)
-            document.getElementById('pollen-frame').src = `https://www.pollen.com/map/pollen/${d.zip}`;
-
+            document.getElementById('radar-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar`;
             lucide.createIcons();
-        } catch(e) { console.error(e); }
+        } catch(e) { console.log(e); }
     }
-
     update();
 </script>
 </body>
