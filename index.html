@@ -9,26 +9,29 @@
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; --accent: #38bdf8; }
         body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: 0.3s; }
-        .container { width: 100%; max-width: 600px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(128,128,128,0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
-        .full { grid-column: span 2; }
-        .icon-row { display: flex; align-items: center; gap: 10px; color: var(--accent); }
-        .label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 700; letter-spacing: 0.5px; }
-        .val { font-size: 1.6rem; font-weight: 800; }
-        .advice-box { margin-top: 20px; background: var(--card); border-radius: 24px; padding: 20px; border-left: 4px solid var(--gold); }
-        .advice-item { display: flex; align-items: start; gap: 12px; margin-bottom: 12px; font-size: 0.9rem; }
-        .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 8px 15px; border-radius: 12px; cursor: pointer; font-size: 0.8rem; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; transition: 0.3s; }
+        .container { width: 100%; max-width: 500px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .location-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .card { background: var(--card); padding: 18px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .icon-row { display: flex; align-items: center; gap: 8px; color: var(--accent); margin-bottom: 8px; }
+        .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 700; }
+        .val { font-size: 1.4rem; font-weight: 800; display: block; }
+        .advice-box { margin-top: 20px; background: var(--card); border-radius: 20px; padding: 20px; border-left: 4px solid var(--gold); font-size: 0.85rem; }
+        .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 10px; border-radius: 12px; cursor: pointer; }
         .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: var(--label); }
+        #gps-btn { font-size: 0.7rem; background: var(--accent); color: white; border: none; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1 id="city-title" style="margin:0; font-size: 1.8rem;">Loading...</h1>
+        <div class="location-group">
+            <h1 id="city-title" style="margin:0; font-size: 1.5rem;">Local Area</h1>
+            <button id="gps-btn" onclick="getGPS()">📍 Precise Location</button>
+        </div>
         <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
     </div>
 
@@ -36,12 +39,11 @@
         <div class="card">
             <div class="icon-row"><i data-lucide="thermometer"></i><span class="label">Temp</span></div>
             <span class="val" id="temp">--°</span>
-            <span class="label" id="feels">Feels like --°</span>
+            <span class="label" id="feels">Feels --°</span>
         </div>
         <div class="card">
             <div class="icon-row"><i data-lucide="wind"></i><span class="label">Wind</span></div>
             <span class="val" id="wind">-- mph</span>
-            <span class="label" id="wind-dir">Direction: --°</span>
         </div>
         <div class="card">
             <div class="icon-row"><i data-lucide="trees"></i><span class="label">Tree Pollen</span></div>
@@ -52,30 +54,22 @@
             <span class="val" id="uv">--</span>
         </div>
         <div class="card">
-            <div class="icon-row"><i data-lucide="sprout"></i><span class="label">Grass / Weed</span></div>
+            <div class="icon-row"><i data-lucide="sprout"></i><span class="label">Grass/Weed</span></div>
             <span class="val" id="pollen-other">--</span>
         </div>
         <div class="card">
-            <div class="icon-row"><i data-lucide="droplets"></i><span class="label">Rain Prob.</span></div>
+            <div class="icon-row"><i data-lucide="droplets"></i><span class="label">Rain</span></div>
             <span class="val" id="rain">--%</span>
         </div>
     </div>
 
-    <div class="advice-box" id="advice-container">
-        <div class="advice-item">
-            <i data-lucide="info" style="color: var(--gold); width: 18px;"></i>
-            <span id="clothing-text">Analyzing conditions for advice...</span>
-        </div>
-        <div class="advice-item">
-            <i data-lucide="sparkles" style="color: var(--accent); width: 18px;"></i>
-            <span id="wash-text">Car wash check...</span>
-        </div>
+    <div class="advice-box">
+        <div style="margin-bottom:10px;"><b>🧥 Clothing:</b> <span id="clothing-text">...</span></div>
+        <div><b>🧼 Car Wash:</b> <span id="wash-text">...</span></div>
     </div>
 
-    <div class="footer" id="updated">Syncing...</div>
+    <div class="footer" id="updated">Detecting...</div>
 </div>
-
-
 
 <script>
     function toggleTheme() {
@@ -83,43 +77,42 @@
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
         document.getElementById('theme-btn').innerText = isLight ? '☀️' : '🌙';
     }
-
     if (localStorage.getItem('theme') === 'light') toggleTheme();
 
-    async function update() {
+    // The logic to get exact GPS coordinates
+    function getGPS() {
+        if (navigator.geolocation) {
+            document.getElementById('gps-btn').innerText = "Locating...";
+            navigator.geolocation.getCurrentPosition(pos => {
+                update(pos.coords.latitude, pos.coords.longitude);
+                document.getElementById('gps-btn').style.display = 'none';
+            });
+        }
+    }
+
+    async function update(lat = null, lon = null) {
         try {
-            const res = await fetch("https://pollen-data.acekallas.com");
+            let apiUrl = "https://pollen-data.acekallas.com";
+            // If GPS is provided, send it to the Worker
+            if(lat && lon) {
+                apiUrl += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
+            }
+
+            const res = await fetch(apiUrl);
             const d = await res.json();
             
             document.getElementById('city-title').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
-            document.getElementById('feels').innerText = "Feels like " + d.feelsLike + "°";
+            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
             document.getElementById('wind').innerText = d.wind + " mph";
-            document.getElementById('wind-dir').innerText = "From " + d.windDir + "°";
             document.getElementById('tree').innerText = d.tree;
             document.getElementById('pollen-other').innerText = d.grass + " / " + d.weed;
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('rain').innerText = d.rainProb + "%";
             document.getElementById('updated').innerText = "Updated: " + d.updated;
 
-            // Clothing Advice
-            let clothing = "Standard attire today.";
-            if(d.temp > 80) clothing = "T-shirt weather. Stay hydrated.";
-            else if(d.temp < 60) clothing = "Grab a light jacket or hoodie.";
-            else if(d.temp < 45) clothing = "Heavier coat recommended.";
-            if(d.uv > 5) clothing += " Wear sunglasses & SPF.";
-            document.getElementById('clothing-text').innerText = clothing;
-
-            // Car Wash Advice
-            let wash = d.rainProb > 20 ? "Wait to wash (Rain expected)." : "Great day for a car wash!";
-            if(d.tree === "High" || d.tree === "Very High") wash = "Wash now, but pollen is heavy!";
-            document.getElementById('wash-text').innerText = wash;
-
-            // UV Color
-            const uvCard = document.getElementById('uv-card');
-            if (d.uv <= 2) uvCard.style.borderLeft = "4px solid #4ade80";
-            else if (d.uv <= 5) uvCard.style.borderLeft = "4px solid #facc15";
-            else uvCard.style.borderLeft = "4px solid #f87171";
+            document.getElementById('clothing-text').innerText = d.temp > 75 ? "Light clothes" : "Light jacket";
+            document.getElementById('wash-text').innerText = d.rainProb > 20 ? "Wait" : "Good to go";
 
             lucide.createIcons();
         } catch(e) { console.error(e); }
