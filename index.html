@@ -6,10 +6,10 @@
     <title>Acekallas | Personal Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; --info: #334155; }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; --info: #1e293b; }
         body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; --info: #e2e8f0; }
         
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: 0.3s; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: background 0.3s ease; }
         .container { width: 95%; max-width: 600px; text-align: center; position: relative; }
         
         .theme-toggle { position: absolute; top: -50px; right: 0; background: var(--card); border: 1px solid rgba(128,128,128,0.2); padding: 8px 12px; border-radius: 12px; cursor: pointer; color: var(--text); font-size: 0.8rem; font-weight: bold; }
@@ -23,10 +23,8 @@
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin-top: 4px; }
         .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
         
-        .facts-container { margin-top: 25px; text-align: left; background: var(--info); padding: 20px; border-radius: 20px; font-size: 0.8rem; line-height: 1.5; }
-        .facts-container h3 { margin-top: 0; font-size: 0.9rem; text-transform: uppercase; color: var(--gold); }
-        .fact-item { margin-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,0.2); padding-bottom: 8px; }
-        .fact-item:last-child { border: none; }
+        .facts { margin-top: 25px; text-align: left; background: var(--info); padding: 20px; border-radius: 20px; font-size: 0.8rem; line-height: 1.5; border: 1px solid rgba(128,128,128,0.1); }
+        .facts h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--gold); text-transform: uppercase; }
         
         .footer { text-align: center; margin-top: 20px; font-size: 0.7rem; color: var(--label); }
     </style>
@@ -35,11 +33,11 @@
 
 <div class="container">
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
-    <h1 id="city-title">Fair Oaks Ranch</h1>
+    <h1>Fair Oaks Ranch</h1>
     
     <div class="grid">
         <div class="card">
-            <span class="label">Actual Temp</span>
+            <span class="label">Temperature</span>
             <span class="val" id="actual">--°</span>
         </div>
         <div class="card">
@@ -68,60 +66,62 @@
         </div>
     </div>
 
-    <div class="facts-container">
-        <h3>Quick Allergy & Health Facts</h3>
-        <div class="fact-item">
-            <strong>Tree Pollen:</strong> Includes <b>Mountain Cedar</b> (dec-feb), <b>Oak</b> (mar-apr), and <b>Pine</b>. These light grains can travel miles in the wind.
-        </div>
-        <div class="fact-item">
-            <strong>Grass Pollen:</strong> Most common in late spring. Includes Bermuda, Timothy, and Orchard grasses. High levels often cause "hay fever."
-        </div>
-        <div class="fact-item">
-            <strong>Weed Pollen:</strong> Typically peaks in late summer/fall. Includes <b>Ragweed</b> and Pigweed. A single plant can produce 1 billion grains.
-        </div>
-        <div class="fact-item">
-            <strong>UV Index:</strong> Measures solar radiation. Levels 6+ require SPF 30+ and eye protection to prevent skin damage.
-        </div>
+    
+
+    <div class="facts">
+        <h3>Pollen & Environmental Facts</h3>
+        <div>• <b>Tree Pollen:</b> Peaks in Winter (Cedar) and Spring (Oak/Pine). These tiny grains are easily carried by the San Antonio winds.</div>
+        <div>• <b>Grass Pollen:</b> Highest in late Spring. Triggers the common seasonal "hay fever" symptoms.</div>
+        <div>• <b>Weed Pollen:</b> Dominant in late Summer and Fall, primarily led by Ragweed.</div>
+        <div>• <b>UV Index:</b> Measures solar intensity. Levels 6+ suggest seeking shade or applying protection between 10am and 4pm.</div>
     </div>
     
-    <div class="footer" id="time">Syncing with Worker...</div>
+    <div class="footer" id="time">Connecting to pollen-data...</div>
 </div>
 
 <script>
+    // 1. Theme Toggle Logic
     function toggleTheme() {
         const isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
         document.getElementById('theme-btn').innerText = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
     }
 
+    // Load saved preference
     if (localStorage.getItem('theme') === 'light') {
         document.body.classList.add('light-mode');
         document.getElementById('theme-btn').innerText = '☀️ Light Mode';
     }
 
+    // 2. Data Fetch Logic
     async function update() {
         try {
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
-            document.getElementById('actual').innerText = d.actualTemp + "°";
-            document.getElementById('feels').innerText = d.feelsLike + "°";
-            document.getElementById('tree').innerText = d.treePollen;
-            document.getElementById('uv').innerText = d.uvIndex;
-            document.getElementById('grass').innerText = d.grassPollen;
-            document.getElementById('weed').innerText = d.weedPollen;
-            document.getElementById('wash').innerText = d.carWash;
-            document.getElementById('time').innerText = "Last Updated: " + d.updated;
+            // Check for data and apply to elements with safety fallbacks (??)
+            document.getElementById('actual').innerText = (d.actualTemp ?? '--') + "°";
+            document.getElementById('feels').innerText = (d.feelsLike ?? '--') + "°";
+            document.getElementById('tree').innerText = d.treePollen || "None";
+            document.getElementById('grass').innerText = d.grassPollen || "None";
+            document.getElementById('weed').innerText = d.weedPollen || "None";
+            document.getElementById('uv').innerText = d.uvIndex ?? "0";
+            document.getElementById('wash').innerText = d.carWash || "---";
+            document.getElementById('time').innerText = "Last Updated: " + (d.updated || "Just Now");
 
+            // UV Visual Indicator logic
             const uvCard = document.getElementById('uv-card');
-            if (d.uvIndex <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
-            else if (d.uvIndex <= 5) uvCard.style.backgroundColor = "rgba(250, 204, 21, 0.15)"; 
+            const uv = d.uvIndex || 0;
+            if (uv <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
+            else if (uv <= 5) uvCard.style.backgroundColor = "rgba(250, 204, 21, 0.15)"; 
             else uvCard.style.backgroundColor = "rgba(248, 113, 113, 0.2)";
 
         } catch(e) { 
-            document.getElementById('time').innerText = "API Rate Limited - Using Cached Data"; 
+            document.getElementById('time').innerText = "Syncing with API Window..."; 
         }
     }
+
+    // Run update on load
     update();
 </script>
 </body>
