@@ -18,6 +18,7 @@
         .label { font-size: 0.6rem; text-transform: uppercase; color: var(--label); letter-spacing: 1px; font-weight: 700; }
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin-top: 4px; }
         .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
+        .outlook { font-size: 0.85rem; margin-top: 6px; color: var(--text); opacity: 0.9; line-height: 1.4; }
         .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: var(--label); }
     </style>
 </head>
@@ -45,12 +46,16 @@
             <span class="val" id="uv">--</span>
         </div>
         <div class="card full">
-            <span class="label">Car Wash</span>
+            <span class="label">Car Wash Recommendation</span>
             <span class="status" id="wash">---</span>
+        </div>
+        <div class="card full">
+            <span class="label">Allergy & Sun Outlook</span>
+            <div id="clears" class="outlook">Syncing detailed outlook...</div>
         </div>
     </div>
     
-    <div class="footer" id="time">Syncing...</div>
+    <div class="footer" id="time">Connecting to pollen-data...</div>
 </div>
 
 <script>
@@ -70,28 +75,44 @@
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
+            // Temperature Display
             document.getElementById('actual').innerText = d.actualTemp + "°";
-            
-            // Fix for Feels Like: Only show if it exists and is different from actual
-            const feelsElement = document.getElementById('feels');
             if (d.feelsLike) {
-                feelsElement.innerText = d.feelsLike + "°";
-            } else {
-                document.getElementById('feels-card').style.display = 'none';
+                document.getElementById('feels').innerText = d.feelsLike + "°";
             }
 
+            // Core Data
             document.getElementById('cedar').innerText = d.cedar;
             document.getElementById('uv').innerText = d.uvIndex;
             document.getElementById('wash').innerText = d.carWash;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
 
+            // Restoring Useful Outlook Logic
+            let outlookText = "";
+            if (d.cedar === "High" || d.cedar === "Moderate") {
+                outlookText += "Cedar is active; keep windows closed. ";
+            } else {
+                outlookText += "Pollen levels are currently manageable. ";
+            }
+
+            if (d.uvIndex >= 6) {
+                outlookText += "High UV: Use SPF or seek shade.";
+            } else if (d.uvIndex >= 3) {
+                outlookText += "Moderate UV: Sun protection recommended.";
+            } else {
+                outlookText += "Low UV risk today.";
+            }
+            
+            document.getElementById('clears').innerText = outlookText;
+
+            // Visual UV Coloring
             const uvCard = document.getElementById('uv-card');
             if (d.uvIndex <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
             else if (d.uvIndex <= 5) uvCard.style.backgroundColor = "rgba(250, 204, 21, 0.15)"; 
             else uvCard.style.backgroundColor = "rgba(248, 113, 113, 0.2)";
 
         } catch(e) { 
-            document.getElementById('time').innerText = "Using Cached Data..."; 
+            document.getElementById('time').innerText = "Data temporarily unavailable."; 
         }
     }
     update();
