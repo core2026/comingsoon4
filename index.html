@@ -3,125 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas | Personal Dashboard</title>
+    <title>Personal Weather Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; --info: #1e293b; }
-        body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; --info: #e2e8f0; }
-        
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: background 0.3s ease; }
-        .container { width: 95%; max-width: 600px; text-align: center; position: relative; }
-        
-        .theme-toggle { position: absolute; top: -50px; right: 0; background: var(--card); border: 1px solid rgba(128,128,128,0.2); padding: 8px 12px; border-radius: 12px; cursor: pointer; color: var(--text); font-size: 0.8rem; font-weight: bold; }
-        
-        h1 { font-size: 2.2rem; margin-bottom: 25px; letter-spacing: -1px; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; text-align: left; }
-        .card { background: var(--card); padding: 18px; border-radius: 20px; border: 1px solid rgba(128,128,128,0.1); backdrop-filter: blur(12px); }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.5); --label: #94a3b8; --gold: #fbbf24; --accent: #38bdf8; }
+        body.light-mode { --bg: #f1f5f9; --text: #1e293b; --card: rgba(255, 255, 255, 0.8); --label: #64748b; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; transition: 0.3s; }
+        .container { width: 100%; max-width: 600px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(128,128,128,0.1); backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 8px; }
         .full { grid-column: span 2; }
-        
-        .label { font-size: 0.6rem; text-transform: uppercase; color: var(--label); letter-spacing: 1px; font-weight: 700; }
-        .val { font-size: 1.5rem; font-weight: 800; display: block; margin-top: 4px; }
-        .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
-        
-        .facts { margin-top: 25px; text-align: left; background: var(--info); padding: 20px; border-radius: 20px; font-size: 0.8rem; line-height: 1.5; border: 1px solid rgba(128,128,128,0.1); }
-        .facts h3 { margin: 0 0 10px 0; font-size: 0.9rem; color: var(--gold); text-transform: uppercase; }
-        
-        .footer { text-align: center; margin-top: 20px; font-size: 0.7rem; color: var(--label); }
+        .icon-row { display: flex; align-items: center; gap: 10px; color: var(--accent); }
+        .label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 700; letter-spacing: 0.5px; }
+        .val { font-size: 1.6rem; font-weight: 800; }
+        .advice-box { margin-top: 20px; background: var(--card); border-radius: 24px; padding: 20px; border-left: 4px solid var(--gold); }
+        .advice-item { display: flex; align-items: start; gap: 12px; margin-bottom: 12px; font-size: 0.9rem; }
+        .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 8px 15px; border-radius: 12px; cursor: pointer; font-size: 0.8rem; }
+        .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: var(--label); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
-    <h1>Fair Oaks Ranch</h1>
-    
+    <div class="header">
+        <h1 id="city-title" style="margin:0; font-size: 1.8rem;">Loading...</h1>
+        <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    </div>
+
     <div class="grid">
         <div class="card">
-            <span class="label">Temperature</span>
-            <span class="val" id="actual">--°</span>
+            <div class="icon-row"><i data-lucide="thermometer"></i><span class="label">Temp</span></div>
+            <span class="val" id="temp">--°</span>
+            <span class="label" id="feels">Feels like --°</span>
         </div>
         <div class="card">
-            <span class="label">Feels Like</span>
-            <span class="val" id="feels">--°</span>
+            <div class="icon-row"><i data-lucide="wind"></i><span class="label">Wind</span></div>
+            <span class="val" id="wind">-- mph</span>
+            <span class="label" id="wind-dir">Direction: --°</span>
         </div>
         <div class="card">
-            <span class="label">Tree (Cedar/Oak/Pine)</span>
+            <div class="icon-row"><i data-lucide="trees"></i><span class="label">Tree Pollen</span></div>
             <span class="val" id="tree">--</span>
         </div>
         <div class="card" id="uv-card">
-            <span class="label">UV Index</span>
+            <div class="icon-row"><i data-lucide="sun"></i><span class="label">UV Index</span></div>
             <span class="val" id="uv">--</span>
         </div>
         <div class="card">
-            <span class="label">Grass Pollen</span>
-            <span class="val" id="grass">--</span>
+            <div class="icon-row"><i data-lucide="sprout"></i><span class="label">Grass / Weed</span></div>
+            <span class="val" id="pollen-other">--</span>
         </div>
         <div class="card">
-            <span class="label">Weed Pollen</span>
-            <span class="val" id="weed">--</span>
-        </div>
-        <div class="card full">
-            <span class="label">Car Wash Recommendation</span>
-            <span class="status" id="wash">---</span>
+            <div class="icon-row"><i data-lucide="droplets"></i><span class="label">Rain Prob.</span></div>
+            <span class="val" id="rain">--%</span>
         </div>
     </div>
 
-    
-
-    <div class="facts">
-        <h3>Pollen & Environmental Facts</h3>
-        <div>• <b>Tree Pollen:</b> Peaks in Winter (Cedar) and Spring (Oak/Pine). These tiny grains are easily carried by the San Antonio winds.</div>
-        <div>• <b>Grass Pollen:</b> Highest in late Spring. Triggers the common seasonal "hay fever" symptoms.</div>
-        <div>• <b>Weed Pollen:</b> Dominant in late Summer and Fall, primarily led by Ragweed.</div>
-        <div>• <b>UV Index:</b> Measures solar intensity. Levels 6+ suggest seeking shade or applying protection between 10am and 4pm.</div>
+    <div class="advice-box" id="advice-container">
+        <div class="advice-item">
+            <i data-lucide="info" style="color: var(--gold); width: 18px;"></i>
+            <span id="clothing-text">Analyzing conditions for advice...</span>
+        </div>
+        <div class="advice-item">
+            <i data-lucide="sparkles" style="color: var(--accent); width: 18px;"></i>
+            <span id="wash-text">Car wash check...</span>
+        </div>
     </div>
-    
-    <div class="footer" id="time">Connecting to pollen-data...</div>
+
+    <div class="footer" id="updated">Syncing...</div>
 </div>
 
+
+
 <script>
-    // 1. Theme Toggle Logic
     function toggleTheme() {
         const isLight = document.body.classList.toggle('light-mode');
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
-        document.getElementById('theme-btn').innerText = isLight ? '☀️ Light Mode' : '🌙 Dark Mode';
+        document.getElementById('theme-btn').innerText = isLight ? '☀️' : '🌙';
     }
 
-    // Load saved preference
-    if (localStorage.getItem('theme') === 'light') {
-        document.body.classList.add('light-mode');
-        document.getElementById('theme-btn').innerText = '☀️ Light Mode';
-    }
+    if (localStorage.getItem('theme') === 'light') toggleTheme();
 
-    // 2. Data Fetch Logic
     async function update() {
         try {
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
-            // Check for data and apply to elements with safety fallbacks (??)
-            document.getElementById('actual').innerText = (d.actualTemp ?? '--') + "°";
-            document.getElementById('feels').innerText = (d.feelsLike ?? '--') + "°";
-            document.getElementById('tree').innerText = d.treePollen || "None";
-            document.getElementById('grass').innerText = d.grassPollen || "None";
-            document.getElementById('weed').innerText = d.weedPollen || "None";
-            document.getElementById('uv').innerText = d.uvIndex ?? "0";
-            document.getElementById('wash').innerText = d.carWash || "---";
-            document.getElementById('time').innerText = "Last Updated: " + (d.updated || "Just Now");
+            document.getElementById('city-title').innerText = d.city;
+            document.getElementById('temp').innerText = d.temp + "°";
+            document.getElementById('feels').innerText = "Feels like " + d.feelsLike + "°";
+            document.getElementById('wind').innerText = d.wind + " mph";
+            document.getElementById('wind-dir').innerText = "From " + d.windDir + "°";
+            document.getElementById('tree').innerText = d.tree;
+            document.getElementById('pollen-other').innerText = d.grass + " / " + d.weed;
+            document.getElementById('uv').innerText = d.uv;
+            document.getElementById('rain').innerText = d.rainProb + "%";
+            document.getElementById('updated').innerText = "Updated: " + d.updated;
 
-            // UV Visual Indicator logic
+            // Clothing Advice
+            let clothing = "Standard attire today.";
+            if(d.temp > 80) clothing = "T-shirt weather. Stay hydrated.";
+            else if(d.temp < 60) clothing = "Grab a light jacket or hoodie.";
+            else if(d.temp < 45) clothing = "Heavier coat recommended.";
+            if(d.uv > 5) clothing += " Wear sunglasses & SPF.";
+            document.getElementById('clothing-text').innerText = clothing;
+
+            // Car Wash Advice
+            let wash = d.rainProb > 20 ? "Wait to wash (Rain expected)." : "Great day for a car wash!";
+            if(d.tree === "High" || d.tree === "Very High") wash = "Wash now, but pollen is heavy!";
+            document.getElementById('wash-text').innerText = wash;
+
+            // UV Color
             const uvCard = document.getElementById('uv-card');
-            const uv = d.uvIndex || 0;
-            if (uv <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
-            else if (uv <= 5) uvCard.style.backgroundColor = "rgba(250, 204, 21, 0.15)"; 
-            else uvCard.style.backgroundColor = "rgba(248, 113, 113, 0.2)";
+            if (d.uv <= 2) uvCard.style.borderLeft = "4px solid #4ade80";
+            else if (d.uv <= 5) uvCard.style.borderLeft = "4px solid #facc15";
+            else uvCard.style.borderLeft = "4px solid #f87171";
 
-        } catch(e) { 
-            document.getElementById('time').innerText = "Syncing with API Window..."; 
-        }
+            lucide.createIcons();
+        } catch(e) { console.error(e); }
     }
 
-    // Run update on load
     update();
 </script>
 </body>
