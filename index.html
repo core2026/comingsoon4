@@ -16,23 +16,22 @@
         .label { font-size: 0.6rem; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; font-weight: 700; }
         .val { font-size: 1.5rem; font-weight: 800; color: #fff; display: block; margin-top: 4px; }
         .status { color: var(--gold); font-size: 1rem; font-weight: 600; margin-top: 4px; display: block; }
-        .uv-guide { font-size: 0.75rem; color: #94a3b8; margin-top: 20px; text-align: left; line-height: 1.5; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .footer { text-align: center; margin-top: 25px; font-size: 0.7rem; color: #475569; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1 id="city-title">Locating...</h1>
+    <h1 id="city-title">Fair Oaks Ranch</h1>
     
     <div class="grid">
         <div class="card">
             <span class="label">Actual Temp</span>
-            <span class="val" id="actual">--°</span>
+            <span class="val" id="actual">--°F</span>
         </div>
         <div class="card" id="feels-card">
             <span class="label">Feels Like</span>
-            <span class="val" id="feels">--°</span>
+            <span class="val" id="feels">--°F</span>
         </div>
         <div class="card">
             <span class="label">Cedar Risk</span>
@@ -43,7 +42,7 @@
             <span class="val" id="uv">--</span>
         </div>
         <div class="card full">
-            <span class="label">Car Wash Index</span>
+            <span class="label">Car Wash</span>
             <span class="status" id="wash">---</span>
         </div>
         <div class="card full">
@@ -51,29 +50,15 @@
             <div id="clears" style="font-size: 0.85rem; margin-top: 4px; color: #cbd5e1;">---</div>
         </div>
     </div>
-
-    <div class="uv-guide">
-        <strong>UV Safety:</strong> 0-2 (Low), 3-5 (Moderate), 6-7 (High), 8+ (Very High). 
-        <br>High UV can cause skin damage even on cool days.
-    </div>
-
     <div class="footer" id="time">Syncing...</div>
 </div>
 
 <script>
-    function getUVColor(uv) {
-        if (uv <= 2) return "rgba(74, 222, 128, 0.15)"; 
-        if (uv <= 5) return "rgba(250, 204, 21, 0.15)"; 
-        if (uv <= 7) return "rgba(251, 146, 60, 0.2)"; 
-        return "rgba(248, 113, 113, 0.2)"; 
-    }
-
     async function update() {
         try {
             const res = await fetch("https://pollen-data.acekallas.com");
             const d = await res.json();
             
-            document.getElementById('city-title').innerText = d.location;
             document.getElementById('actual').innerText = d.actualTemp + "°";
             document.getElementById('feels').innerText = d.feelsLike + "°";
             document.getElementById('cedar').innerText = d.cedar;
@@ -82,12 +67,15 @@
             document.getElementById('clears').innerText = d.clearsUp;
             document.getElementById('time').innerText = "Last Updated: " + d.updated;
 
-            // Color Coding
-            document.getElementById('uv-card').style.backgroundColor = getUVColor(d.uvIndex);
-            if (d.feelsLike > 90) {
-                document.getElementById('feels-card').style.backgroundColor = "rgba(248, 113, 113, 0.15)";
-            }
-        } catch(e) { document.getElementById('time').innerText = "Sync Failed"; }
+            // UV Color Logic
+            const uvCard = document.getElementById('uv-card');
+            if (d.uvIndex <= 2) uvCard.style.backgroundColor = "rgba(74, 222, 128, 0.15)"; 
+            else if (d.uvIndex <= 5) uvCard.style.backgroundColor = "rgba(250, 204, 21, 0.15)"; 
+            else uvCard.style.backgroundColor = "rgba(248, 113, 113, 0.2)";
+
+        } catch(e) { 
+            document.getElementById('time').innerText = "Update Failed - API Cooling Down"; 
+        }
     }
     update();
 </script>
