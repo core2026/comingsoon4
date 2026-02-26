@@ -2,28 +2,55 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Acekallas Pro Weather</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Acekallas Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --gold: #fbbf24; --accent: #38bdf8; }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 15px; transition: 0.3s; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); 
+            display: flex; justify-content: center; min-height: 100vh; margin: 0; 
+            padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom));
+            transition: 0.3s; overscroll-behavior: none;
+        }
         .container { width: 100%; max-width: 480px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
-        .city-box h1 { margin: 0; font-size: 1.6rem; display: flex; align-items: center; gap: 8px; }
-        #gps-btn { background: var(--accent); color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 10px 16px; border-radius: 12px; cursor: pointer; margin-top: 10px; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        
+        .header { margin-bottom: 25px; display: flex; justify-content: space-between; align-items: flex-start; }
+        .city-box h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.5px; }
+        
+        /* The Nudge Button */
+        #gps-btn { 
+            background: var(--accent); color: white; border: none; font-size: 0.75rem; 
+            font-weight: 800; padding: 12px 18px; border-radius: 14px; cursor: pointer; 
+            margin-top: 10px; display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+            animation: pulse-ring 2s infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+            70% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+            100% { transform: scale(1); }
+        }
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(15px); }
+        .card { 
+            background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); 
+            backdrop-filter: blur(15px); transition: transform 0.1s ease;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        /* Mobile Haptic Feel */
+        .card:active { transform: scale(0.96); }
+        
         .icon-row { display: flex; align-items: center; gap: 8px; color: var(--accent); margin-bottom: 8px; }
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        .val { font-size: 1.6rem; font-weight: 800; }
-        .advice-box { margin-top: 20px; background: var(--card); border-radius: 24px; padding: 20px; border-left: 4px solid var(--gold); }
-        .advice-item { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; margin-bottom: 12px; }
-        .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 12px; border-radius: 16px; cursor: pointer; }
-        .footer { text-align: center; margin-top: 30px; font-size: 0.75rem; color: var(--label); }
+        .val { font-size: 1.5rem; font-weight: 800; display: block; }
+        .sub-val { font-size: 0.7rem; color: var(--label); }
+
+        .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 12px; border-radius: 16px; }
+        .footer { text-align: center; margin-top: 30px; font-size: 0.75rem; color: var(--label); padding-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -31,7 +58,7 @@
 <div class="container">
     <div class="header">
         <div class="city-box">
-            <h1 id="city-name">Detecting...</h1>
+            <h1 id="city-title">Detecting...</h1>
             <button id="gps-btn" onclick="getGPS()">📍 Precise Location</button>
         </div>
         <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
@@ -41,33 +68,27 @@
         <div class="card">
             <div class="icon-row"><i data-lucide="thermometer"></i><span class="label">Temp</span></div>
             <span class="val" id="temp">--°</span>
-            <span class="label" id="feels">Feels --°</span>
+            <span class="sub-val" id="feels">Feels like --°</span>
         </div>
         <div class="card">
-            <div class="icon-row"><i data-lucide="waves"></i><span class="label">Comfort</span></div>
-            <span class="val" id="comfort">--</span>
-            <span class="label" id="humidity">Hum: --%</span>
-        </div>
-        <div class="card">
-            <div class="icon-row"><i data-lucide="trees"></i><span class="label">Tree Pollen</span></div>
+            <div class="icon-row"><i data-lucide="trees"></i><span class="label">Tree</span></div>
             <span class="val" id="tree">--</span>
+            <span class="sub-val">Allergy Risk</span>
         </div>
         <div class="card">
-            <div class="icon-row"><i data-lucide="sun"></i><span class="label">UV Index</span></div>
-            <span class="val" id="uv">--</span>
+            <div class="icon-row"><i data-lucide="sprout"></i><span class="label">Grass / Weed</span></div>
+            <span class="val" id="pollen-other">--</span>
+            <span class="sub-val">Secondary Allergens</span>
+        </div>
+        <div class="card">
+            <div class="icon-row"><i data-lucide="droplets"></i><span class="label">Rain</span></div>
+            <span class="val" id="rain">--%</span>
+            <span class="sub-val">Precip. Chance</span>
         </div>
     </div>
 
-    <div class="advice-box">
-        <div class="advice-item"><i data-lucide="clock" size="18" color="#fbbf24"></i> <span id="daylight">Daylight remaining...</span></div>
-        <div class="advice-item"><i data-lucide="car" size="18" color="#38bdf8"></i> <span id="wash">Car wash check...</span></div>
-        <div class="advice-item"><i data-lucide="shirt" size="18" color="#a78bfa"></i> <span id="clothing">...</span></div>
-    </div>
-
-    <div class="footer" id="updated">Syncing...</div>
+    <div class="footer" id="updated">Syncing with Worker...</div>
 </div>
-
-
 
 <script>
     function toggleTheme() {
@@ -78,36 +99,36 @@
     if (localStorage.getItem('theme') === 'light') toggleTheme();
 
     function getGPS() {
+        const btn = document.getElementById('gps-btn');
+        btn.innerText = "Accessing GPS...";
         navigator.geolocation.getCurrentPosition(pos => {
             update(pos.coords.latitude, pos.coords.longitude);
-            document.getElementById('gps-btn').style.display = 'none';
-        });
+        }, () => { btn.innerText = "Location Denied"; });
     }
 
     async function update(lat = null, lon = null) {
         try {
             let url = "https://pollen-data.acekallas.com";
             if(lat && lon) url += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
+
             const res = await fetch(url);
             const d = await res.json();
             
-            document.getElementById('city-name').innerText = d.city;
+            document.getElementById('city-title').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
-            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
-            document.getElementById('comfort').innerText = d.comfort;
-            document.getElementById('humidity').innerText = "Hum: " + d.humidity + "%";
-            document.getElementById('tree').innerText = ["None","Very Low","Low","Medium","High","Very High"][d.tree] || "Low";
-            document.getElementById('uv').innerText = d.uv;
+            document.getElementById('feels').innerText = "Feels like " + d.feelsLike + "°";
+            document.getElementById('tree').innerText = d.tree;
+            document.getElementById('pollen-other').innerText = d.grass + " / " + d.weed;
+            document.getElementById('rain').innerText = d.rainProb + "%";
             document.getElementById('updated').innerText = "Updated " + d.updated;
 
-            // Daylight Logic (Simplified approximation)
-            const now = new Date();
-            const sunset = new Date(); sunset.setHours(18, 30, 0); // Approx 6:30 PM for Feb
-            const diff = (sunset - now) / (1000 * 60 * 60);
-            document.getElementById('daylight').innerText = diff > 0 ? `${Math.floor(diff)}h ${Math.round((diff % 1) * 60)}m of light left.` : "Sun has set.";
-
-            document.getElementById('clothing').innerText = d.temp > 78 ? "Light clothes." : "Grab a jacket.";
-            document.getElementById('wash').innerText = d.rainProb > 20 ? "Wait." : "Good to wash.";
+            // The Nudge Logic
+            const btn = document.getElementById('gps-btn');
+            if(d.isPrecise) {
+                btn.style.display = 'none';
+            } else {
+                btn.innerText = `Not in ${d.city}? Click for Precise Location`;
+            }
 
             lucide.createIcons();
         } catch(e) { console.error(e); }
