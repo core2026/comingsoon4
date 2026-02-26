@@ -3,55 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Acekallas Weather</title>
+    <title>Acekallas Pro Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --gold: #fbbf24; --accent: #38bdf8; }
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
-        
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 15px; transition: 0.3s; overflow-x: hidden; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 15px; transition: 0.3s; }
         .container { width: 100%; max-width: 480px; }
-        
-        /* Header & Location Nudge */
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 0 5px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
         .city-box h1 { margin: 0; font-size: 1.6rem; display: flex; align-items: center; gap: 8px; }
-        .dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; display: none; box-shadow: 0 0 8px #4ade80; }
-        
-        #gps-btn { 
-            background: var(--accent); color: white; border: none; 
-            font-size: 0.75rem; font-weight: 800; padding: 10px 16px; 
-            border-radius: 12px; cursor: pointer; margin-top: 10px;
-            display: flex; align-items: center; gap: 6px;
-            animation: pulse-blue 2s infinite;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
-        }
-
-        @keyframes pulse-blue {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.03); box-shadow: 0 4px 20px rgba(56, 189, 248, 0.6); }
-            100% { transform: scale(1); }
-        }
-
-        /* Grid UI */
+        #gps-btn { background: var(--accent); color: white; border: none; font-size: 0.75rem; font-weight: 800; padding: 10px 16px; border-radius: 12px; cursor: pointer; margin-top: 10px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
-        
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(15px); }
         .icon-row { display: flex; align-items: center; gap: 8px; color: var(--accent); margin-bottom: 8px; }
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         .val { font-size: 1.6rem; font-weight: 800; }
-        
         .advice-box { margin-top: 20px; background: var(--card); border-radius: 24px; padding: 20px; border-left: 4px solid var(--gold); }
-        .advice-item { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; margin-bottom: 10px; }
-
+        .advice-item { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; margin-bottom: 12px; }
         .theme-btn { background: var(--card); border: 1px solid rgba(128,128,128,0.2); color: var(--text); padding: 12px; border-radius: 16px; cursor: pointer; }
-        .footer { text-align: center; margin-top: 30px; font-size: 0.75rem; color: var(--label); opacity: 0.8; }
-        
-        /* Mobile Touch Optimizations */
-        @media (max-width: 400px) {
-            .val { font-size: 1.3rem; }
-            .card { padding: 15px; }
-        }
+        .footer { text-align: center; margin-top: 30px; font-size: 0.75rem; color: var(--label); }
     </style>
 </head>
 <body>
@@ -59,10 +31,8 @@
 <div class="container">
     <div class="header">
         <div class="city-box">
-            <h1><span id="city-name">Detecting...</span><div id="live-dot" class="dot"></div></h1>
-            <button id="gps-btn" onclick="getGPS()">
-                <i data-lucide="map-pin" size="14"></i> Use Precise Location
-            </button>
+            <h1 id="city-name">Detecting...</h1>
+            <button id="gps-btn" onclick="getGPS()">📍 Precise Location</button>
         </div>
         <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
     </div>
@@ -74,31 +44,30 @@
             <span class="label" id="feels">Feels --°</span>
         </div>
         <div class="card">
-            <div class="icon-row"><i data-lucide="wind"></i><span class="label">Wind</span></div>
-            <span class="val" id="wind">-- mph</span>
+            <div class="icon-row"><i data-lucide="waves"></i><span class="label">Comfort</span></div>
+            <span class="val" id="comfort">--</span>
             <span class="label" id="humidity">Hum: --%</span>
         </div>
         <div class="card">
             <div class="icon-row"><i data-lucide="trees"></i><span class="label">Tree Pollen</span></div>
             <span class="val" id="tree">--</span>
         </div>
-        <div class="card" id="uv-card">
+        <div class="card">
             <div class="icon-row"><i data-lucide="sun"></i><span class="label">UV Index</span></div>
             <span class="val" id="uv">--</span>
         </div>
     </div>
 
     <div class="advice-box">
-        <div class="advice-item"><i data-lucide="shirt" size="18" color="#fbbf24"></i> <span id="clothing">...</span></div>
-        <div class="advice-item"><i data-lucide="car" size="18" color="#38bdf8"></i> <span id="wash">...</span></div>
+        <div class="advice-item"><i data-lucide="clock" size="18" color="#fbbf24"></i> <span id="daylight">Daylight remaining...</span></div>
+        <div class="advice-item"><i data-lucide="car" size="18" color="#38bdf8"></i> <span id="wash">Car wash check...</span></div>
+        <div class="advice-item"><i data-lucide="shirt" size="18" color="#a78bfa"></i> <span id="clothing">...</span></div>
     </div>
 
-    <div class="footer">
-        <div onclick="update()" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
-            <i data-lucide="refresh-cw" size="12"></i> <span id="updated">Syncing...</span>
-        </div>
-    </div>
+    <div class="footer" id="updated">Syncing...</div>
 </div>
+
+
 
 <script>
     function toggleTheme() {
@@ -109,17 +78,9 @@
     if (localStorage.getItem('theme') === 'light') toggleTheme();
 
     function getGPS() {
-        const btn = document.getElementById('gps-btn');
-        btn.innerHTML = "Locating...";
-        btn.style.animation = "none";
-        
         navigator.geolocation.getCurrentPosition(pos => {
             update(pos.coords.latitude, pos.coords.longitude);
-            btn.style.display = 'none';
-            document.getElementById('live-dot').style.display = 'block';
-        }, () => {
-            btn.innerHTML = "Access Denied";
-            btn.style.background = "#ef4444";
+            document.getElementById('gps-btn').style.display = 'none';
         });
     }
 
@@ -127,36 +88,30 @@
         try {
             let url = "https://pollen-data.acekallas.com";
             if(lat && lon) url += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
-
             const res = await fetch(url);
             const d = await res.json();
             
             document.getElementById('city-name').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
-            document.getElementById('wind').innerText = d.wind + " mph";
+            document.getElementById('comfort').innerText = d.comfort;
             document.getElementById('humidity').innerText = "Hum: " + d.humidity + "%";
-            document.getElementById('tree').innerText = d.tree;
+            document.getElementById('tree').innerText = ["None","Very Low","Low","Medium","High","Very High"][d.tree] || "Low";
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('updated').innerText = "Updated " + d.updated;
 
-            // Advice Logic
-            document.getElementById('clothing').innerText = d.temp > 78 ? "Light clothes & hydration." : "Light jacket recommended.";
-            document.getElementById('wash').innerText = d.rainProb > 25 ? "Wait for clear skies." : "Great day for a wash!";
+            // Daylight Logic (Simplified approximation)
+            const now = new Date();
+            const sunset = new Date(); sunset.setHours(18, 30, 0); // Approx 6:30 PM for Feb
+            const diff = (sunset - now) / (1000 * 60 * 60);
+            document.getElementById('daylight').innerText = diff > 0 ? `${Math.floor(diff)}h ${Math.round((diff % 1) * 60)}m of light left.` : "Sun has set.";
 
-            // UV Indicator
-            const uvCard = document.getElementById('uv-card');
-            uvCard.style.borderTop = d.uv > 5 ? "4px solid #f87171" : (d.uv > 2 ? "4px solid #facc15" : "4px solid #4ade80");
-
-            if(d.isPrecise) {
-                document.getElementById('gps-btn').style.display = 'none';
-                document.getElementById('live-dot').style.display = 'block';
-            }
+            document.getElementById('clothing').innerText = d.temp > 78 ? "Light clothes." : "Grab a jacket.";
+            document.getElementById('wash').innerText = d.rainProb > 20 ? "Wait." : "Good to wash.";
 
             lucide.createIcons();
         } catch(e) { console.error(e); }
     }
-
     update();
 </script>
 </body>
