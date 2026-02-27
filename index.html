@@ -3,16 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pollen Diagnostic 3</title>
+    <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; position: relative; }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; box-sizing: border-box; }
+        .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
+        .search-container input::placeholder { color: var(--label); }
+        .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; white-space: nowrap; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+
+        /* Allergy Widget */
         .widget-spacer { grid-column: span 2; min-height: 270px; display: block; text-align: center; padding: 10px 0; background: #fff; border-radius: 24px; }
+
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         h1 { font-size: 2rem; font-weight: 800; margin: 0; }
@@ -23,12 +32,32 @@
     <h1 id="city-title">Syncing...</h1>
     <p id="updated" style="font-size: 11px; color: var(--label); margin: 5px 0 20px 0;">Connecting...</p>
 
-    <div class="grid">
-        <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span></div>
-        <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span></div>
+    <button id="gps-btn" onclick="getGPS()">
+        <i data-lucide="map-pin"></i>
+        <span id="gps-text">Sync Precise Location</span>
+    </button>
 
-        <!-- Pollen Widget -->
-        <div class="widget-spacer">
+    <div class="search-container">
+        <input type="text" id="zip-input" placeholder="Zip Code (e.g. 90210)" maxlength="5" inputmode="numeric">
+        <button onclick="searchZip()">Search</button>
+    </div>
+
+    <div class="grid">
+        <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
+        <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
+        <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
+        <div class="card"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Velocity</span></div>
+
+        <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2);">
+            <i data-lucide="car" style="color: var(--accent); width: 28px; height: 28px;"></i>
+            <div>
+                <span class="label" style="color: var(--accent);">Car Wash Forecast</span>
+                <span id="wash-text" style="display: block; font-weight: 800; font-size: 1.2rem;">Analyzing...</span>
+            </div>
+        </div>
+
+        <!-- Pollen/Allergy Widget -->
+        <div class="widget-spacer" id="allergy-container">
             <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
         </div>
         <script src="//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
@@ -36,20 +65,103 @@
 </div>
 
 <script>
-    // Using DOMContentLoaded instead of window.onload
-    // window.onload waits for ALL resources including external scripts —
-    // the pollen script may be using window.onload internally and we could be overwriting it
-    document.addEventListener('DOMContentLoaded', async () => {
+    lucide.createIcons();
+
+    // Enter key support on zip input
+    document.getElementById('zip-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchZip();
+    });
+
+    function updatePollenWidget(zip) {
+        document.querySelectorAll('script[data-pollen]').forEach(s => s.remove());
+
+        const el = document.getElementById('allergyalert');
+        el.innerHTML = '';
+        el.setAttribute('data-aa_location', zip);
+        // Ensure required styles are always present
+        el.style.cssText = 'width:300px; height:250px; background-color:#eee; position:relative; display:inline-block;';
+
+        const newScript = document.createElement('script');
+        newScript.setAttribute('data-pollen', 'true');
+        newScript.src = '//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js?v=' + Date.now();
+        newScript.onload = () => {};
+        document.body.appendChild(newScript);
+    }
+
+    async function getGPS() {
+        document.getElementById('gps-text').innerText = "Locating...";
+        if (!navigator.geolocation) {
+            document.getElementById('gps-text').innerText = "GPS Not Supported";
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            p => update(p.coords.latitude, p.coords.longitude, null, null),
+            e => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
+        );
+    }
+
+    async function searchZip() {
+        const zip = document.getElementById('zip-input').value.trim();
+        if (!/^\d{5}$/.test(zip)) {
+            document.getElementById('zip-input').style.outline = '2px solid #f87171';
+            setTimeout(() => document.getElementById('zip-input').style.outline = '', 1500);
+            return;
+        }
+        document.getElementById('zip-input').style.outline = '';
         try {
-            const r = await fetch('https://pollen-data.acekallas.com/');
+            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+            if (!res.ok) throw new Error("Invalid ZIP");
+            const data = await res.json();
+            update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
+        } catch (e) {
+            document.getElementById('updated').innerText = "Invalid ZIP code.";
+        }
+    }
+
+    async function update(lat = null, lon = null, name = null, zip = null) {
+        try {
+            let url = `https://pollen-data.acekallas.com/`;
+            const params = [];
+            if (lat) { params.push(`lat=${lat}`, `lon=${lon}`); }
+            if (name) { params.push(`name=${encodeURIComponent(name)}`); }
+            if (params.length) url += '?' + params.join('&');
+
+            const r = await fetch(url);
             const d = await r.json();
+
             document.getElementById('city-title').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
+            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
             document.getElementById('hum').innerText = d.humidity + "%";
-            document.getElementById('updated').innerText = `Updated: ${d.updated}`;
+            document.getElementById('uv').innerText = d.uv;
+            document.getElementById('wind').innerText = d.wind + " mph";
+
+            const workerCache = r.headers.get('X-Cache');
+            const cfCache = r.headers.get('cf-cache-status');
+            const cacheLabel = (workerCache === 'HIT' || cfCache === 'HIT') ? ' · ⚡ Cached' : '';
+            document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}`;
+
+            document.getElementById('wash-text').innerText =
+                (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
+
+            if (lat) document.getElementById('gps-text').innerText = "Location Verified";
+
+            // Only reload pollen widget if zip actually changed
+            const targetZip = zip || "78015";
+            const currentZip = document.getElementById('allergyalert').getAttribute('data-aa_location');
+            if (targetZip !== currentZip) {
+                updatePollenWidget(targetZip);
+            }
+
         } catch (e) {
-            document.getElementById('updated').innerText = "Unable to connect.";
+            console.error("Update error:", e);
+            document.getElementById('updated').innerText = "Unable to connect — retrying...";
+            setTimeout(() => update(lat, lon, name, zip), 5000);
         }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        update();
     });
 </script>
 </body>
