@@ -20,7 +20,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Spacer Container - ESSENTIAL: Forces the container size */
+        /* Allergy Widget Spacer Container - Moved to bottom */
         .widget-spacer { 
             grid-column: span 2; 
             min-height: 270px; 
@@ -32,6 +32,7 @@
             border-radius: 24px; 
             overflow: hidden; 
             position: relative;
+            margin-top: 15px; /* Added spacing from cards above */
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -52,10 +53,6 @@
     </div>
 
     <div class="grid">
-        <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
-        </div>
-
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
@@ -68,6 +65,10 @@
                 <span id="wash-text" style="display: block; font-weight: 800; font-size: 1.2rem;">Analyzing...</span>
             </div>
         </div>
+        
+        <div class="widget-spacer" id="allergy-container">
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
+        </div>
     </div>
 </div>
 
@@ -76,7 +77,7 @@
 <script>
     lucide.createIcons();
 
-    // 1. Mutation Observer: Watches for the widget content to load
+    // Mutation Observer: Watches for the widget content to load
     const targetNode = document.getElementById('allergy-container');
     const observer = new MutationObserver((mutationsList, observer) => {
         const widget = document.getElementById('allergyalert');
@@ -90,7 +91,7 @@
     // Start observing
     observer.observe(targetNode, { childList: true, subtree: true });
 
-    // 2. Initialize Function
+    // Initialize Function
     function loadWidget(zip) {
         const widget = document.getElementById('allergyalert');
         widget.setAttribute('data-aa_location', zip || '78015');
