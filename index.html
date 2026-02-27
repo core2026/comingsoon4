@@ -73,10 +73,15 @@
 <script>
     lucide.createIcons();
 
+    // Safely initialize Pollen Widget
     function initPollenWidget() {
         if (typeof AA !== 'undefined' && typeof AA.init === 'function') {
-            AA.init();
-            console.log("Pollen Widget Initialized");
+            try {
+                AA.init();
+                console.log("Pollen Widget Initialized");
+            } catch (e) {
+                console.error("Pollen Init Error", e);
+            }
         }
     }
 
@@ -105,23 +110,29 @@
             const r = await fetch(url);
             const d = await r.json();
 
-            document.getElementById('city-title').innerText = d.city;
-            document.getElementById('temp').innerText = d.temp + "°";
-            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
-            document.getElementById('hum').innerText = d.humidity + "%";
-            document.getElementById('uv').innerText = d.uv;
-            document.getElementById('wind').innerText = d.wind + " mph";
+            // Update DOM only if data is valid
+            if (d && d.city) {
+                document.getElementById('city-title').innerText = d.city;
+                document.getElementById('temp').innerText = d.temp + "°";
+                document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
+                document.getElementById('hum').innerText = d.humidity + "%";
+                document.getElementById('uv').innerText = d.uv;
+                document.getElementById('wind').innerText = d.wind + " mph";
+                
+                document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
+                document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
+                
+                if(lat) document.getElementById('gps-text').innerText = "Location Verified";
+            } else {
+                throw new Error("Invalid data format");
+            }
             
-            document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
-            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-            
-            // Re-initialize after weather update
+            // Re-initialize widget after weather update
             setTimeout(initPollenWidget, 500);
             
-            if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
             console.error("Update error:", e);
-            document.getElementById('updated').innerText = "Syncing...";
+            document.getElementById('updated').innerText = "Error syncing data.";
         }
     }
 
