@@ -20,7 +20,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling - ABSOLUTE FORCE */
+        /* Allergy Widget Styling - ABSOLUTE FORCE (Approach 1) */
         .widget-spacer { 
             grid-column: span 2 !important; 
             min-height: 270px !important; 
@@ -43,6 +43,7 @@
             height: 250px !important;
             display: block !important;
             visibility: visible !important;
+            opacity: 1 !important;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -87,8 +88,10 @@
 <script>
     lucide.createIcons();
 
+    // FORCE RENDER & REFRESH (Approach 2 & 3)
     function refreshWidget() {
         if (window.AA && typeof window.AA.init === 'function') {
+            // Force the init function to run
             window.AA.init();
         }
     }
@@ -130,17 +133,17 @@
             
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
             
-            // Re-initialize after data updates
-            refreshWidget();
+            // Re-initialize after data updates (Approach 2)
+            setTimeout(refreshWidget, 500);
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
         }
     }
 
-    // Delay initiation until everything is ready
+    // Delayed initiation to ensure DOM is ready (Approach 2)
     window.onload = () => {
         update();
-        setTimeout(refreshWidget, 1000);
+        setTimeout(refreshWidget, 1000); // Initial load check
     };
 </script>
 </body>
