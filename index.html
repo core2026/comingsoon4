@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather & Allergy</title>
+    <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -63,11 +63,10 @@
     </div>
 </div>
 
-<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js" id="pollen-script"></script>
+<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
 
 <script>
-    // Init Lucide icons after DOM is ready
-    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
+    lucide.createIcons();
 
     // Enter key support on zip input
     document.getElementById('zip-input').addEventListener('keydown', (e) => {
@@ -75,18 +74,17 @@
     });
 
     function updatePollenWidget(zip) {
-        // PollenApps has no public re-init API — the only reliable way to change location
-        // is to replace the div's data attribute and re-inject the script fresh.
-        const oldScript = document.getElementById('pollen-script');
-        if (oldScript) oldScript.remove();
+        // Remove any previously injected dynamic pollen script
+        document.querySelectorAll('script[data-pollen]').forEach(s => s.remove());
 
         const el = document.getElementById('allergyalert');
         el.innerHTML = '';
         el.setAttribute('data-aa_location', zip);
 
+        // Cache-buster ensures browser fetches + re-executes fresh each time
         const newScript = document.createElement('script');
-        newScript.id = 'pollen-script';
-        newScript.src = 'https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js';
+        newScript.setAttribute('data-pollen', 'true');
+        newScript.src = 'https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js?v=' + Date.now();
         document.body.appendChild(newScript);
     }
 
@@ -166,4 +164,3 @@
 </script>
 </body>
 </html>
-
