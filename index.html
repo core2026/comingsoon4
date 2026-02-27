@@ -20,8 +20,8 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling - Isolated */
-        #pollen-embed-wrapper { 
+        /* Allergy Widget Styling */
+        .widget-spacer { 
             grid-column: span 2; 
             min-height: 270px; 
             display: flex; 
@@ -29,27 +29,22 @@
             align-items: center; 
             background: #fff; 
             border-radius: 24px; 
-            overflow: hidden; 
-            position: relative; 
+            overflow: hidden;
+            position: relative; /* Required for loader */
         }
         
-        /* loading overlay specific to pollen */
+        /* Localized Loading Message */
         #pollen-loader {
             position: absolute;
+            width: 100%;
+            height: 100%;
             background: #fff;
             color: #0b1120;
-            font-weight: 700;
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%;
-            height: 100%;
+            font-weight: 800;
             z-index: 10;
-        }
-
-        /* Prevent advertisement transition */
-        #allergyalert iframe {
-            transition: none !important;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -65,11 +60,16 @@
     <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Sync Precise Location</span></button>
     
     <div class="search-container">
-        <input type="text" id="zip-input" placeholder="Zip Code (e.g. 78006)" maxlength="5">
+        <input type="text" id="zip-input" placeholder="Zip Code (e.g. 78015)" maxlength="5">
         <button onclick="searchZip()">Search</button>
     </div>
 
     <div class="grid">
+        <div class="widget-spacer" id="allergy-container">
+            <div id="pollen-loader">Loading Pollen Data...</div>
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
+        </div>
+
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
@@ -82,42 +82,38 @@
                 <span id="wash-text" style="display: block; font-weight: 800; font-size: 1.2rem;">Analyzing...</span>
             </div>
         </div>
-
-        <div id="pollen-embed-wrapper">
-            <div id="pollen-loader">Loading Pollen Data...</div>
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78006" style="width:300px; height:250px;"></div>
-            <script defer src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
-        </div>
     </div>
 </div>
 
 <script>
     lucide.createIcons();
 
-    // Check if widget is actually loaded in the DOM
-    function checkWidgetContent() {
-        const iframe = document.querySelector('#allergyalert iframe');
-        if (iframe && iframe.contentWindow.document.body.innerHTML.length > 50) {
-            console.log("Widget content loaded");
-            document.getElementById('pollen-loader').style.display = 'none';
-        } else {
-            console.log("Waiting for widget...");
-            setTimeout(checkWidgetContent, 500);
+    // 1. Manually initialize the Pollen Widget to control load order
+    function initPollenWidget() {
+        if (window.AA && typeof window.AA.init === 'function') {
+            window.AA.init();
+            
+            // Check if the widget has loaded content (data) rather than just an ad
+            // This is a rough check based on typical iframe behavior
+            const checkInt = setInterval(() => {
+                const iframe = document.querySelector('#allergyalert iframe');
+                if (iframe) {
+                    clearInterval(checkInt);
+                    // Hide loader after ensuring content exists
+                    setTimeout(() => {
+                        document.getElementById('pollen-loader').style.display = 'none';
+                    }, 500);
+                }
+            }, 200);
         }
     }
 
-    // Stricter initialization of Pollen Widget
-    function initPollenWidget() {
-        if (typeof AA !== 'undefined' && typeof AA.init === 'function') {
-            try {
-                AA.init();
-                console.log("Pollen Widget Initialized");
-                checkWidgetContent(); // Use new check to hide loader
-            } catch (e) {
-                console.error("Pollen Init Error", e);
-            }
-        }
-    }
+    // 2. Load the script dynamically
+    const script = document.createElement('script');
+    script.src = "https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js";
+    script.onload = initPollenWidget;
+    document.head.appendChild(script);
+
 
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
@@ -135,9 +131,8 @@
         update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
     }
 
-    async function update(lat = null, lon = null, name = null, zip = "78006") {
+    async function update(lat = null, lon = null, name = null, zip = "78015") {
         try {
-            // Using the worker URL as the API source
             let url = `https://pollen-data.acekallas.com/`;
             if (lat) url += `?lat=${lat}&lon=${lon}`;
             if (name) url += (lat ? '&' : '?') + `name=${encodeURIComponent(name)}`;
@@ -145,38 +140,25 @@
             const r = await fetch(url);
             const d = await r.json();
 
-            // Update DOM only if data is valid
-            if (d && d.city) {
-                document.getElementById('city-title').innerText = d.city;
-                document.getElementById('temp').innerText = d.temp + "°";
-                document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
-                document.getElementById('hum').innerText = d.humidity + "%";
-                document.getElementById('uv').innerText = d.uv;
-                document.getElementById('wind').innerText = d.wind + " mph";
-                
-                document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
-                document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-                
-                if(lat) document.getElementById('gps-text').innerText = "Location Verified";
-            } else {
-                throw new Error("Invalid data format");
-            }
+            document.getElementById('city-title').innerText = d.city;
+            document.getElementById('temp').innerText = d.temp + "°";
+            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
+            document.getElementById('hum').innerText = d.humidity + "%";
+            document.getElementById('uv').innerText = d.uv;
+            document.getElementById('wind').innerText = d.wind + " mph";
             
-            // Re-initialize widget after weather update
-            setTimeout(initPollenWidget, 500);
+            document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
+            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
+            if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
-            console.error("Update error:", e);
-            document.getElementById('updated').innerText = "Error syncing data.";
+            document.getElementById('updated').innerText = "Syncing...";
         }
     }
 
-    // Ensure DOM is fully loaded before running updates
-    document.addEventListener("DOMContentLoaded", () => {
+    window.onload = () => {
         update();
-        // Initial init call
-        setTimeout(initPollenWidget, 1000); 
-    });
+    };
 </script>
 </body>
 </html>
