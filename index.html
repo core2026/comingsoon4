@@ -73,7 +73,7 @@
 <script>
     lucide.createIcons();
 
-    // Safely initialize Pollen Widget
+    // Stricter initialization of Pollen Widget
     function initPollenWidget() {
         if (typeof AA !== 'undefined' && typeof AA.init === 'function') {
             try {
@@ -127,8 +127,8 @@
                 throw new Error("Invalid data format");
             }
             
-            // Re-initialize widget after weather update
-            setTimeout(initPollenWidget, 500);
+            // Pollen widget script might take time to load, re-init
+            setTimeout(initPollenWidget, 1000);
             
         } catch (e) {
             console.error("Update error:", e);
@@ -136,11 +136,12 @@
         }
     }
 
-    window.onload = () => {
+    // Ensure DOM is fully loaded before running updates
+    document.addEventListener("DOMContentLoaded", () => {
         update();
         // Initial init call
-        setTimeout(initPollenWidget, 1000); 
-    };
+        setTimeout(initPollenWidget, 1500); 
+    });
 </script>
 </body>
 </html>
