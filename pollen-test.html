@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pollen Widget</title>
+    <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
+    <style>
+        body { margin: 0; padding: 10px; background: #fff; display: flex; justify-content: center; align-items: center; }
+    </style>
+    <script>
+        // Read zip from query string, fall back to default
+        const zip = new URLSearchParams(window.location.search).get('zip') || '78015';
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('allergyalert').setAttribute('data-aa_location', zip);
+        });
+    </script>
+</head>
+<body>
+    <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
+    <script src="//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
+</body>
+</html>
