@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas Weather Dashboard</title>
+    <title>Acekallas Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; --warning: #f59e0b; }
+        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
         .header { margin-bottom: 25px; }
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
-        #gps-btn:active { transform: scale(0.98); }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         .map-card { grid-column: span 2; height: 350px; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
@@ -31,40 +30,30 @@
     <div class="grid">
         <div class="card" style="grid-column: span 2;"><span id="wash-text">Analyzing...</span></div>
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
-        <div class="card"><span class="label" id="sun-label">Solar</span><span class="val" id="sun-val">--</span><span id="sun-sub" class="label">Syncing...</span></div>
-        <div class="card"><span class="label">Pollen Index</span><span class="val" id="tree">--</span><span class="label">Tree Level</span></div>
-        <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span id="hum-desc" class="label">--</span></div>
-        <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Safety</span></div>
-        <div class="card"><span class="label">Wind</span><span class="val" id="wind">-- mph</span><span class="label">Surface</span></div>
+        <div class="card"><span class="label" id="sun-label">Solar Status</span><span class="val" id="sun-val">--</span><span id="sun-sub" class="label">Syncing...</span></div>
+        <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span class="label">Atmosphere</span></div>
+        <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
+        <div class="card" style="grid-column: span 2;"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Surface Conditions</span></div>
 
-        <span class="label" style="margin-top:20px; display:block;">🌿 Pollen/Dust Heatmap</span>
-        <div class="map-card"><iframe id="pollen-map" allow="geolocation"></iframe></div>
-        <span class="label" style="margin-top:10px; display:block;">🌧️ Rain Radar</span>
-        <div class="map-card"><iframe id="rain-map" allow="geolocation"></iframe></div>
-        <span class="label" style="margin-top:10px; display:block;">🌬️ Wind Flow</span>
-        <div class="map-card"><iframe id="wind-map" allow="geolocation"></iframe></div>
+        <span class="label" style="margin-top:20px; display:block;">🛰️ Satellite Cloud Cover</span>
+        <div class="map-card">
+            <iframe id="cloud-map" allow="geolocation"></iframe>
+        </div>
+        
+        <span class="label" style="margin-top:10px; display:block;">🌧️ Regional Rain Radar</span>
+        <div class="map-card">
+            <iframe id="rain-map" allow="geolocation"></iframe>
+        </div>
     </div>
     <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label); opacity:0.5;">...</div>
 </div>
 
 <script>
     async function getGPS() {
-        const btnText = document.getElementById('gps-text');
-        btnText.innerText = "Locating...";
-        
-        if (!navigator.geolocation) {
-            btnText.innerText = "GPS Not Supported";
-            return;
-        }
-
+        document.getElementById('gps-text').innerText = "Locating...";
         navigator.geolocation.getCurrentPosition(
             p => update(p.coords.latitude, p.coords.longitude),
-            e => { 
-                console.warn("GPS Blocked:", e.message);
-                btnText.innerText = "GPS Access Denied";
-                update(); // Fallback to IP location
-            },
-            { timeout: 10000 }
+            e => { update(); }
         );
     }
 
@@ -84,8 +73,6 @@
             document.getElementById('wind').innerText = d.wind + " mph";
             document.getElementById('updated').innerText = "Last Updated: " + d.updated;
 
-            const pLevels = ["None", "Low", "Low", "Medium", "High", "Very High"];
-            document.getElementById('tree').innerText = pLevels[Math.round(d.tree)] || "Low";
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 15) ? "✨ Perfect day for a car wash" : "⚠️ Skip the wash today";
 
             if (d.sunset && d.sunrise) {
@@ -103,13 +90,12 @@
                 document.getElementById('gps-btn').style.background = "#22c55e";
             }
 
-            // Maps with Geolocation allowed
-            document.getElementById('pollen-map').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=5&overlay=dust&metricWind=mph`;
-            document.getElementById('rain-map').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar`;
-            document.getElementById('wind-map').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=5&overlay=wind`;
+            // MAPS: Using RainViewer (Much cleaner than Windy for simple Radar/Clouds)
+            document.getElementById('cloud-map').src = `https://www.rainviewer.com/map.html?loc=${d.lat},${d.lon},7&control=1&map=1&type=1&ped=1&v=1`;
+            document.getElementById('rain-map').src = `https://www.rainviewer.com/map.html?loc=${d.lat},${d.lon},8&control=1&map=1&type=radar&ped=1&v=1`;
 
             lucide.createIcons();
-        } catch(e) { console.error("Update Error:", e); }
+        } catch(e) { console.error(e); }
     }
     update();
 </script>
