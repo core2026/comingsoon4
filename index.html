@@ -35,15 +35,14 @@
             width: 300px;
             height: 250px;
         }
-        /* Loading state for widget reload */
+        /* Loading overlay for widget reload — uses grid trick since flex doesn't work on ::after */
         .widget-spacer.loading::after {
             content: "Updating allergy data...";
             position: absolute;
             inset: 0;
             background: rgba(255,255,255,0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: grid;
+            place-items: center;
             font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 700;
             color: #0b1120;
@@ -66,20 +65,12 @@
     </button>
 
     <div class="search-container">
-        <!-- FIX: inputmode="numeric" for better mobile keyboard; Enter key support via JS -->
         <input type="text" id="zip-input" placeholder="Zip Code (e.g. 78015)" maxlength="5" inputmode="numeric">
         <button onclick="searchZip()">Search</button>
     </div>
 
     <div class="grid">
         <!-- Pollen/Allergy Widget -->
-        <!-- 
-            HOW THE POLLEN WIDGET WORKS:
-            The PollenApps script scans for #allergyalert on load and renders based on data-aa_location.
-            It does NOT support dynamic re-init via window.AA.init() reliably.
-            FIX: We destroy and rebuild the widget container + reload the script tag on location change.
-            This is the only reliable method to re-render for a new zip code.
-        -->
         <div class="widget-spacer" id="allergy-container">
             <div id="allergy-inner">
                 <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
@@ -101,20 +92,13 @@
     </div>
 </div>
 
-<!--
-    IMPORTANT: The pollen script is loaded ONCE here on initial page load.
-    For location changes, we dynamically remove + re-inject this script tag (see reloadPollenWidget).
-    Do NOT move this tag or add it to the <head> — it must execute after the #allergyalert div exists.
--->
 <script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js" id="pollen-script"></script>
 
 <script>
     // Init Lucide icons after DOM is ready
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
+    document.addEventListener('DOMContentLoaded', () => lucide.createIcons());
 
-    // FIX: Enter key support on zip input
+    // Enter key support on zip input
     document.getElementById('zip-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') searchZip();
     });
@@ -226,8 +210,7 @@
             // GPS button feedback
             if (lat) document.getElementById('gps-text').innerText = "Location Verified";
 
-            // FIX: Update pollen widget if we have a zip code
-            // GPS users don't have a zip — widget stays on default (78015) in that case
+            // Update pollen widget if zip changed — skip reload if same location
             const targetZip = zip || "78015";
             const currentZip = document.querySelector('#allergyalert')?.getAttribute('data-aa_location');
             if (targetZip !== currentZip) {
