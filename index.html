@@ -20,25 +20,8 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Fixed Allergy Widget Styling */
-        .widget-spacer { 
-            grid-column: span 2 !important; 
-            min-height: 270px !important; 
-            display: flex !important; 
-            justify-content: center !important; 
-            align-items: center !important; 
-            background: #fff !important; 
-            border-radius: 24px !important; 
-            overflow: hidden !important; 
-            position: relative !important;
-        }
-        
-        /* Ensure Pollen div takes space */
-        #allergyalert {
-            width: 300px !important;
-            height: 250px !important;
-            display: block !important;
-        }
+        /* Allergy Widget Styling */
+        .widget-spacer { grid-column: span 2; min-height: 270px; display: flex; justify-content: center; align-items: center; background: #fff; border-radius: 24px; overflow: hidden; }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
@@ -59,7 +42,7 @@
 
     <div class="grid">
         <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -77,13 +60,13 @@
     </div>
 </div>
 
-<script src="pollen-final/index.js"></script>
+<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
 
 <script>
     lucide.createIcons();
 
-    // Forced re-initialization function
-    function forcePollenScan() {
+    function initPollenWidget() {
+        // Force re-initialization if AA object exists
         if (window.AA && typeof window.AA.init === 'function') {
             window.AA.init();
         }
@@ -107,7 +90,6 @@
 
     async function update(lat = null, lon = null, name = null, zip = "78015") {
         try {
-            // Frontend calls your worker backend
             let url = `https://pollen-data.acekallas.com/`;
             if (lat) url += `?lat=${lat}&lon=${lon}`;
             if (name) url += (lat ? '&' : '?') + `name=${encodeURIComponent(name)}`;
@@ -125,14 +107,8 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // --- FIX FOR BLANK WIDGET ---
-            // 1. Update the data-aa_location attribute on the div
-            const widgetDiv = document.getElementById('allergyalert');
-            widgetDiv.setAttribute('data-aa_location', zip);
-            
-            // 2. Force the Pollen library to re-scan for the updated div
-            forcePollenScan();
-            // -----------------------------
+            // Re-initialize after weather update too
+            setTimeout(initPollenWidget, 500);
             
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
@@ -142,8 +118,8 @@
 
     window.onload = () => {
         update();
-        // FORCE SCAN AFTER PAGE LOADS
-        setTimeout(forcePollenScan, 1500);
+        // Give the script extra time to load
+        setTimeout(initPollenWidget, 1500); 
     };
 </script>
 </body>
