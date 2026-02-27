@@ -6,6 +6,8 @@
     <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
@@ -18,15 +20,8 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling - Using Iframe */
-        .widget-spacer { grid-column: span 2; height: 270px; display: flex; justify-content: center; }
-        .pollen-iframe { 
-            width: 300px; 
-            height: 250px; 
-            border: none;
-            border-radius: 24px;
-            overflow: hidden;
-        }
+        /* Allergy Widget Styling */
+        .widget-spacer { grid-column: span 2; height: 270px; display: flex; justify-content: center; align-items: center; background: #fff; border-radius: 24px;}
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
@@ -47,7 +42,7 @@
 
     <div class="grid">
         <div class="widget-spacer">
-            <iframe src="https://www.pollen.com/tools/allergy-alert/widget/10757/78015" class="pollen-iframe" scrolling="no"></iframe>
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -64,6 +59,8 @@
         </div>
     </div>
 </div>
+
+<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
 
 <script>
     lucide.createIcons();
@@ -103,8 +100,8 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // NOTE: Widget is now static via Iframe.
-
+            // To keep widget static, we do not call AA.init() here.
+            
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
