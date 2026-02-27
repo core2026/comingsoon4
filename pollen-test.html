@@ -6,18 +6,18 @@
     <title>Pollen Widget</title>
     <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
     <style>
-        body { margin: 0; padding: 10px; background: #fff; display: flex; justify-content: center; align-items: center; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; background: #fff; overflow: hidden; }
+        body { display: flex; justify-content: center; align-items: center; }
+        #allergyalert { flex-shrink: 0; }
     </style>
-    <script>
-        // Read zip from query string, fall back to default
-        const zip = new URLSearchParams(window.location.search).get('zip') || '78015';
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('allergyalert').setAttribute('data-aa_location', zip);
-        });
-    </script>
 </head>
 <body>
     <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
+    <script>
+        const zip = new URLSearchParams(window.location.search).get('zip');
+        if (zip) document.getElementById('allergyalert').setAttribute('data-aa_location', zip);
+    </script>
     <script src="//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
 </body>
 </html>
