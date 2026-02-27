@@ -6,6 +6,8 @@
     <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
@@ -18,7 +20,7 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Spacer Container - Ensures space exists */
+        /* Allergy Widget Spacer Container - ESSENTIAL: Forces the container size */
         .widget-spacer { 
             grid-column: span 2; 
             min-height: 270px; 
@@ -51,7 +53,7 @@
 
     <div class="grid">
         <div class="widget-spacer" id="allergy-container">
-            <div id="shadow-host"></div>
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -69,43 +71,34 @@
     </div>
 </div>
 
+<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
+
 <script>
     lucide.createIcons();
 
-    // FUNCTION: Creates Shadow DOM and injects widget
-    function initShadowWidget(zip) {
-        const host = document.getElementById('shadow-host');
-        const zipCode = zip || '78015';
-        
-        // Clear previous shadow content
-        host.innerHTML = '';
-        const shadow = host.attachShadow({mode: 'open'});
-        
-        // 1. Inject Official Stylesheet into Shadow DOM
-        const style = document.createElement('link');
-        style.rel = 'stylesheet';
-        style.href = 'https://www.pollenapps.com/df/tools/aa/css/load.css';
-        shadow.appendChild(style);
+    // 1. Mutation Observer: Watches for the widget content to load
+    const targetNode = document.getElementById('allergy-container');
+    const observer = new MutationObserver((mutationsList, observer) => {
+        const widget = document.getElementById('allergyalert');
+        // If content is loaded, apply forced styles immediately
+        if (widget && widget.innerHTML.trim() !== "") {
+            widget.style.width = '300px';
+            widget.style.height = '250px';
+        }
+    });
 
-        // 2. Inject Official Div Structure into Shadow DOM
-        const widgetDiv = document.createElement('div');
-        widgetDiv.id = 'allergyalert';
-        widgetDiv.setAttribute('data-aa_account', '10757');
-        widgetDiv.setAttribute('data-aa_location', zipCode);
-        widgetDiv.style.width = '300px';
-        widgetDiv.style.height = '250px';
-        shadow.appendChild(widgetDiv);
+    // Start observing
+    observer.observe(targetNode, { childList: true, subtree: true });
 
-        // 3. Inject and Run Official Script into Shadow DOM
-        const script = document.createElement('script');
-        script.src = 'https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js';
-        script.onload = () => {
-            // Re-scan when script loads
-            if (window.AA && typeof window.AA.init === 'function') {
-                window.AA.init();
-            }
-        };
-        shadow.appendChild(script);
+    // 2. Initialize Function
+    function loadWidget(zip) {
+        const widget = document.getElementById('allergyalert');
+        widget.setAttribute('data-aa_location', zip || '78015');
+        
+        // Force the script to re-scan
+        if (window.AA && typeof window.AA.init === 'function') {
+            window.AA.init();
+        }
     }
 
     async function getGPS() {
@@ -145,8 +138,7 @@
             
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
             
-            // Re-initialize widget with new zip code
-            initShadowWidget(zip);
+            loadWidget(zip);
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
         }
@@ -154,8 +146,8 @@
 
     window.onload = () => {
         update();
-        // Fallback initiation
-        setTimeout(() => initShadowWidget('78015'), 1000);
+        // Initial load check
+        setTimeout(() => loadWidget('78015'), 1000);
     };
 </script>
 </body>
