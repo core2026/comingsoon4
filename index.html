@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Acekallas | Personal Weather Hub</title>
+    <title>Acekallas | Ultimate Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -11,17 +11,24 @@
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; margin: 0; }
         .container { width: 100%; max-width: 480px; padding-bottom: 60px; }
+        
         .proxy-badge { display: none; font-size: 9px; background: var(--warning); color: #000; padding: 5px 10px; border-radius: 8px; font-weight: 800; margin-left: 10px; line-height: 1.2; }
         #ticker { display: none; background: var(--alert); color: white; padding: 12px; font-weight: 800; font-size: 0.75rem; text-align: center; border-radius: 12px; margin-bottom: 15px; }
+        
         .header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
         #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; font-weight: 800; padding: 14px; border-radius: 16px; width: 100%; margin-top: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .pulse-warning { background: var(--warning) !important; color: #000 !important; animation: p-ring 1.5s infinite; border: none !important; }
+        
         @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); } }
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); position: relative; }
-        .map-card { grid-column: span 2; padding: 0 !important; background: #000; height: 320px; margin-top: 5px; border-radius: 24px; overflow: hidden; }
+        
+        /* Map Layout */
+        .map-card { grid-column: span 2; padding: 0 !important; background: #000; height: 320px; margin-top: 5px; border-radius: 24px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
         .map-title { margin: 25px 0 8px 8px; display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         iframe { width: 100%; height: 100%; border: none; }
+
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         .val { font-size: 1.3rem; font-weight: 800; display: block; margin: 4px 0; }
         .wash-status { grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 15px; font-weight: 700; border-radius: 18px; }
@@ -51,10 +58,14 @@
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Burn Risk</span></div>
         <div class="card"><span class="label">Wind</span><span class="val" id="wind">-- mph</span><span class="label">Surface</span></div>
         
-        <span class="map-title">🌬️ Live Wind Flow</span>
-        <div class="card map-card"><iframe id="wind-frame"></iframe></div>
+        <span class="map-title">🌿 Tree Pollen Heatmap</span>
+        <div class="card map-card"><iframe id="pollen-frame"></iframe></div>
+
         <span class="map-title">🌧️ Live Rain Radar</span>
         <div class="card map-card"><iframe id="rain-frame"></iframe></div>
+
+        <span class="map-title">🌬️ Live Wind Flow</span>
+        <div class="card map-card"><iframe id="wind-frame"></iframe></div>
     </div>
     <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label);">...</div>
 </div>
@@ -76,11 +87,10 @@
             if(lat) url += `?lat=${lat}&lon=${lon}&city=User%20Location`;
             
             const r = await fetch(url);
-            if (!r.ok) throw new Error("Server Error");
             const d = await r.json();
             
-            // 1. Text Fields with Null Checks
-            document.getElementById('city-title').innerText = d.city || "Unknown Location";
+            // Text Updates
+            document.getElementById('city-title').innerText = d.city || "Local Area";
             document.getElementById('temp').innerText = (d.temp || "--") + "°";
             document.getElementById('feels').innerText = "Feels " + (d.feelsLike || "--") + "°";
             document.getElementById('hum-val').innerText = (d.humidity || 0) + "%";
@@ -89,25 +99,25 @@
             document.getElementById('wind').innerText = (d.wind ?? 0) + " mph";
             document.getElementById('updated').innerText = "Sync Active: " + (d.updated || "Now");
 
-            // 2. Pollen Display
             const levels = ["None", "Very Low", "Low", "Medium", "High", "Very High"];
             document.getElementById('tree').innerText = levels[Math.round(d.tree)] || "None";
-
-            // 3. Solar Math - Protected against nulls
+            
+            // Solar
             if (d.sunset && d.sunrise) {
                 const sunset = new Date(d.sunset), sunrise = new Date(d.sunrise), now = new Date();
                 const sunVal = document.getElementById('sun-val'), sunSub = document.getElementById('sun-sub'), sunLabel = document.getElementById('sun-label');
-                
                 let target = (now < sunset && now > sunrise) ? sunset : sunrise;
                 if (now > sunrise && target === sunrise) target.setDate(target.getDate() + 1);
-                
                 const diff = target - now;
                 sunVal.innerText = `${Math.floor(diff/3600000)}h ${Math.round((diff%3600000)/60000)}m`;
                 sunLabel.innerText = (now < sunset && now > sunrise) ? "Sun Left" : "Dark Left";
                 sunSub.innerText = (now < sunset && now > sunrise) ? "Until Sunset" : "Until Sunrise";
             }
 
-            // 4. UI States
+            // Wash Logic Fix
+            document.getElementById('wash-text').innerText = (d.uv > 0 && d.wind < 15) ? "✨ Wash OK" : "⚠️ Skip Wash";
+
+            // UI Feedback
             const badge = document.getElementById('proxy-badge');
             const btn = document.getElementById('gps-btn');
             if(d.isPrecise) {
@@ -121,15 +131,15 @@
                 document.getElementById('gps-text').innerText = "Not your location? Click here";
             }
 
-            // 5. Maps
+            // Maps Fix
+            // Pollen Heatmap (Using Weatherbit as Windy doesn't have a standalone Pollen embed)
+            document.getElementById('pollen-frame').src = `https://www.pollen.com/map/embed/${d.lat}/${d.lon}`; 
+            // Rain & Wind
+            document.getElementById('rain-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar&metricWind=mph`;
             document.getElementById('wind-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=6&overlay=wind&metricWind=mph`;
-            document.getElementById('rain-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar`;
 
             lucide.createIcons();
-        } catch(e) { 
-            console.error(e);
-            document.getElementById('city-title').innerText = "Connection Error";
-        }
+        } catch(e) { console.error(e); }
     }
     update();
 </script>
