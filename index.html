@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas Weather & Allergy</title>
+    <title>Pollen Diagnostic 2</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
     <style>
@@ -17,10 +17,7 @@
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; white-space: nowrap; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-
-        /* Allergy Widget */
         .widget-spacer { grid-column: span 2; min-height: 270px; display: block; text-align: center; padding: 10px 0; background: #fff; border-radius: 24px; }
-
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         h1 { font-size: 2rem; font-weight: 800; margin: 0; }
@@ -32,7 +29,7 @@
     <p id="updated" style="font-size: 11px; color: var(--label); margin: 5px 0 20px 0;">Connecting...</p>
 
     <button id="gps-btn" onclick="getGPS()">
-        <i data-lucide="map-pin"></i>
+        <span>📍</span>
         <span id="gps-text">Sync Precise Location</span>
     </button>
 
@@ -48,14 +45,14 @@
         <div class="card"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Velocity</span></div>
 
         <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2);">
-            <i data-lucide="car" style="color: var(--accent); width: 28px; height: 28px;"></i>
+            <span>🚗</span>
             <div>
                 <span class="label" style="color: var(--accent);">Car Wash Forecast</span>
                 <span id="wash-text" style="display: block; font-weight: 800; font-size: 1.2rem;">Analyzing...</span>
             </div>
         </div>
 
-        <!-- Pollen/Allergy Widget -->
+        <!-- Pollen Widget -->
         <div class="widget-spacer" id="allergy-container">
             <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
         </div>
@@ -64,47 +61,8 @@
 </div>
 
 <script>
-    // Load lucide dynamically AFTER pollen script has had full control of the page
-    (function() {
-        const s = document.createElement('script');
-        s.src = 'https://unpkg.com/lucide@latest';
-        s.onload = () => lucide.createIcons();
-        document.body.appendChild(s);
-    })();
-
-    // Enter key support on zip input
-    document.getElementById('zip-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') searchZip();
-    });
-
-    function initPollenWidget() {
-        if (window.AA && typeof window.AA.init === 'function') {
-            window.AA.init();
-        }
-    }
-
-    function updatePollenWidget(zip) {
-        document.querySelectorAll('script[data-pollen]').forEach(s => s.remove());
-
-        const el = document.getElementById('allergyalert');
-        el.innerHTML = '';
-        el.setAttribute('data-aa_location', zip);
-        // Ensure required styles are always present
-        el.style.cssText = 'width:300px; height:250px; background-color:#eee; position:relative; display:inline-block;';
-
-        const newScript = document.createElement('script');
-        newScript.setAttribute('data-pollen', 'true');
-        newScript.src = '//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js?v=' + Date.now();
-        newScript.onload = () => setTimeout(initPollenWidget, 500);
-        document.body.appendChild(newScript);
-    }
-
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
-        if (!navigator.geolocation) {
-            document.getElementById('gps-text').innerText = "GPS Not Supported";
-            return;
-        }
         navigator.geolocation.getCurrentPosition(
             p => update(p.coords.latitude, p.coords.longitude, null, null),
             e => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
@@ -113,20 +71,10 @@
 
     async function searchZip() {
         const zip = document.getElementById('zip-input').value.trim();
-        if (!/^\d{5}$/.test(zip)) {
-            document.getElementById('zip-input').style.outline = '2px solid #f87171';
-            setTimeout(() => document.getElementById('zip-input').style.outline = '', 1500);
-            return;
-        }
-        document.getElementById('zip-input').style.outline = '';
-        try {
-            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-            if (!res.ok) throw new Error("Invalid ZIP");
-            const data = await res.json();
-            update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
-        } catch (e) {
-            document.getElementById('updated').innerText = "Invalid ZIP code.";
-        }
+        if (!/^\d{5}$/.test(zip)) return;
+        const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+        const data = await res.json();
+        update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
     }
 
     async function update(lat = null, lon = null, name = null, zip = null) {
@@ -146,35 +94,16 @@
             document.getElementById('hum').innerText = d.humidity + "%";
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
-
-            const workerCache = r.headers.get('X-Cache');
-            const cfCache = r.headers.get('cf-cache-status');
-            const cacheLabel = (workerCache === 'HIT' || cfCache === 'HIT') ? ' · ⚡ Cached' : '';
-            document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}`;
-
+            document.getElementById('updated').innerText = `Updated: ${d.updated}`;
             document.getElementById('wash-text').innerText =
                 (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-
             if (lat) document.getElementById('gps-text').innerText = "Location Verified";
-
-            // Only reload pollen widget if zip actually changed
-            const targetZip = zip || "78015";
-            const currentZip = document.getElementById('allergyalert').getAttribute('data-aa_location');
-            if (targetZip !== currentZip) {
-                updatePollenWidget(targetZip);
-            }
-
         } catch (e) {
-            console.error("Update error:", e);
-            document.getElementById('updated').innerText = "Unable to connect — retrying...";
-            setTimeout(() => update(lat, lon, name, zip), 5000);
+            document.getElementById('updated').innerText = "Unable to connect.";
         }
     }
 
-    window.onload = () => {
-        update();
-        setTimeout(initPollenWidget, 1500);
-    };
+    window.onload = () => update();
 </script>
 </body>
 </html>
