@@ -20,19 +20,29 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling - FORCE RENDER */
+        /* Allergy Widget Styling - ABSOLUTE FORCE */
         .widget-spacer { 
-            grid-column: span 2; 
-            min-height: 270px; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            background: #fff; 
-            border-radius: 24px; 
-            overflow: hidden; 
-            /* Added !important to override dashboard CSS */
+            grid-column: span 2 !important; 
+            min-height: 270px !important; 
+            height: 270px !important;
+            display: flex !important; 
+            justify-content: center !important; 
+            align-items: center !important; 
+            background: #fff !important; 
+            border-radius: 24px !important; 
+            overflow: hidden !important; 
             visibility: visible !important;
-            display: flex !important;
+            opacity: 1 !important;
+            position: relative !important;
+            z-index: 10 !important;
+        }
+        
+        /* Force Pollen Div to accept dimensions */
+        #allergyalert {
+            width: 300px !important;
+            height: 250px !important;
+            display: block !important;
+            visibility: visible !important;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -77,7 +87,6 @@
 <script>
     lucide.createIcons();
 
-    // Re-initialize helper
     function refreshWidget() {
         if (window.AA && typeof window.AA.init === 'function') {
             window.AA.init();
@@ -128,10 +137,10 @@
         }
     }
 
+    // Delay initiation until everything is ready
     window.onload = () => {
         update();
-        // Fallback initialization
-        setTimeout(refreshWidget, 1500);
+        setTimeout(refreshWidget, 1000);
     };
 </script>
 </body>
