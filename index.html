@@ -103,6 +103,7 @@
 
     async function update(lat = null, lon = null, name = null, zip = "78006") {
         try {
+            // Using the worker URL as the API source
             let url = `https://pollen-data.acekallas.com/`;
             if (lat) url += `?lat=${lat}&lon=${lon}`;
             if (name) url += (lat ? '&' : '?') + `name=${encodeURIComponent(name)}`;
