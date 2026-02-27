@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas Weather Dashboard</title>
+    <title>Acekallas Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -11,41 +11,13 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
         .header { margin-bottom: 20px; }
-        
-        #gps-btn { 
-            background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); 
-            padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; 
-            font-weight: 800; display: flex; align-items: center; justify-content: center; 
-            gap: 10px; transition: 0.3s; margin-bottom: 15px;
-        }
-
-        .search-container {
-            display: flex; gap: 10px; background: var(--card); padding: 5px; 
-            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
-        }
-        
-        .search-container input {
-            background: transparent; border: none; color: #fff; padding: 10px; 
-            width: 100%; outline: none; font-family: inherit; font-weight: 600;
-        }
-
-        .search-container button {
-            background: var(--accent); color: #0b1120; border: none; 
-            border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800;
-        }
-
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
+        .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
+        .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .card { 
-            background: var(--card); padding: 20px; border-radius: 24px; 
-            border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); 
-        }
-        
-        .map-card { 
-            grid-column: span 2; height: 420px; border-radius: 24px; 
-            overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); 
-            margin-top: 5px; 
-        }
-        
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .map-card { grid-column: span 2; height: 420px; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
         iframe { width: 100%; height: 100%; border: none; }
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; letter-spacing: 0.5px; }
@@ -57,46 +29,24 @@
 <div class="container">
     <div class="header">
         <h1 id="city-title">Detecting...</h1>
-        <button id="gps-btn" onclick="getGPS()">
-            <i data-lucide="map-pin"></i>
-            <span id="gps-text">Sync Precise Location</span>
-        </button>
-        
+        <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Sync Precise Location</span></button>
         <div class="search-container">
-            <input type="text" id="zip-input" placeholder="Enter US Zip (e.g. 90210)" 
-                   inputmode="numeric" maxlength="5">
+            <input type="text" id="zip-input" placeholder="Enter US Zip (e.g. 78015)" inputmode="numeric" maxlength="5">
             <button onclick="searchZip()">Search</button>
         </div>
         <div id="zip-error">Invalid US Zip Code</div>
     </div>
 
     <div class="grid">
-        <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="sparkles" style="color: var(--accent); width: 18px;"></i>
-            <span id="wash-text" style="font-weight: 700;">Analyzing conditions...</span>
-        </div>
-        
-        <div class="card">
-            <span class="label">Temperature</span>
-            <span class="val" id="temp">--°</span>
-            <span id="feels" class="label">Feels --°</span>
-        </div>
-        
-        <div class="card">
-            <span class="label" id="sun-label">Solar Status</span>
-            <span class="val" id="sun-val">--</span>
-            <span id="sun-sub" class="label">Calculated...</span>
-        </div>
-        
+        <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 10px;"><i data-lucide="sparkles" style="color: var(--accent); width: 18px;"></i><span id="wash-text" style="font-weight: 700;">Analyzing...</span></div>
+        <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
+        <div class="card"><span class="label">Solar Status</span><span class="val" id="sun-val">--</span><span id="sun-sub" class="label">Syncing...</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span class="label">In Air</span></div>
         <div class="card"><span class="label">Sun Safety</span><span class="val" id="uv">--</span><span class="label">UV Index</span></div>
-        
         <div class="card" style="grid-column: span 2;"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Surface Velocity</span></div>
-
-        <span class="label" style="margin-top:20px; display:block; padding-left:5px;">🌧️ Live Doppler Radar (HD)</span>
+        <span class="label" style="margin-top:20px; display:block; padding-left:5px;">🌧️ Live Doppler Radar</span>
         <div class="map-card"><iframe id="rain-map" allow="geolocation"></iframe></div>
     </div>
-    
     <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label); opacity:0.6;">...</div>
 </div>
 
@@ -107,8 +57,7 @@
         document.getElementById('gps-text').innerText = "Locating...";
         navigator.geolocation.getCurrentPosition(
             p => update(p.coords.latitude, p.coords.longitude),
-            e => { console.warn("GPS Denied"); update(); },
-            { timeout: 8000 }
+            e => update()
         );
     }
 
@@ -120,21 +69,23 @@
 
         try {
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-            if (!res.ok) throw new Error();
             const data = await res.json();
-            update(data.places[0].latitude, data.places[0].longitude);
-            
-            // Reset GPS button style
-            document.getElementById('gps-text').innerText = "Sync Precise Location";
-            document.getElementById('gps-btn').style.background = "var(--card)";
-            document.getElementById('gps-btn').style.borderColor = "rgba(255,255,255,0.1)";
-        } catch (e) { err.innerText = "Zip code not found"; err.style.display = 'block'; }
+            const place = data.places[0];
+            // Passing the specific city name found by the ZIP API to our update function
+            update(place.latitude, place.longitude, place['place name']);
+        } catch (e) { err.style.display = 'block'; }
     }
 
-    async function update(lat = null, lon = null) {
+    async function update(lat = null, lon = null, name = null) {
         try {
             const apiBase = "https://pollen-data.acekallas.com";
-            const url = lat ? `${apiBase}?lat=${lat}&lon=${lon}` : apiBase;
+            // Build URL with optional name parameter
+            let url = apiBase;
+            if (lat) {
+                url += `?lat=${lat}&lon=${lon}`;
+                if (name) url += `&name=${encodeURIComponent(name)}`;
+            }
+            
             const r = await fetch(url);
             const d = await r.json();
 
@@ -145,9 +96,7 @@
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
             document.getElementById('updated').innerText = "Last Updated: " + d.updated;
-
-            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? 
-                "✨ Perfect day for a car wash" : "⚠️ Skip the wash today";
+            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect day for a car wash" : "⚠️ Skip the wash today";
 
             if (d.sunset && d.sunrise) {
                 const sunset = new Date(d.sunset), sunrise = new Date(d.sunrise), now = new Date();
@@ -159,15 +108,8 @@
                 document.getElementById('sun-sub').innerText = (now < sunset && now > sunrise) ? "Until Sunset" : "Until Sunrise";
             }
 
-            if(d.isPrecise) {
-                const btn = document.getElementById('gps-btn');
-                document.getElementById('gps-text').innerText = "Location Verified";
-                btn.style.borderColor = "#22c55e";
-                btn.style.background = "rgba(34, 197, 94, 0.1)";
-            }
-
             document.getElementById('rain-map').src = `https://www.rainviewer.com/map.html?loc=${d.lat},${d.lon},9&control=1&map=1&type=radar&ped=1&v=1`;
-        } catch(e) { document.getElementById('city-title').innerText = "Offline"; }
+        } catch(e) { console.error(e); }
     }
     update();
 </script>
