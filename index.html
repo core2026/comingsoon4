@@ -6,9 +6,6 @@
     <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
-    <script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
-    
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
@@ -21,18 +18,14 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling - Separated */
-        .widget-spacer { grid-column: span 2; height: 270px; }
-        #allergyalert { 
-            background: #fff; 
-            border-radius: 24px; 
-            overflow: hidden; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
+        /* Allergy Widget Styling - Using Iframe */
+        .widget-spacer { grid-column: span 2; height: 270px; display: flex; justify-content: center; }
+        .pollen-iframe { 
             width: 300px; 
             height: 250px; 
-            margin: 0 auto;
+            border: none;
+            border-radius: 24px;
+            overflow: hidden;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -54,7 +47,7 @@
 
     <div class="grid">
         <div class="widget-spacer">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
+            <iframe src="https://www.pollen.com/tools/allergy-alert/widget/10757/78015" class="pollen-iframe" scrolling="no"></iframe>
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -74,9 +67,6 @@
 
 <script>
     lucide.createIcons();
-
-    // REMOVED: refreshAllergyWidget function is no longer needed.
-    // The widget is now static.
 
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
@@ -113,7 +103,7 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // NOTE: The widget is no longer updated here. It stays static at 78015.
+            // NOTE: Widget is now static via Iframe.
 
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
