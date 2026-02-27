@@ -42,7 +42,7 @@
 
     <div class="grid">
         <div class="widget-spacer" id="allergy-container">
-            Loading Widget...
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -65,11 +65,7 @@
 <script>
     lucide.createIcons();
 
-    // FIX: Aggressively re-renders the widget div
     function initPollenWidget() {
-        const container = document.getElementById('allergy-container');
-        container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>`;
-        
         // Force re-initialization if AA object exists
         if (window.AA && typeof window.AA.init === 'function') {
             window.AA.init();
@@ -111,16 +107,19 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
+            // Re-initialize after weather update too
+            setTimeout(initPollenWidget, 500);
+            
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
         }
     }
 
-    // Initialize widget on load
     window.onload = () => {
         update();
-        setTimeout(initPollenWidget, 1000); // 1 second delay to ensure script is ready
+        // Give the script extra time to load
+        setTimeout(initPollenWidget, 1500); 
     };
 </script>
 </body>
