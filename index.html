@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas Weather</title>
+    <title>Acekallas Weather Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -11,17 +11,17 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
         .header { margin-bottom: 20px; }
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; transition: 0.3s; }
         .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-        .map-card { grid-column: span 2; height: 420px; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
+        .map-card { grid-column: span 2; height: 450px; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; position: relative; }
         iframe { width: 100%; height: 100%; border: none; }
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; letter-spacing: 0.5px; }
-        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin: 0 0 15px 0; }
+        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin: 0 0 10px 0; }
         #zip-error { color: #f87171; font-size: 11px; margin: -15px 0 15px 10px; display: none; }
     </style>
 </head>
@@ -31,7 +31,7 @@
         <h1 id="city-title">Detecting...</h1>
         <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Sync Precise Location</span></button>
         <div class="search-container">
-            <input type="text" id="zip-input" placeholder="Enter US Zip (e.g. 78015)" inputmode="numeric" maxlength="5">
+            <input type="text" id="zip-input" placeholder="US Zip Code" inputmode="numeric" maxlength="5">
             <button onclick="searchZip()">Search</button>
         </div>
         <div id="zip-error">Invalid US Zip Code</div>
@@ -41,11 +41,13 @@
         <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 10px;"><i data-lucide="sparkles" style="color: var(--accent); width: 18px;"></i><span id="wash-text" style="font-weight: 700;">Analyzing...</span></div>
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Solar Status</span><span class="val" id="sun-val">--</span><span id="sun-sub" class="label">Syncing...</span></div>
-        <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span class="label">In Air</span></div>
+        <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span class="label">Atmosphere</span></div>
         <div class="card"><span class="label">Sun Safety</span><span class="val" id="uv">--</span><span class="label">UV Index</span></div>
         <div class="card" style="grid-column: span 2;"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Surface Velocity</span></div>
-        <span class="label" style="margin-top:20px; display:block; padding-left:5px;">🌧️ Live Doppler Radar</span>
-        <div class="map-card"><iframe id="rain-map" allow="geolocation"></iframe></div>
+        <span class="label" style="margin-top:20px; display:block; padding-left:5px;">📡 NWS Doppler Radar (Official)</span>
+        <div class="map-card">
+            <iframe id="radar-frame" src=""></iframe>
+        </div>
     </div>
     <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label); opacity:0.6;">...</div>
 </div>
@@ -71,7 +73,6 @@
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
             const data = await res.json();
             const place = data.places[0];
-            // Passing the specific city name found by the ZIP API to our update function
             update(place.latitude, place.longitude, place['place name']);
         } catch (e) { err.style.display = 'block'; }
     }
@@ -79,7 +80,6 @@
     async function update(lat = null, lon = null, name = null) {
         try {
             const apiBase = "https://pollen-data.acekallas.com";
-            // Build URL with optional name parameter
             let url = apiBase;
             if (lat) {
                 url += `?lat=${lat}&lon=${lon}`;
@@ -108,7 +108,16 @@
                 document.getElementById('sun-sub').innerText = (now < sunset && now > sunrise) ? "Until Sunset" : "Until Sunrise";
             }
 
-            document.getElementById('rain-map').src = `https://www.rainviewer.com/map.html?loc=${d.lat},${d.lon},9&control=1&map=1&type=radar&ped=1&v=1`;
+            // Official NWS Radar Embed Link
+            // Using radar.weather.gov which handles the GIS centering
+            document.getElementById('radar-frame').src = `https://radar.weather.gov/?settings=v1_eyJsYXRpdHVkZSI6${d.latLC || d.lat},"bG9uZ2l0dWRlIjoi${d.lonLC || d.lon}Iiwiem9vbSI6OSwiYmFzZSI6InN0YW5kYXJkIiwib3ZlcmxheXMiOnsicmFkYXIiOnRydWUsImFsZXJ0cyI6dHJ1ZX0sInBsYXliYWNrIjp0cnVlfQ%3D%3D`;
+
+            if(d.isPrecise) {
+                const btn = document.getElementById('gps-btn');
+                document.getElementById('gps-text').innerText = "Location Verified";
+                btn.style.borderColor = "#22c55e";
+                btn.style.background = "rgba(34, 197, 94, 0.1)";
+            }
         } catch(e) { console.error(e); }
     }
     update();
