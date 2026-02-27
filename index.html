@@ -20,19 +20,19 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Spacer Container - Moved to bottom */
+        /* Allergy Widget Spacer Container - Forced Dimensions */
         .widget-spacer { 
-            grid-column: span 2; 
-            min-height: 270px; 
-            height: 270px;
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            background: #fff; 
-            border-radius: 24px; 
-            overflow: hidden; 
-            position: relative;
-            margin-top: 15px; /* Added spacing from cards above */
+            grid-column: span 2 !important; 
+            min-height: 270px !important; 
+            height: 270px !important;
+            display: flex !important; 
+            justify-content: center !important; 
+            align-items: center !important; 
+            background: #fff !important; 
+            border-radius: 24px !important; 
+            overflow: hidden !important; 
+            position: relative !important;
+            margin-top: 15px !important;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -77,26 +77,8 @@
 <script>
     lucide.createIcons();
 
-    // Mutation Observer: Watches for the widget content to load
-    const targetNode = document.getElementById('allergy-container');
-    const observer = new MutationObserver((mutationsList, observer) => {
-        const widget = document.getElementById('allergyalert');
-        // If content is loaded, apply forced styles immediately
-        if (widget && widget.innerHTML.trim() !== "") {
-            widget.style.width = '300px';
-            widget.style.height = '250px';
-        }
-    });
-
-    // Start observing
-    observer.observe(targetNode, { childList: true, subtree: true });
-
-    // Initialize Function
-    function loadWidget(zip) {
-        const widget = document.getElementById('allergyalert');
-        widget.setAttribute('data-aa_location', zip || '78015');
-        
-        // Force the script to re-scan
+    // Force re-initialization function
+    function forceInit() {
         if (window.AA && typeof window.AA.init === 'function') {
             window.AA.init();
         }
@@ -139,7 +121,12 @@
             
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
             
-            loadWidget(zip);
+            // Update widget location
+            const widget = document.getElementById('allergyalert');
+            widget.setAttribute('data-aa_location', zip);
+            
+            // Force re-scan after data load
+            forceInit();
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
         }
@@ -147,8 +134,8 @@
 
     window.onload = () => {
         update();
-        // Initial load check
-        setTimeout(() => loadWidget('78015'), 1000);
+        // Initial load check, then again to be sure
+        setTimeout(forceInit, 1000);
     };
 </script>
 </body>
