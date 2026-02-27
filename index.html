@@ -73,18 +73,23 @@
         if (e.key === 'Enter') searchZip();
     });
 
+    function initPollenWidget() {
+        if (window.AA && typeof window.AA.init === 'function') {
+            window.AA.init();
+        }
+    }
+
     function updatePollenWidget(zip) {
-        // Remove any previously injected dynamic pollen script
         document.querySelectorAll('script[data-pollen]').forEach(s => s.remove());
 
         const el = document.getElementById('allergyalert');
         el.innerHTML = '';
         el.setAttribute('data-aa_location', zip);
 
-        // Cache-buster ensures browser fetches + re-executes fresh each time
         const newScript = document.createElement('script');
         newScript.setAttribute('data-pollen', 'true');
         newScript.src = 'https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js?v=' + Date.now();
+        newScript.onload = () => setTimeout(initPollenWidget, 500);
         document.body.appendChild(newScript);
     }
 
@@ -160,7 +165,10 @@
         }
     }
 
-    window.onload = () => update();
+    window.onload = () => {
+        update();
+        setTimeout(initPollenWidget, 1500);
+    };
 </script>
 </body>
 </html>
