@@ -11,23 +11,15 @@
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; margin: 0; }
         .container { width: 100%; max-width: 480px; padding-bottom: 60px; }
-        
-        /* Proxy / Relay Badge */
-        .proxy-badge { display: none; font-size: 9px; background: var(--warning); color: #000; padding: 5px 10px; border-radius: 8px; font-weight: 800; margin-left: 10px; line-height: 1.2; border: 1px solid rgba(0,0,0,0.1); }
-        
+        .proxy-badge { display: none; font-size: 9px; background: var(--warning); color: #000; padding: 5px 10px; border-radius: 8px; font-weight: 800; margin-left: 10px; line-height: 1.2; }
         #ticker { display: none; background: var(--alert); color: white; padding: 12px; font-weight: 800; font-size: 0.75rem; text-align: center; border-radius: 12px; margin-bottom: 15px; }
-        
         .header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
-        
-        /* Pulsing GPS Button */
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; font-weight: 800; padding: 14px; border-radius: 16px; width: 100%; margin-top: 10px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; font-weight: 800; padding: 14px; border-radius: 16px; width: 100%; margin-top: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .pulse-warning { background: var(--warning) !important; color: #000 !important; animation: p-ring 1.5s infinite; border: none !important; }
-        
-        @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
-
+        @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); } }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); position: relative; overflow: hidden; }
-        .map-card { grid-column: span 2; padding: 0 !important; background: #000; height: 320px; margin-top: 5px; }
+        .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); position: relative; }
+        .map-card { grid-column: span 2; padding: 0 !important; background: #000; height: 320px; margin-top: 5px; border-radius: 24px; overflow: hidden; }
         .map-title { margin: 25px 0 8px 8px; display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         iframe { width: 100%; height: 100%; border: none; }
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
@@ -45,10 +37,7 @@
                 <h1 id="city-title" style="margin:0;">...</h1>
                 <span id="proxy-badge" class="proxy-badge">🛡️ RELAY ACTIVE<br>USE GPS BELOW</span>
             </div>
-            <button id="gps-btn" onclick="getGPS()">
-                <i data-lucide="map-pin"></i> 
-                <span id="gps-text">Checking Location...</span>
-            </button>
+            <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Checking Location...</span></button>
         </div>
         <button class="theme-btn" onclick="toggleTheme()" style="margin-left:15px;">🌙</button>
     </div>
@@ -78,84 +67,69 @@
     
     function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
-        navigator.geolocation.getCurrentPosition(p => update(p.coords.latitude, p.coords.longitude));
+        navigator.geolocation.getCurrentPosition(p => update(p.coords.latitude, p.coords.longitude), () => alert("GPS Denied"));
     }
 
     async function update(lat = null, lon = null) {
         try {
             let url = "https://pollen-data.acekallas.com";
-            if(lat) url += `?lat=${lat}&lon=${lon}&city=Fair%20Oaks%20Ranch`;
+            if(lat) url += `?lat=${lat}&lon=${lon}&city=User%20Location`;
+            
             const r = await fetch(url);
+            if (!r.ok) throw new Error("Server Error");
             const d = await r.json();
             
-            document.getElementById('city-title').innerText = d.city;
-            
-            // RELAY & BUTTON LOGIC
-            const badge = document.getElementById('proxy-badge');
-            const btn = document.getElementById('gps-btn');
-            const btnText = document.getElementById('gps-text');
-
-            if(d.isPrecise) {
-                badge.style.display = 'none';
-                btn.classList.remove('pulse-warning');
-                btn.style.background = "#22c55e";
-                btn.style.color = "white";
-                btnText.innerText = `Precise Location: ${d.city}`;
-                btn.onclick = null; 
-            } else if (d.isProxy) {
-                badge.style.display = 'inline-block';
-                btn.classList.add('pulse-warning');
-                btnText.innerText = "Not your location? Click here";
-            } else {
-                badge.style.display = 'none';
-                btnText.innerText = "Refine Location";
-            }
-            
-            // Standard Weather Updates
-            document.getElementById('temp').innerText = d.temp + "°";
-            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
-            document.getElementById('hum-val').innerText = d.humidity + "%";
+            // 1. Text Fields with Null Checks
+            document.getElementById('city-title').innerText = d.city || "Unknown Location";
+            document.getElementById('temp').innerText = (d.temp || "--") + "°";
+            document.getElementById('feels').innerText = "Feels " + (d.feelsLike || "--") + "°";
+            document.getElementById('hum-val').innerText = (d.humidity || 0) + "%";
             document.getElementById('hum-desc').innerText = d.humidity < 30 ? "🌵 Dry Air" : d.humidity > 65 ? "💧 Muggy" : "Comfortable";
-            document.getElementById('uv').innerText = d.uv;
-            document.getElementById('wind').innerText = d.wind + " mph";
-            document.getElementById('updated').innerText = "Sync Active: " + d.updated;
+            document.getElementById('uv').innerText = d.uv ?? 0;
+            document.getElementById('wind').innerText = (d.wind ?? 0) + " mph";
+            document.getElementById('updated').innerText = "Sync Active: " + (d.updated || "Now");
 
+            // 2. Pollen Display
             const levels = ["None", "Very Low", "Low", "Medium", "High", "Very High"];
             document.getElementById('tree').innerText = levels[Math.round(d.tree)] || "None";
 
-            // Solar Calculation
-            const sunset = new Date(d.sunset);
-            const sunrise = new Date(d.sunrise);
-            const now = new Date();
-            const sunVal = document.getElementById('sun-val');
-            const sunSub = document.getElementById('sun-sub');
-            const sunLabel = document.getElementById('sun-label');
-
-            if (now < sunset && now > sunrise) {
-                const diff = sunset - now;
+            // 3. Solar Math - Protected against nulls
+            if (d.sunset && d.sunrise) {
+                const sunset = new Date(d.sunset), sunrise = new Date(d.sunrise), now = new Date();
+                const sunVal = document.getElementById('sun-val'), sunSub = document.getElementById('sun-sub'), sunLabel = document.getElementById('sun-label');
+                
+                let target = (now < sunset && now > sunrise) ? sunset : sunrise;
+                if (now > sunrise && target === sunrise) target.setDate(target.getDate() + 1);
+                
+                const diff = target - now;
                 sunVal.innerText = `${Math.floor(diff/3600000)}h ${Math.round((diff%3600000)/60000)}m`;
-                sunLabel.innerText = "Sun Left"; sunSub.innerText = "Until Sunset";
-            } else {
-                let nextSun = sunrise; if(now > sunrise) nextSun.setDate(nextSun.getDate()+1);
-                const diff = nextSun - now;
-                sunVal.innerText = `${Math.floor(diff/3600000)}h ${Math.round((diff%3600000)/60000)}m`;
-                sunLabel.innerText = "Dark Left"; sunSub.innerText = "Until Sunrise";
+                sunLabel.innerText = (now < sunset && now > sunrise) ? "Sun Left" : "Dark Left";
+                sunSub.innerText = (now < sunset && now > sunrise) ? "Until Sunset" : "Until Sunrise";
             }
 
-            // Alerts
-            const ticker = document.getElementById('ticker');
-            ticker.style.display = d.activeAlert ? 'block' : 'none';
-            if(d.activeAlert) ticker.innerText = "⚠️ " + d.activeAlert;
+            // 4. UI States
+            const badge = document.getElementById('proxy-badge');
+            const btn = document.getElementById('gps-btn');
+            if(d.isPrecise) {
+                badge.style.display = 'none';
+                btn.classList.remove('pulse-warning');
+                btn.style.background = "#22c55e"; btn.style.color = "white";
+                document.getElementById('gps-text').innerText = "Location Verified";
+            } else if (d.isProxy) {
+                badge.style.display = 'inline-block';
+                btn.classList.add('pulse-warning');
+                document.getElementById('gps-text').innerText = "Not your location? Click here";
+            }
 
-            // Wash Advice
-            document.getElementById('wash-text').innerText = (d.uv > 0 && d.wind < 15) ? "✨ Wash OK" : "⚠️ Skip Wash";
-
-            // Radars
+            // 5. Maps
             document.getElementById('wind-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=6&overlay=wind&metricWind=mph`;
             document.getElementById('rain-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar`;
 
             lucide.createIcons();
-        } catch(e) { console.log(e); }
+        } catch(e) { 
+            console.error(e);
+            document.getElementById('city-title').innerText = "Connection Error";
+        }
     }
     update();
 </script>
