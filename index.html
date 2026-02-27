@@ -14,7 +14,7 @@
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; width: 100%; }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
         .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; }
@@ -40,8 +40,7 @@
 
     <div class="grid">
         <div class="widget-card" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
-        </div>
+            </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
@@ -60,21 +59,15 @@
 
 <script>
     lucide.createIcons();
-    let lastCall = 0;
 
-    // Helper to refresh the Pollen.com widget dynamically
+    // FIX: Rebuilds the inner HTML to force widget re-render
     function refreshAllergyWidget(zipCode) {
         const container = document.getElementById('allergy-container');
         container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zipCode}" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>`;
         
-        // Re-run the Pollenapps script logic
+        // Re-initialize the widget script if it exists
         if (window.AA && typeof window.AA.init === 'function') {
             window.AA.init();
-        } else {
-            // Fallback: Re-inject script if init isn't global
-            const script = document.createElement('script');
-            script.src = "https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js";
-            document.head.appendChild(script);
         }
     }
 
@@ -109,10 +102,12 @@
             document.getElementById('hum').innerText = d.humidity + "%";
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
-            document.getElementById('updated').innerText = "Updated: " + d.updated;
+            
+            // Displays if data was cached
+            document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // Refresh Allergy Widget
+            // Refresh Allergy Widget with the current ZIP
             refreshAllergyWidget(zip);
 
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
