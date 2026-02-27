@@ -9,27 +9,29 @@
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; --alert: #ef4444; }
         body.light-mode { --bg: #f8fafc; --text: #0f172a; --card: rgba(255, 255, 255, 0.7); --label: #64748b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; margin:0; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; display: flex; justify-content: center; margin: 0; }
         .container { width: 100%; max-width: 480px; padding-bottom: 50px; }
         
-        /* ALERT TICKER */
-        #ticker { display: none; background: var(--alert); color: white; padding: 10px; font-weight: 800; font-size: 0.75rem; text-align: center; border-radius: 12px; margin-bottom: 15px; animation: slideDown 0.5s ease; }
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
+        #ticker { display: none; background: var(--alert); color: white; padding: 12px; font-weight: 800; font-size: 0.75rem; text-align: center; border-radius: 12px; margin-bottom: 15px; }
         .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        
         #gps-btn { background: var(--accent); color: white; border: none; font-size: 0.7rem; font-weight: 800; padding: 12px; border-radius: 12px; width: 100%; margin-top: 10px; cursor: pointer; transition: 0.3s; }
         .pulse { animation: p-ring 2s infinite; }
         @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(56,189,248,0.4); } 70% { box-shadow: 0 0 0 10px rgba(56,189,248,0); } }
-        
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); position: relative; overflow: hidden; }
         .card.alert-active { border: 2px solid var(--alert); }
         .alert-tag { position: absolute; top: 0; right: 0; background: var(--alert); color: white; font-size: 9px; padding: 3px 7px; border-bottom-left-radius: 10px; font-weight: 800; display: none; }
         .alert-active .alert-tag { display: block; }
 
+        /* Full-Width Map Cards */
+        .map-card { grid-column: span 2; padding: 0; background: #000; border: 1px solid rgba(255,255,255,0.1); height: 320px; margin-top: 5px; }
+        .map-title { margin: 20px 0 8px 5px; display: block; font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
+        iframe { width: 100%; height: 100%; border: none; }
+
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         .val { font-size: 1.3rem; font-weight: 800; display: block; margin: 4px 0; }
-        .iframe-wrap { width: 100%; height: 320px; border-radius: 20px; overflow: hidden; margin-top: 15px; border: 1px solid rgba(255,255,255,0.1); background: #000; }
         .wash-status { grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 15px; font-weight: 700; border-radius: 18px; font-size: 0.85rem; }
         .theme-btn { background: var(--card); border: none; color: var(--text); padding: 12px; border-radius: 12px; cursor: pointer; }
     </style>
@@ -49,15 +51,18 @@
     <div class="grid">
         <div class="card wash-status" id="wash-card"><i data-lucide="car"></i> <span id="wash-text">...</span></div>
         <div class="card"><span class="label">Temp</span><span class="val" id="temp">--°</span><span class="label" id="feels">Feels --°</span></div>
-        <div class="card"><span class="label">Sun Left</span><span class="val" id="sun-left">--</span><span class="label" id="sun-sub">Solar Sync</span></div>
+        <div class="card"><span class="label">Sun Left</span><span class="val" id="sun-left">--</span><span class="label">Until Sunset</span></div>
         <div class="card" id="tree-card"><div class="alert-tag">SEASON ALERT</div><span class="label">Tree Pollen</span><span class="val" id="tree">--</span><span class="label">Hill Country</span></div>
         <div class="card"><span class="label">Comfort</span><span class="val" id="hum-val">--%</span><span class="label" id="hum-desc">--</span></div>
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Burn Risk</span></div>
         <div class="card"><span class="label">Wind</span><span class="val" id="wind">-- mph</span><span class="label">Surface</span></div>
-    </div>
 
-    <div class="iframe-wrap"><iframe id="wind-frame"></iframe></div>
-    <div class="iframe-wrap"><iframe id="rain-frame"></iframe></div>
+        <span class="map-title">🌬️ Live Wind Flow</span>
+        <div class="card map-card"><iframe id="wind-frame"></iframe></div>
+
+        <span class="map-title">🌧️ Live Rain Radar</span>
+        <div class="card map-card"><iframe id="rain-frame"></iframe></div>
+    </div>
 
     <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label);">...</div>
 </div>
@@ -80,7 +85,6 @@
             const r = await fetch(url);
             const d = await r.json();
             
-            // Update Text
             document.getElementById('city-title').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
@@ -91,17 +95,23 @@
             document.getElementById('wind').innerText = d.wind + " mph";
             document.getElementById('updated').innerText = "Sync Active: " + d.updated;
 
-            // NWS Alert Ticker
+            // NWS Alert
             const ticker = document.getElementById('ticker');
             if(d.activeAlert) { ticker.style.display = 'block'; ticker.innerText = "⚠️ " + d.activeAlert; }
-            else { ticker.style.display = 'none'; }
+            else ticker.style.display = 'none';
 
-            // Sun Left Calculation
+            // Fixed Sun Left Logic (Local Comparison)
             const sunsetTime = new Date(d.sunset);
-            const diffMs = sunsetTime - new Date();
-            const diffHrs = Math.floor(diffMs / 3600000);
-            const diffMins = Math.round((diffMs % 3600000) / 60000);
-            document.getElementById('sun-left').innerText = diffMs > 0 ? `${diffHrs}h ${diffMins}m` : "Set";
+            const now = new Date();
+            const diffMs = sunsetTime.getTime() - now.getTime();
+            
+            if (diffMs > 0 && diffMs < 86400000) { // If sunset is today
+                const h = Math.floor(diffMs / 3600000);
+                const m = Math.round((diffMs % 3600000) / 60000);
+                document.getElementById('sun-left').innerText = `${h}h ${m}m`;
+            } else {
+                document.getElementById('sun-left').innerText = "Set";
+            }
 
             // Car Wash
             const wc = document.getElementById('wash-card');
@@ -121,9 +131,9 @@
                 btn.onclick = null;
             } else { document.getElementById('btn-city').innerText = d.city; }
 
-            // Radars
-            document.getElementById('wind-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=6&overlay=wind`;
-            document.getElementById('rain-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar`;
+            // Radars (Using correct Windy IDs)
+            document.getElementById('wind-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=6&overlay=wind&menu=&message=&marker=&calendar=now&location=coordinates&type=map&actualforecast=false&metricWind=mph&metricTemp=%C2%B0F`;
+            document.getElementById('rain-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar&menu=&message=&marker=&calendar=now&location=coordinates&type=map&actualforecast=false&metricWind=mph&metricTemp=%C2%B0F`;
 
             lucide.createIcons();
         } catch(e) { console.log(e); }
