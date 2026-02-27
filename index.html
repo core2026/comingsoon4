@@ -1,102 +1,192 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" id="theme-meta" content="#0b1120">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Weather">
+    <link rel="manifest" href="/manifest.json">
     <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
     <style>
-        :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
-
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 500px; }
-
-        /* GPS button */
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; box-sizing: border-box; transition: border-color 0.3s; }
-        #gps-btn.pulse { border-color: #fb923c; animation: gps-pulse 1.8s ease-in-out infinite; }
-        @keyframes gps-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4); }
-            50%       { box-shadow: 0 0 0 8px rgba(251, 146, 60, 0); }
+        /* ── Theme variables ── */
+        :root {
+            --bg: #0b1120; --text: #f8fafc; --card: rgba(30,41,59,0.4);
+            --label: #94a3b8; --accent: #38bdf8; --border: rgba(255,255,255,0.05);
+            --card-solid: #1e293b; --shimmer-from: rgba(255,255,255,0.04); --shimmer-to: rgba(255,255,255,0.10);
+            --input-bg: rgba(30,41,59,0.4); --search-input-color: #fff;
+        }
+        [data-theme="light"] {
+            --bg: #f0f4f8; --text: #0f172a; --card: rgba(255,255,255,0.85);
+            --label: #64748b; --accent: #0284c7; --border: rgba(0,0,0,0.07);
+            --card-solid: #ffffff; --shimmer-from: rgba(0,0,0,0.04); --shimmer-to: rgba(0,0,0,0.08);
+            --input-bg: rgba(255,255,255,0.85); --search-input-color: #0f172a;
         }
 
-        .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
-        .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text);
+               padding: 20px; padding-top: max(20px, env(safe-area-inset-top));
+               padding-bottom: max(20px, env(safe-area-inset-bottom));
+               margin: 0; display: flex; justify-content: center; transition: background 0.3s, color 0.3s; }
+        .container { width: 100%; max-width: 500px; }
+
+        /* ── Header row ── */
+        .header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 4px; }
+        .header-left { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .weather-icon { font-size: 2rem; line-height: 1; margin-right: 6px; }
+        h1 { font-size: 2rem; font-weight: 800; margin: 0; display: inline; }
+        .header-actions { display: flex; gap: 8px; flex-shrink: 0; padding-top: 4px; }
+        .icon-btn { background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+                    color: var(--label); cursor: pointer; width: 36px; height: 36px;
+                    display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 0; }
+        .icon-btn:hover { background: var(--card-solid); color: var(--text); }
+
+        /* ── VPN badge ── */
+        #vpn-badge { display: none; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 800;
+                     color: #fb923c; background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.3);
+                     border-radius: 8px; padding: 3px 8px; cursor: default; white-space: nowrap; }
+        #vpn-badge.visible { display: inline-flex; }
+
+        /* ── Pull to refresh ── */
+        #ptr-indicator { position: fixed; top: 0; left: 50%; transform: translateX(-50%) translateY(-60px);
+                         background: var(--accent); color: #0b1120; border-radius: 0 0 20px 20px;
+                         padding: 8px 20px; font-size: 0.8rem; font-weight: 800;
+                         transition: transform 0.3s; z-index: 100; display: flex; align-items: center; gap: 6px; }
+        #ptr-indicator.visible { transform: translateX(-50%) translateY(0); }
+        @keyframes ptr-spin { to { transform: rotate(360deg); } }
+        #ptr-spinner { display: none; width: 14px; height: 14px; border: 2px solid #0b112040;
+                       border-top-color: #0b1120; border-radius: 50%; animation: ptr-spin 0.7s linear infinite; }
+        #ptr-spinner.spin { display: block; }
+
+        /* ── Toast notification ── */
+        #toast { position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%;
+                 transform: translateX(-50%) translateY(80px); background: var(--card-solid);
+                 color: var(--text); border-radius: 14px; padding: 12px 20px; font-size: 0.85rem;
+                 font-weight: 700; box-shadow: 0 8px 30px rgba(0,0,0,0.3); transition: transform 0.35s;
+                 z-index: 200; white-space: nowrap; }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+
+        /* ── GPS button ── */
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid var(--border);
+                   padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800;
+                   display: flex; align-items: center; justify-content: center; gap: 10px;
+                   margin-bottom: 15px; transition: border-color 0.3s; }
+        #gps-btn.pulse { border-color: #fb923c; animation: gps-pulse 1.8s ease-in-out infinite; }
+        @keyframes gps-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(251,146,60,0.4); }
+            50%      { box-shadow: 0 0 0 8px rgba(251,146,60,0); }
+        }
+
+        /* ── Search ── */
+        .search-container { display: flex; gap: 10px; background: var(--input-bg); padding: 5px;
+                            border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .search-container input { background: transparent; border: none; color: var(--search-input-color);
+                                  padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
         .search-container input::placeholder { color: var(--label); }
-        .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; white-space: nowrap; }
+        .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px;
+                                   padding: 0 20px; cursor: pointer; font-weight: 800; white-space: nowrap; }
 
+        /* ── Grid & cards ── */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid var(--border);
+                backdrop-filter: blur(10px); position: relative; overflow: hidden; transition: background 0.3s; }
 
-        /* Base card */
-        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); position: relative; overflow: hidden; }
+        /* ── Skeleton shimmer ── */
+        .skeleton { position: relative; overflow: hidden; }
+        .skeleton::after { content: ''; position: absolute; inset: 0;
+                           background: linear-gradient(90deg, transparent 0%, var(--shimmer-to) 50%, transparent 100%);
+                           background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .skeleton .val, .skeleton .label { color: transparent; background: var(--shimmer-from); border-radius: 6px; }
 
-        /* Expandable info panel inside card */
-        .card-toggle { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.07); border: none; border-radius: 8px; color: var(--label); cursor: pointer; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; transition: transform 0.25s, background 0.2s; padding: 0; }
-        .card-toggle:hover { background: rgba(255,255,255,0.14); }
+        /* ── Card expand ── */
+        .card-toggle { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.07);
+                       border: none; border-radius: 8px; color: var(--label); cursor: pointer;
+                       width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; }
         .card-toggle svg { transition: transform 0.25s; }
         .card-toggle.open svg { transform: rotate(90deg); }
         .card-info { max-height: 0; overflow: hidden; transition: max-height 0.35s ease, opacity 0.3s ease; opacity: 0; }
         .card-info.open { max-height: 200px; opacity: 1; }
-        .card-info-inner { border-top: 1px solid rgba(255,255,255,0.07); margin-top: 12px; padding-top: 10px; font-size: 0.78rem; line-height: 1.5; color: var(--label); }
-        .card-info-inner strong { color: #fff; }
+        .card-info-inner { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px;
+                           font-size: 0.78rem; line-height: 1.5; color: var(--label); }
         .info-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; margin-bottom: 5px; }
 
-        /* VPN badge */
-        #vpn-badge { display: none; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 800; color: #fb923c; background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.3); border-radius: 8px; padding: 3px 8px; margin-left: 10px; vertical-align: middle; cursor: default; white-space: nowrap; }
-        #vpn-badge.visible { display: inline-flex; }
-
-        /* Pollen section */
-        .pollen-wrapper { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
-        #pollen-iframe { width: 100%; height: 270px; border: none; display: block; line-height: 0; }
-
-        /* Pollen level selector */
-        .pollen-level-row { padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
+        /* ── Pollen wrapper ── */
+        .pollen-wrapper { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
+        #pollen-iframe { width: 100%; height: 270px; border: none; display: block; }
+        .pollen-level-row { padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
         .pollen-level-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--label); }
-        .pollen-level-btns { display: flex; gap: 6px; flex-wrap: wrap; }
-        .plvl-btn { flex: 1; min-width: 0; padding: 6px 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--label); font-size: 0.7rem; font-weight: 800; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
-        .plvl-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .pollen-level-btns { display: flex; gap: 6px; }
+        .plvl-btn { flex: 1; padding: 6px 4px; border-radius: 10px; border: 1px solid var(--border);
+                    background: rgba(255,255,255,0.05); color: var(--label); font-size: 0.7rem; font-weight: 800;
+                    cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
         .plvl-btn.active-0 { background: rgba(74,222,128,0.2);  border-color: #4ade80; color: #4ade80; }
         .plvl-btn.active-1 { background: rgba(163,230,53,0.2);  border-color: #a3e635; color: #a3e635; }
         .plvl-btn.active-2 { background: rgba(251,191,36,0.2);  border-color: #fbbf24; color: #fbbf24; }
         .plvl-btn.active-3 { background: rgba(249,115,22,0.2);  border-color: #f97316; color: #f97316; }
         .plvl-btn.active-4 { background: rgba(248,113,113,0.2); border-color: #f87171; color: #f87171; }
+        .pollen-chips { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--border); }
+        .chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06);
+                border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; color: var(--text); }
 
-        /* Pollen action chips */
-        .pollen-chips { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid rgba(255,255,255,0.05); }
-        .chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 12px; font-size: 0.75rem; font-weight: 700; color: var(--text); }
-        .chip span.chip-icon { font-size: 1rem; }
-
-        /* Triggers card (Option C) */
-        .triggers-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 20px; }
-        .triggers-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px; }
+        /* ── Triggers card ── */
+        .triggers-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); padding: 20px; }
+        .triggers-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-top: 12px; }
         .trigger-item { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
-        .trigger-icon { font-size: 1.5rem; }
-        .trigger-label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        .trigger-level { font-size: 0.8rem; font-weight: 800; padding: 3px 10px; border-radius: 8px; }
-        .level-low    { background: rgba(34,197,94,0.15);  color: #4ade80; }
-        .level-mod    { background: rgba(251,191,36,0.15); color: #fbbf24; }
-        .level-high   { background: rgba(239,68,68,0.15);  color: #f87171; }
+        .trigger-icon { font-size: 1.4rem; }
+        .trigger-label { font-size: 0.6rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
+        .trigger-level { font-size: 0.75rem; font-weight: 800; padding: 3px 8px; border-radius: 8px; }
+        .trigger-note { font-size: 0.6rem; color: var(--label); }
+        .level-low  { background: rgba(34,197,94,0.15);  color: #4ade80; }
+        .level-mod  { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .level-high { background: rgba(239,68,68,0.15);  color: #f87171; }
 
-        /* Sunrise/Sunset card */
-        .sun-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 20px; }
+        /* ── Sun card ── */
+        .sun-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); padding: 20px; }
         .sun-row { display: flex; justify-content: space-around; align-items: center; }
         .sun-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .sun-time { font-size: 1.4rem; font-weight: 800; color: #fff; }
+        .sun-time { font-size: 1.4rem; font-weight: 800; color: var(--text); }
         .sun-label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        .sun-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.1); }
+        .sun-divider { width: 1px; height: 50px; background: var(--border); }
 
-        .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
+        /* ── AQI card (commented out — enable when API key is ready) ── */
+        /* .aqi-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); backdrop-filter: blur(10px); padding: 20px; }
+        .aqi-bar-track { height: 8px; border-radius: 4px; background: linear-gradient(to right, #4ade80,#fbbf24,#f97316,#f87171,#c084fc,#7f1d1d); margin: 10px 0 6px; position: relative; }
+        .aqi-bar-dot { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid #0b1120; transform: translate(-50%, -50%); transition: left 0.8s ease; } */
+
+        .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: var(--text); }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        h1 { font-size: 2rem; font-weight: 800; margin: 0; display: inline; }
-        .title-row { margin-bottom: 5px; }
     </style>
 </head>
 <body>
+<!-- Pull to refresh indicator -->
+<div id="ptr-indicator">
+    <div id="ptr-spinner"></div>
+    <span id="ptr-text">Pull to refresh</span>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
 <div class="container">
-    <div class="title-row">
-        <h1 id="city-title">Syncing...</h1>
-        <span id="vpn-badge" title="VPN or iCloud Private Relay detected — location may be inaccurate">⚠ VPN / Relay</span>
+    <div class="header-row">
+        <div class="header-left">
+            <span class="weather-icon" id="weather-icon">🌤</span>
+            <h1 id="city-title">Syncing...</h1>
+            <span id="vpn-badge" title="VPN or iCloud Private Relay detected">⚠ VPN / Relay</span>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="shareLocation()" title="Share">
+                <i data-lucide="share-2" style="width:16px;height:16px;"></i>
+            </button>
+            <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">
+                <i data-lucide="sun" style="width:16px;height:16px;"></i>
+            </button>
+        </div>
     </div>
     <p id="updated" style="font-size:11px; color:var(--label); margin:5px 0 20px 0;">Connecting...</p>
 
@@ -113,59 +203,65 @@
     <div class="grid">
 
         <!-- Temperature -->
-        <div class="card">
-            <button class="card-toggle" onclick="toggleInfo('temp-info', this)" aria-label="More info">
+        <div class="card skeleton" id="card-temp">
+            <button class="card-toggle" onclick="toggleInfo('temp-info', this)">
                 <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
             </button>
             <span class="label">Temperature</span>
             <span class="val" id="temp">--°</span>
             <span id="feels" class="label">Feels --°</span>
-            <div class="card-info" id="temp-info">
-                <div class="card-info-inner" id="temp-info-text">--</div>
-            </div>
+            <div class="card-info" id="temp-info"><div class="card-info-inner" id="temp-info-text"></div></div>
         </div>
 
         <!-- Humidity -->
-        <div class="card">
-            <button class="card-toggle" onclick="toggleInfo('hum-info', this)" aria-label="More info">
+        <div class="card skeleton" id="card-hum">
+            <button class="card-toggle" onclick="toggleInfo('hum-info', this)">
                 <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
             </button>
             <span class="label">Humidity</span>
             <span class="val" id="hum">--%</span>
             <span class="label">Atmosphere</span>
-            <div class="card-info" id="hum-info">
-                <div class="card-info-inner" id="hum-info-text">--</div>
-            </div>
+            <div class="card-info" id="hum-info"><div class="card-info-inner" id="hum-info-text"></div></div>
         </div>
 
         <!-- UV Index -->
-        <div class="card">
-            <button class="card-toggle" onclick="toggleInfo('uv-info', this)" aria-label="More info">
+        <div class="card skeleton" id="card-uv">
+            <button class="card-toggle" onclick="toggleInfo('uv-info', this)">
                 <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
             </button>
             <span class="label">UV Index</span>
             <span class="val" id="uv">--</span>
             <span class="label">Sun Safety</span>
-            <div class="card-info" id="uv-info">
-                <div class="card-info-inner" id="uv-info-text">--</div>
-            </div>
+            <div class="card-info" id="uv-info"><div class="card-info-inner" id="uv-info-text"></div></div>
         </div>
 
         <!-- Wind Speed -->
-        <div class="card">
-            <button class="card-toggle" onclick="toggleInfo('wind-info', this)" aria-label="More info">
+        <div class="card skeleton" id="card-wind">
+            <button class="card-toggle" onclick="toggleInfo('wind-info', this)">
                 <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
             </button>
             <span class="label">Wind Speed</span>
             <span class="val" id="wind">-- mph</span>
             <span class="label">Velocity</span>
-            <div class="card-info" id="wind-info">
-                <div class="card-info-inner" id="wind-info-text">--</div>
-            </div>
+            <div class="card-info" id="wind-info"><div class="card-info-inner" id="wind-info-text"></div></div>
+        </div>
+
+        <!-- Precip Chance -->
+        <div class="card skeleton" id="card-precip">
+            <span class="label">Rain Chance</span>
+            <span class="val" id="precip">--%</span>
+            <span class="label">Precipitation</span>
+        </div>
+
+        <!-- Visibility -->
+        <div class="card skeleton" id="card-vis">
+            <span class="label">Visibility</span>
+            <span class="val" id="visibility">-- mi</span>
+            <span class="label">Clarity</span>
         </div>
 
         <!-- Car Wash -->
-        <div class="card" style="grid-column: span 2; display:flex; align-items:center; gap:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2);">
+        <div class="card" style="grid-column:span 2; display:flex; align-items:center; gap:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2);">
             <i data-lucide="car" style="color:var(--accent); width:28px; height:28px; flex-shrink:0;"></i>
             <div>
                 <span class="label" style="color:var(--accent);">Car Wash Forecast</span>
@@ -173,7 +269,21 @@
             </div>
         </div>
 
-        <!-- Sunrise / Sunset -->
+        <!-- AQI — commented out until API key is configured
+        <div class="aqi-card">
+            <span class="label">🌬 Air Quality Index</span>
+            <div style="display:flex; align-items:baseline; gap:10px; margin-top:8px;">
+                <span class="val" id="aqi-val" style="margin:0;">--</span>
+                <span id="aqi-label" style="font-weight:800; font-size:0.9rem; color:var(--label);">Loading...</span>
+            </div>
+            <div class="aqi-bar-track">
+                <div class="aqi-bar-dot" id="aqi-dot" style="left:0%"></div>
+            </div>
+            <span id="aqi-main-pollutant" style="font-size:0.7rem; color:var(--label);"></span>
+        </div>
+        -->
+
+        <!-- Sun Schedule -->
         <div class="sun-card">
             <span class="label" style="display:block; margin-bottom:14px;">☀️ Sun Schedule</span>
             <div class="sun-row">
@@ -184,12 +294,12 @@
                 </div>
                 <div class="sun-divider"></div>
                 <div class="sun-item">
-                    <svg viewBox="0 0 120 60" style="width:80px; height:40px;">
+                    <svg viewBox="0 0 120 60" style="width:80px;height:40px;">
                         <path d="M10,55 A50,50 0 0,1 110,55" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4" stroke-linecap="round"/>
                         <path id="sun-arc-progress" d="M10,55 A50,50 0 0,1 110,55" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157"/>
                         <circle id="sun-dot" cx="10" cy="55" r="5" fill="#fbbf24"/>
                     </svg>
-                    <span class="sun-label" id="daylight-label">-- hrs daylight</span>
+                    <span class="sun-label" id="daylight-label">-- hrs</span>
                 </div>
                 <div class="sun-divider"></div>
                 <div class="sun-item">
@@ -200,55 +310,59 @@
             </div>
         </div>
 
-        <!-- Related Triggers (Option C) -->
+        <!-- Related Triggers -->
         <div class="triggers-card">
             <span class="label">🌿 Related Allergy Triggers</span>
             <div class="triggers-grid">
                 <div class="trigger-item">
                     <span class="trigger-icon">🍄</span>
-                    <span class="trigger-label">Mold Risk</span>
+                    <span class="trigger-label">Mold</span>
                     <span class="trigger-level" id="mold-level">--</span>
-                    <span style="font-size:0.65rem; color:var(--label); margin-top:2px;" id="mold-note"></span>
+                    <span class="trigger-note" id="mold-note"></span>
                 </div>
                 <div class="trigger-item">
                     <span class="trigger-icon">💨</span>
-                    <span class="trigger-label">Dust / Debris</span>
+                    <span class="trigger-label">Dust</span>
                     <span class="trigger-level" id="dust-level">--</span>
-                    <span style="font-size:0.65rem; color:var(--label); margin-top:2px;" id="dust-note"></span>
+                    <span class="trigger-note" id="dust-note"></span>
                 </div>
                 <div class="trigger-item">
                     <span class="trigger-icon">🌡️</span>
                     <span class="trigger-label">Heat Stress</span>
                     <span class="trigger-level" id="heat-level">--</span>
-                    <span style="font-size:0.65rem; color:var(--label); margin-top:2px;" id="heat-note"></span>
+                    <span class="trigger-note" id="heat-note"></span>
+                </div>
+                <div class="trigger-item">
+                    <span class="trigger-icon">🌧️</span>
+                    <span class="trigger-label">Rain Relief</span>
+                    <span class="trigger-level" id="rain-level">--</span>
+                    <span class="trigger-note" id="rain-note"></span>
                 </div>
             </div>
         </div>
 
         <!-- Rain Radar -->
-        <div class="card" style="grid-column: span 2; padding: 0; overflow: hidden; border-radius: 24px;">
-            <div style="padding: 16px 20px 12px; display: flex; align-items: center; gap: 8px;">
-                <i data-lucide="radar" style="color: var(--accent); width:18px; height:18px;"></i>
-                <span class="label" style="color: var(--accent);">Rain Radar</span>
+        <div class="card" style="grid-column:span 2; padding:0; overflow:hidden; border-radius:24px;">
+            <div style="padding:16px 20px 12px; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="radar" style="color:var(--accent); width:18px; height:18px;"></i>
+                <span class="label" style="color:var(--accent);">Rain Radar</span>
             </div>
             <iframe id="radar-iframe"
                 src="https://www.rainviewer.com/map.html?loc=29.7408,-98.6444,8&oFa=0&oC=0&oU=0&oCS=1&oF=0&oAP=0&rmt=4&c=3&o=83&lm=1&layer=radar&sm=1&sn=1"
-                style="width:100%; height:320px; border:none; display:block;"
-                allowfullscreen>
-            </iframe>
+                style="width:100%; height:320px; border:none; display:block;" allowfullscreen></iframe>
         </div>
 
-        <!-- Pollen widget + level selector + action chips -->
+        <!-- Pollen widget -->
         <div class="pollen-wrapper">
             <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
             <div class="pollen-level-row">
                 <span class="pollen-level-label">Set level shown in widget above:</span>
                 <div class="pollen-level-btns">
-                    <button class="plvl-btn" data-level="0" onclick="setPollenLevel(0)" title="0 – 2.4">Low</button>
-                    <button class="plvl-btn" data-level="1" onclick="setPollenLevel(1)" title="2.5 – 4.8">Low-Med</button>
-                    <button class="plvl-btn" data-level="2" onclick="setPollenLevel(2)" title="4.9 – 7.2">Medium</button>
-                    <button class="plvl-btn" data-level="3" onclick="setPollenLevel(3)" title="7.3 – 9.6">Med-High</button>
-                    <button class="plvl-btn" data-level="4" onclick="setPollenLevel(4)" title="9.7 – 12">High</button>
+                    <button class="plvl-btn" data-level="0" onclick="setPollenLevel(0)" title="0–2.4">Low</button>
+                    <button class="plvl-btn" data-level="1" onclick="setPollenLevel(1)" title="2.5–4.8">Low-Med</button>
+                    <button class="plvl-btn" data-level="2" onclick="setPollenLevel(2)" title="4.9–7.2">Medium</button>
+                    <button class="plvl-btn" data-level="3" onclick="setPollenLevel(3)" title="7.3–9.6">Med-High</button>
+                    <button class="plvl-btn" data-level="4" onclick="setPollenLevel(4)" title="9.7–12">High</button>
                 </div>
             </div>
             <div class="pollen-chips" id="pollen-chips"></div>
@@ -258,372 +372,419 @@
 </div>
 
 <script>
+// ── PWA service worker ────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentZip = new URLSearchParams(location.search).get('zip') || '78015';
+let currentLat = 29.7408, currentLon = -98.6444;
+let weatherData = {};
+let currentPollenLevel = null;
+let autoRefreshTimer = null;
+
+lucide.createIcons();
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.getElementById('theme-meta').content = theme === 'dark' ? '#0b1120' : '#f0f4f8';
+    const btn = document.getElementById('theme-btn');
+    btn.innerHTML = theme === 'dark'
+        ? '<i data-lucide="sun" style="width:16px;height:16px;"></i>'
+        : '<i data-lucide="moon" style="width:16px;height:16px;"></i>';
     lucide.createIcons();
+    localStorage.setItem('theme', theme);
+}
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
 
-    let currentZip = '78015';
-    let currentLat = 29.7408;
-    let currentLon = -98.6444;
-    let weatherData = {};
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, duration = 2500) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), duration);
+}
 
-    document.getElementById('zip-input').addEventListener('keydown', e => { if (e.key === 'Enter') searchZip(); });
-
-    // ── Card toggle ───────────────────────────────────────────────────────────
-    function toggleInfo(id, btn) {
-        const panel = document.getElementById(id);
-        const isOpen = panel.classList.contains('open');
-        // Close all panels first
-        document.querySelectorAll('.card-info').forEach(p => p.classList.remove('open'));
-        document.querySelectorAll('.card-toggle').forEach(b => b.classList.remove('open'));
-        if (!isOpen) {
-            panel.classList.add('open');
-            btn.classList.add('open');
-        }
+// ── Share ─────────────────────────────────────────────────────────────────────
+function shareLocation() {
+    const url = `${location.origin}${location.pathname}?zip=${currentZip}`;
+    if (navigator.share) {
+        navigator.share({ title: 'Acekallas Weather', url }).catch(() => {});
+    } else {
+        navigator.clipboard.writeText(url).then(() => showToast('📋 Link copied!')).catch(() => showToast('Copy failed'));
     }
+    if (navigator.vibrate) navigator.vibrate(30);
+}
 
-    // ── Contextual info builders ──────────────────────────────────────────────
-    function getTempInfo(temp, feels, humidity) {
-        let badge, badgeColor, desc;
-        if (temp <= 32)       { badge = '🥶 Freezing';    badgeColor = '#93c5fd'; }
-        else if (temp <= 50)  { badge = '🧥 Cold';        badgeColor = '#93c5fd'; }
-        else if (temp <= 65)  { badge = '🌤 Cool';         badgeColor = '#6ee7b7'; }
-        else if (temp <= 80)  { badge = '😊 Comfortable'; badgeColor = '#4ade80'; }
-        else if (temp <= 90)  { badge = '☀️ Warm';         badgeColor = '#fbbf24'; }
-        else if (temp <= 100) { badge = '🔥 Hot';          badgeColor = '#f97316'; }
-        else                  { badge = '🌋 Extreme Heat'; badgeColor = '#f87171'; }
-
-        const diff = Math.abs(temp - feels);
-        let feelNote = '';
-        if (diff >= 5) feelNote = feels < temp
-            ? `Wind chill making it feel <strong>${diff}° cooler</strong> than actual.`
-            : `Humidity making it feel <strong>${diff}° warmer</strong> than actual.`;
-
-        if (temp <= 32)      desc = 'Freezing conditions. Exposed skin can be affected quickly outdoors.';
-        else if (temp <= 50) desc = 'Dress in warm layers. Good conditions for brisk outdoor activity.';
-        else if (temp <= 65) desc = 'Light jacket recommended. Pleasant for most outdoor activities.';
-        else if (temp <= 80) desc = 'Great conditions for outdoor activity. Stay hydrated.';
-        else if (temp <= 90) desc = 'Warm day. Seek shade during peak hours and drink plenty of water.';
-        else                 desc = 'High heat. Limit strenuous outdoor activity and stay hydrated.';
-
-        return `<span class="info-badge" style="background:${badgeColor}22; color:${badgeColor};">${badge}</span><br>${desc}${feelNote ? '<br><br>' + feelNote : ''}`;
+// ── Pull to refresh ───────────────────────────────────────────────────────────
+let ptrStartY = 0, ptrTriggered = false;
+document.addEventListener('touchstart', e => { ptrStartY = e.touches[0].clientY; ptrTriggered = false; }, { passive: true });
+document.addEventListener('touchmove', e => {
+    const delta = e.touches[0].clientY - ptrStartY;
+    if (window.scrollY === 0 && delta > 60 && !ptrTriggered) {
+        ptrTriggered = true;
+        const ptr = document.getElementById('ptr-indicator');
+        document.getElementById('ptr-text').innerText = 'Release to refresh';
+        ptr.classList.add('visible');
     }
-
-    function getHumidityInfo(hum) {
-        let badge, color, desc;
-        if (hum < 25)       { badge = '🏜️ Very Dry';    color = '#f87171'; desc = 'Very low humidity. Can cause dry skin, irritated sinuses, and static electricity.'; }
-        else if (hum < 40)  { badge = '💧 Dry';          color = '#fbbf24'; desc = 'Slightly dry air. Comfortable for most people, but sensitive individuals may notice dry skin.'; }
-        else if (hum < 60)  { badge = '✅ Comfortable';  color = '#4ade80'; desc = 'Ideal humidity range. Air feels fresh and comfortable for most activities.'; }
-        else if (hum < 75)  { badge = '💦 Humid';        color = '#fbbf24'; desc = 'Noticeably humid. Sweat evaporates more slowly, making heat feel more intense.'; }
-        else                { badge = '🌊 Very Humid';   color = '#f87171'; desc = 'High humidity. The body struggles to cool itself efficiently. Take it easy outdoors.'; }
-        return `<span class="info-badge" style="background:${color}22; color:${color};">${badge}</span><br>${desc}`;
-    }
-
-    function getUVInfo(uv) {
-        let badge, color, desc;
-        if (uv <= 2.4)       { badge = '🟢 Low';          color = '#4ade80'; desc = 'Minimal risk. No protection needed for short exposures. Safe for all outdoor activities.'; }
-        else if (uv <= 4.8)  { badge = '🟡 Low–Medium';   color = '#a3e635'; desc = 'Low to moderate risk. A hat and sunscreen are a good idea for extended time outdoors.'; }
-        else if (uv <= 7.2)  { badge = '🟠 Medium';        color = '#fbbf24'; desc = 'Moderate risk. Wear sunscreen and a hat. Seek shade during midday hours.'; }
-        else if (uv <= 9.6)  { badge = '🔴 Med–High';      color = '#f97316'; desc = 'High risk. Cover up, apply sunscreen, and limit direct sun exposure between 10am–4pm.'; }
-        else                 { badge = '🟣 High';           color = '#f87171'; desc = 'Very high risk. Unprotected skin can burn quickly. Minimize outdoor exposure during peak hours.'; }
-        return `<span class="info-badge" style="background:${color}22; color:${color};">${badge}</span><br>${desc}`;
-    }
-
-    function getWindInfo(wind) {
-        let badge, color, desc;
-        if (wind < 5)        { badge = '🍃 Calm';          color = '#4ade80'; desc = 'Essentially still air. Ideal for outdoor dining, events, and activities.'; }
-        else if (wind < 12)  { badge = '🌬 Light Breeze';   color = '#6ee7b7'; desc = 'Gentle breeze felt on face. Pleasant for most outdoor activities.'; }
-        else if (wind < 20)  { badge = '💨 Moderate';       color = '#fbbf24'; desc = 'Noticeable wind. Loose items may be disturbed. Good kite-flying conditions.'; }
-        else if (wind < 30)  { badge = '🌀 Strong';         color = '#f97316'; desc = 'Strong wind. Secure loose outdoor items. Cycling and walking may be difficult.'; }
-        else                 { badge = '⚠️ High Wind';      color = '#f87171'; desc = 'Hazardous conditions. Avoid unnecessary outdoor exposure. Secure all outdoor furniture.'; }
-        return `<span class="info-badge" style="background:${color}22; color:${color};">${badge}</span><br>${desc}`;
-    }
-
-    // ── Trigger risk levels ───────────────────────────────────────────────────
-    function updateTriggers(temp, humidity, wind) {
-        // Mold risk — driven by humidity
-        const moldEl = document.getElementById('mold-level');
-        const moldNote = document.getElementById('mold-note');
-        if (humidity >= 75)     { moldEl.className = 'trigger-level level-high'; moldEl.innerText = 'High';     moldNote.innerText = 'Favor indoor air'; }
-        else if (humidity >= 60){ moldEl.className = 'trigger-level level-mod';  moldEl.innerText = 'Moderate'; moldNote.innerText = 'Check damp areas'; }
-        else                    { moldEl.className = 'trigger-level level-low';  moldEl.innerText = 'Low';      moldNote.innerText = 'Good conditions'; }
-
-        // Dust / debris — driven by wind
-        const dustEl = document.getElementById('dust-level');
-        const dustNote = document.getElementById('dust-note');
-        if (wind >= 20)     { dustEl.className = 'trigger-level level-high'; dustEl.innerText = 'High';     dustNote.innerText = 'Close windows'; }
-        else if (wind >= 10){ dustEl.className = 'trigger-level level-mod';  dustEl.innerText = 'Moderate'; dustNote.innerText = 'Some stirring'; }
-        else                { dustEl.className = 'trigger-level level-low';  dustEl.innerText = 'Low';      dustNote.innerText = 'Minimal disturbance'; }
-
-        // Heat stress — simplified heat index (Rothfusz)
-        const heatEl = document.getElementById('heat-level');
-        const heatNote = document.getElementById('heat-note');
-        let hi = temp;
-        if (temp >= 80) {
-            hi = -42.379 + 2.04901523*temp + 10.14333127*humidity
-                - 0.22475541*temp*humidity - 0.00683783*temp*temp
-                - 0.05481717*humidity*humidity + 0.00122874*temp*temp*humidity
-                + 0.00085282*temp*humidity*humidity - 0.00000199*temp*temp*humidity*humidity;
-        }
-        if (hi >= 103)     { heatEl.className = 'trigger-level level-high'; heatEl.innerText = 'Dangerous';  heatNote.innerText = 'Limit time outside'; }
-        else if (hi >= 90) { heatEl.className = 'trigger-level level-mod';  heatEl.innerText = 'Caution';    heatNote.innerText = 'Stay hydrated'; }
-        else               { heatEl.className = 'trigger-level level-low';  heatEl.innerText = 'Normal';     heatNote.innerText = 'Comfortable range'; }
-    }
-
-    // ── Pollen action chips ───────────────────────────────────────────────────
-    // PollenApps scale: Low 0-2.4 | Low-Med 2.5-4.8 | Medium 4.9-7.2 | Med-High 7.3-9.6 | High 9.7-12
-    let currentPollenLevel = null; // null = not yet set by user
-
-    function setPollenLevel(level) {
-        currentPollenLevel = level;
-        // Update button active state
-        document.querySelectorAll('.plvl-btn').forEach(btn => {
-            btn.className = 'plvl-btn';
-            if (parseInt(btn.dataset.level) === level) btn.classList.add('active-' + level);
+}, { passive: true });
+document.addEventListener('touchend', () => {
+    if (ptrTriggered) {
+        const ptr = document.getElementById('ptr-indicator');
+        document.getElementById('ptr-text').innerText = 'Refreshing...';
+        document.getElementById('ptr-spinner').classList.add('spin');
+        if (navigator.vibrate) navigator.vibrate(40);
+        update(currentLat, currentLon).finally(() => {
+            setTimeout(() => {
+                ptr.classList.remove('visible');
+                document.getElementById('ptr-spinner').classList.remove('spin');
+                document.getElementById('ptr-text').innerText = 'Pull to refresh';
+            }, 600);
         });
+        ptrTriggered = false;
+    }
+});
+
+// ── Skeleton helpers ──────────────────────────────────────────────────────────
+const skeletonIds = ['card-temp','card-hum','card-uv','card-wind','card-precip','card-vis'];
+function showSkeletons() { skeletonIds.forEach(id => document.getElementById(id)?.classList.add('skeleton')); }
+function hideSkeletons() { skeletonIds.forEach(id => document.getElementById(id)?.classList.remove('skeleton')); }
+
+// ── Weather condition icon (Tomorrow.io weatherCode) ─────────────────────────
+const weatherIcons = {
+    1000:'☀️', 1001:'☁️', 1100:'🌤', 1101:'⛅', 1102:'🌥',
+    2000:'🌫', 2100:'🌁',
+    4000:'🌦', 4001:'🌧', 4200:'🌦', 4201:'🌧',
+    5000:'🌨', 5001:'🌨', 5100:'🌨', 5101:'❄️',
+    6000:'🌧', 6001:'🌧', 6200:'🌧', 6201:'🌧',
+    7000:'🌩', 7101:'🌩', 7102:'🌩',
+    8000:'⛈'
+};
+function getWeatherIcon(code) { return weatherIcons[code] || '🌤'; }
+
+// ── Card toggle ───────────────────────────────────────────────────────────────
+function toggleInfo(id, btn) {
+    const panel = document.getElementById(id);
+    const isOpen = panel.classList.contains('open');
+    document.querySelectorAll('.card-info').forEach(p => p.classList.remove('open'));
+    document.querySelectorAll('.card-toggle').forEach(b => b.classList.remove('open'));
+    if (!isOpen) { panel.classList.add('open'); btn.classList.add('open'); }
+    if (navigator.vibrate) navigator.vibrate(15);
+}
+
+// ── Info panel content builders ───────────────────────────────────────────────
+function getTempInfo(temp, feels, humidity) {
+    let badge, color;
+    if (temp <= 32)      { badge='🥶 Freezing';    color='#93c5fd'; }
+    else if (temp <= 50) { badge='🧥 Cold';         color='#93c5fd'; }
+    else if (temp <= 65) { badge='🌤 Cool';          color='#6ee7b7'; }
+    else if (temp <= 80) { badge='😊 Comfortable';  color='#4ade80'; }
+    else if (temp <= 90) { badge='☀️ Warm';          color='#fbbf24'; }
+    else if (temp<=100)  { badge='🔥 Hot';           color='#f97316'; }
+    else                 { badge='🌋 Extreme Heat';  color='#f87171'; }
+    const diff = Math.abs(temp - feels);
+    const feelNote = diff >= 5 ? (feels < temp
+        ? `Wind chill making it feel <strong>${diff}° cooler</strong>.`
+        : `Humidity making it feel <strong>${diff}° warmer</strong>.`) : '';
+    const descs = { '🥶 Freezing':'Freezing conditions. Limit time outdoors.',
+        '🧥 Cold':'Dress warmly. Good for brisk outdoor activity.',
+        '🌤 Cool':'Light jacket recommended. Pleasant for most activities.',
+        '😊 Comfortable':'Great conditions for being outside.',
+        '☀️ Warm':'Stay hydrated and seek shade during peak hours.',
+        '🔥 Hot':'Limit strenuous outdoor activity. Drink plenty of water.',
+        '🌋 Extreme Heat':'Dangerous heat. Avoid outdoor activity if possible.' };
+    return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${descs[badge]}${feelNote ? '<br><br>' + feelNote : ''}`;
+}
+function getHumidityInfo(hum) {
+    let badge, color, desc;
+    if (hum < 25)      { badge='🏜️ Very Dry';    color='#f87171'; desc='Can cause dry skin and irritated sinuses.'; }
+    else if (hum < 40) { badge='💧 Dry';           color='#fbbf24'; desc='Slightly dry but comfortable for most.'; }
+    else if (hum < 60) { badge='✅ Comfortable';   color='#4ade80'; desc='Ideal range. Air feels fresh.'; }
+    else if (hum < 75) { badge='💦 Humid';         color='#fbbf24'; desc='Sweat evaporates slowly, heat feels more intense.'; }
+    else               { badge='🌊 Very Humid';    color='#f87171'; desc='High humidity. The body struggles to cool itself.'; }
+    return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
+}
+function getUVInfo(uv) {
+    let badge, color, desc;
+    if (uv <= 2)      { badge='🟢 Low';      color='#4ade80'; desc='Minimal protection needed for short exposure.'; }
+    else if (uv <= 5) { badge='🟡 Moderate'; color='#fbbf24'; desc='Wear sunscreen and a hat during midday.'; }
+    else if (uv <= 7) { badge='🟠 High';     color='#f97316'; desc='Cover up and seek shade during peak hours (10am–4pm).'; }
+    else if (uv<=10)  { badge='🔴 Very High';color='#f87171'; desc='Unprotected skin can burn quickly. Minimize midday exposure.'; }
+    else              { badge='🟣 Extreme';  color='#c084fc'; desc='Avoid outdoor activity during peak UV hours if possible.'; }
+    return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
+}
+function getWindInfo(wind) {
+    let badge, color, desc;
+    if (wind < 5)       { badge='🍃 Calm';       color='#4ade80'; desc='Still air. Ideal for outdoor dining and events.'; }
+    else if (wind < 12) { badge='🌬 Light Breeze';color='#6ee7b7'; desc='Gentle breeze. Pleasant for most outdoor activities.'; }
+    else if (wind < 20) { badge='💨 Moderate';    color='#fbbf24'; desc='Noticeable wind. Loose items may be disturbed.'; }
+    else if (wind < 30) { badge='🌀 Strong';      color='#f97316'; desc='Strong wind. Secure loose outdoor items.'; }
+    else                { badge='⚠️ High Wind';   color='#f87171'; desc='Hazardous conditions. Secure all outdoor furniture.'; }
+    return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
+}
+
+// ── Trigger risks ─────────────────────────────────────────────────────────────
+function updateTriggers(temp, humidity, wind, precipChance) {
+    const set = (id, noteId, cls, text, note) => {
+        document.getElementById(id).className = 'trigger-level ' + cls;
+        document.getElementById(id).innerText = text;
+        document.getElementById(noteId).innerText = note;
+    };
+    // Mold — humidity
+    if (humidity >= 75)      set('mold-level','mold-note','level-high','High','Favor indoor air');
+    else if (humidity >= 60) set('mold-level','mold-note','level-mod','Moderate','Check damp areas');
+    else                     set('mold-level','mold-note','level-low','Low','Good conditions');
+    // Dust — wind
+    if (wind >= 20)      set('dust-level','dust-note','level-high','High','Close windows');
+    else if (wind >= 10) set('dust-level','dust-note','level-mod','Moderate','Some stirring');
+    else                 set('dust-level','dust-note','level-low','Low','Minimal disturbance');
+    // Heat stress — Rothfusz heat index
+    let hi = temp;
+    if (temp >= 80) hi = -42.379 + 2.04901523*temp + 10.14333127*humidity - 0.22475541*temp*humidity
+        - 0.00683783*temp*temp - 0.05481717*humidity*humidity + 0.00122874*temp*temp*humidity
+        + 0.00085282*temp*humidity*humidity - 0.00000199*temp*temp*humidity*humidity;
+    if (hi >= 103)      set('heat-level','heat-note','level-high','Dangerous','Limit time outside');
+    else if (hi >= 90)  set('heat-level','heat-note','level-mod','Caution','Stay hydrated');
+    else                set('heat-level','heat-note','level-low','Normal','Comfortable range');
+    // Rain relief — high precip chance washes pollen out of air
+    if (precipChance >= 60)      set('rain-level','rain-note','level-low','Washing','Rain clears pollen');
+    else if (precipChance >= 30) set('rain-level','rain-note','level-mod','Possible','Some relief likely');
+    else                         set('rain-level','rain-note','level-high','Dry','No pollen wash-out');
+}
+
+// ── Pollen chips ──────────────────────────────────────────────────────────────
+function setPollenLevel(level) {
+    currentPollenLevel = level;
+    document.querySelectorAll('.plvl-btn').forEach(btn => {
+        btn.className = 'plvl-btn';
+        if (parseInt(btn.dataset.level) === level) btn.classList.add('active-' + level);
+    });
+    if (navigator.vibrate) navigator.vibrate(15);
+    updatePollenChips();
+}
+function updatePollenChips() {
+    const month = new Date().getMonth(), wind = weatherData.wind || 0, hour = new Date().getHours();
+    let pollenType = month<=0||month>=11?'general':month<=4?'tree':month<=7?'grass':'ragweed';
+    const windowChip = (currentPollenLevel >= 3 || wind >= 15)
+        ? {icon:'🪟',text:'Keep windows closed — pollen transport elevated'}
+        : currentPollenLevel >= 2
+        ? {icon:'🪟',text:'Consider closing windows during peak hours'}
+        : {icon:'🪟',text:'Windows OK — pollen transport low today'};
+    const isPeak = hour>=5&&hour<=10, isMid = hour>=11&&hour<=16;
+    const timeChip = currentPollenLevel >= 4
+        ? {icon:'⏰',text: isPeak?'High pollen + peak hours — minimize outdoor time':'High pollen today — keep trips short'}
+        : currentPollenLevel >= 2
+        ? {icon:'⏰',text: isPeak?'Moderate pollen + peak hours — shorter outings':isMid?'Moderate pollen — afternoon OK':'Pollen lower now — good time to go out'}
+        : {icon:'⏰',text: isPeak?'Low pollen — enjoy the outdoors':'Good conditions for outdoor activity'};
+    const tips = {
+        tree:   [['🌳','Change clothes after being outside'],['🌳','Avoid shaking out clothing indoors'],['🌳','Shower after extended time outdoors']],
+        grass:  [['👟','Wipe shoes before entering home'],['👟','Use a dust mask when mowing'],['👟','Avoid mowing and sitting in grass']],
+        ragweed:[['🚿','Rinse hair after prolonged outdoor time'],['🚿','Keep car windows up when driving'],['🚿','Rinse hair and wash face after going out']],
+        general:[['🧤','Wash hands after time outdoors'],['🧤','Rinse off after outdoor activity'],['🧤','Shower and change clothes when returning inside']]
+    };
+    const ti = currentPollenLevel===null?0:currentPollenLevel<=1?0:currentPollenLevel<=2?1:2;
+    const [icon, text] = tips[pollenType][ti];
+    const chips = [windowChip, timeChip, {icon, text}];
+    document.getElementById('pollen-chips').innerHTML = chips.map(c=>
+        `<div class="chip"><span style="font-size:1rem">${c.icon}</span>${c.text}</div>`).join('');
+}
+
+// ── AQI (AirNow) — commented out until API key is configured ─────────────────
+/* async function updateAQI(zip) {
+    try {
+        const res = await fetch(`https://www.airnowapi.org/aq/observation/zipCode/current/?format=application/json&zipCode=${zip}&distance=25&API_KEY=YOUR_KEY_HERE`);
+        const data = await res.json();
+        if (!data || !data.length) { document.getElementById('aqi-label').innerText = 'No data'; return; }
+        const top = data.reduce((a, b) => a.AQI > b.AQI ? a : b);
+        const aqi = top.AQI;
+        document.getElementById('aqi-val').innerText = aqi;
+        document.getElementById('aqi-main-pollutant').innerText = `Primary pollutant: ${top.ParameterName}`;
+        let label, color;
+        if (aqi <= 50)       { label='Good';               color='#4ade80'; }
+        else if (aqi <= 100) { label='Moderate';           color='#fbbf24'; }
+        else if (aqi <= 150) { label='Unhealthy for Some'; color='#f97316'; }
+        else if (aqi <= 200) { label='Unhealthy';          color='#f87171'; }
+        else if (aqi <= 300) { label='Very Unhealthy';     color='#c084fc'; }
+        else                 { label='Hazardous';          color='#7f1d1d'; }
+        document.getElementById('aqi-label').innerText = label;
+        document.getElementById('aqi-label').style.color = color;
+        document.getElementById('aqi-val').style.color = color;
+        const pct = Math.min((aqi / 300) * 100, 100);
+        document.getElementById('aqi-dot').style.left = pct + '%';
+    } catch(e) { document.getElementById('aqi-label').innerText = 'Unavailable'; }
+} */
+
+// ── Sun times ─────────────────────────────────────────────────────────────────
+function calcSunTimes(lat, lon) {
+    const now = new Date();
+    const n = Math.floor(now.getTime()/86400000) + 2440587.5 - 2451545.0;
+    const L = (280.46 + 0.9856474*n) % 360;
+    const g = (357.528 + 0.9856003*n) % 360;
+    const gR = g*Math.PI/180;
+    const lambda = L + 1.915*Math.sin(gR) + 0.02*Math.sin(2*gR);
+    const sinDec = Math.sin(23.439*Math.PI/180) * Math.sin(lambda*Math.PI/180);
+    const dec = Math.asin(sinDec);
+    const cosHA = (Math.cos(90.833*Math.PI/180) - Math.sin(lat*Math.PI/180)*sinDec) /
+                  (Math.cos(lat*Math.PI/180)*Math.cos(dec));
+    if (cosHA<-1||cosHA>1) return null;
+    const HA = Math.acos(cosHA)*180/Math.PI;
+    const noon = 720 - 4*lon;
+    const srMin = noon - HA*4, ssMin = noon + HA*4;
+    const toLocal = m => { const d=new Date(now); d.setUTCHours(0,0,0,0); d.setTime(d.getTime()+m*60000);
+        return d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); };
+    const nowMin = now.getUTCHours()*60+now.getUTCMinutes();
+    return { sunrise:toLocal(srMin), sunset:toLocal(ssMin),
+             daylight:((ssMin-srMin)/60).toFixed(1),
+             progressPct: nowMin<srMin?0:nowMin>ssMin?1:(nowMin-srMin)/(ssMin-srMin) };
+}
+function updateSunWidget(lat, lon) {
+    const sun = calcSunTimes(lat, lon); if (!sun) return;
+    document.getElementById('sunrise-time').innerText = sun.sunrise;
+    document.getElementById('sunset-time').innerText  = sun.sunset;
+    document.getElementById('daylight-label').innerText = sun.daylight + ' hrs';
+    const prog = document.getElementById('sun-arc-progress');
+    prog.style.transition = 'stroke-dashoffset 1s ease';
+    prog.setAttribute('stroke-dashoffset', 157 - sun.progressPct*157);
+    const a = Math.PI - sun.progressPct*Math.PI;
+    document.getElementById('sun-dot').setAttribute('cx', 60-50*Math.cos(a));
+    document.getElementById('sun-dot').setAttribute('cy', 55-50*Math.sin(a));
+}
+
+// ── VPN detection ─────────────────────────────────────────────────────────────
+async function checkVPN() {
+    try {
+        const d = await (await fetch('https://ipapi.co/json/')).json();
+        const org = (d.org||'').toLowerCase();
+        const isVPN = ['apple','icloud','private relay','vpn','mullvad','nordvpn','expressvpn','proton','tor project']
+            .some(k=>org.includes(k)) || d.privacy?.vpn || d.privacy?.proxy || d.privacy?.relay;
+        if (isVPN) { document.getElementById('vpn-badge').classList.add('visible'); document.getElementById('gps-btn').classList.add('pulse'); }
+    } catch(e) {}
+}
+function clearVPNWarning() {
+    document.getElementById('vpn-badge').classList.remove('visible');
+    document.getElementById('gps-btn').classList.remove('pulse');
+}
+
+// ── Widget updates ────────────────────────────────────────────────────────────
+function updatePollenWidget(zip) {
+    currentZip = zip;
+    document.getElementById('pollen-iframe').src = `/pollen-test.html?zip=${zip}&t=${Date.now()}`;
+}
+function updateRadar(lat, lon) {
+    document.getElementById('radar-iframe').src =
+        `https://www.rainviewer.com/map.html?loc=${lat},${lon},8&oFa=0&oC=0&oU=0&oCS=1&oF=0&oAP=0&rmt=4&c=3&o=83&lm=1&layer=radar&sm=1&sn=1`;
+}
+
+// ── GPS ───────────────────────────────────────────────────────────────────────
+async function getGPS() {
+    document.getElementById('gps-text').innerText = "Locating...";
+    if (navigator.vibrate) navigator.vibrate(20);
+    if (!navigator.geolocation) { document.getElementById('gps-text').innerText = "GPS Not Supported"; return; }
+    navigator.geolocation.getCurrentPosition(
+        p => { clearVPNWarning(); update(p.coords.latitude, p.coords.longitude, null, null); },
+        () => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
+    );
+}
+
+// ── Zip search ────────────────────────────────────────────────────────────────
+async function searchZip() {
+    const zip = document.getElementById('zip-input').value.trim();
+    if (!/^\d{5}$/.test(zip)) {
+        document.getElementById('zip-input').style.outline = '2px solid #f87171';
+        setTimeout(() => document.getElementById('zip-input').style.outline = '', 1500);
+        return;
+    }
+    document.getElementById('zip-input').style.outline = '';
+    if (navigator.vibrate) navigator.vibrate(20);
+    try {
+        const data = await (await fetch(`https://api.zippopotam.us/us/${zip}`)).json();
+        clearVPNWarning();
+        update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
+    } catch(e) { document.getElementById('updated').innerText = "Invalid ZIP code."; }
+}
+
+// ── Main update ───────────────────────────────────────────────────────────────
+async function update(lat=null, lon=null, name=null, zip=null) {
+    showSkeletons();
+    try {
+        let url = `https://pollen-data.acekallas.com/`;
+        const params = [];
+        if (lat) { params.push(`lat=${lat}`,`lon=${lon}`); }
+        if (name) params.push(`name=${encodeURIComponent(name)}`);
+        if (params.length) url += '?' + params.join('&');
+
+        const r = await fetch(url);
+        const d = await r.json();
+        weatherData = d;
+
+        // Weather icon + city
+        document.getElementById('weather-icon').innerText = getWeatherIcon(d.weatherCode || 1000);
+        document.getElementById('city-title').innerText = d.city;
+
+        // Cards
+        document.getElementById('temp').innerText      = d.temp + "°";
+        document.getElementById('feels').innerText     = "Feels " + d.feelsLike + "°";
+        document.getElementById('hum').innerText       = d.humidity + "%";
+        document.getElementById('uv').innerText        = d.uv;
+        document.getElementById('wind').innerText      = d.wind + " mph";
+        document.getElementById('precip').innerText    = (d.precipChance ?? '--') + "%";
+        document.getElementById('visibility').innerText= (d.visibility ?? '--') + " mi";
+
+        const cacheLabel = (r.headers.get('X-Cache')==='HIT'||r.headers.get('cf-cache-status')==='HIT') ? ' · ⚡ Cached' : '';
+        document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}`;
+        document.getElementById('wash-text').innerText = (d.uv>1&&d.wind<18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
+        if (lat) document.getElementById('gps-text').innerText = "Location Verified";
+
+        // Info panels
+        document.getElementById('temp-info-text').innerHTML = getTempInfo(d.temp, d.feelsLike, d.humidity);
+        document.getElementById('hum-info-text').innerHTML  = getHumidityInfo(d.humidity);
+        document.getElementById('uv-info-text').innerHTML   = getUVInfo(d.uv);
+        document.getElementById('wind-info-text').innerHTML = getWindInfo(d.wind);
+
+        // Derived widgets
+        updateTriggers(d.temp, d.humidity, d.wind, d.precipChance || 0);
         updatePollenChips();
+
+        currentLat = d.lat || lat || currentLat;
+        currentLon = d.lon || lon || currentLon;
+        updateSunWidget(currentLat, currentLon);
+        updateRadar(currentLat, currentLon);
+
+        const targetZip = zip || currentZip;
+        // updateAQI(targetZip); // ← uncomment when AirNow API key is ready
+        if (targetZip !== currentZip) updatePollenWidget(targetZip);
+        else currentZip = targetZip;
+
+        // Haptic on success
+        if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+
+        hideSkeletons();
+
+        // Schedule next auto-refresh in 10 min
+        clearTimeout(autoRefreshTimer);
+        autoRefreshTimer = setTimeout(() => update(currentLat, currentLon), 10 * 60 * 1000);
+
+    } catch(e) {
+        console.error(e);
+        hideSkeletons();
+        document.getElementById('updated').innerText = "Unable to connect — retrying...";
+        setTimeout(() => update(lat, lon, name, zip), 5000);
     }
+}
 
-    function updatePollenChips() {
-        const month = new Date().getMonth();
-        const wind  = weatherData.wind || 0;
-        const hour  = new Date().getHours();
-
-        // Season → pollen type
-        let pollenType;
-        if (month >= 1 && month <= 4)       pollenType = 'tree';
-        else if (month >= 5 && month <= 7)  pollenType = 'grass';
-        else if (month >= 8 && month <= 10) pollenType = 'ragweed';
-        else                                pollenType = 'general';
-
-        // Chip 1 — window guidance: wind-driven + pollen level adjusted
-        let windowChip;
-        if (currentPollenLevel >= 3 || wind >= 15)
-            windowChip = { icon: '🪟', text: 'Keep windows closed — pollen transport elevated' };
-        else if (currentPollenLevel >= 2)
-            windowChip = { icon: '🪟', text: 'Consider keeping windows closed during peak hours' };
-        else
-            windowChip = { icon: '🪟', text: 'Windows OK — pollen transport low today' };
-
-        // Chip 2 — outdoor timing: hour-driven + scaled by level
-        let timeChip;
-        const isPeak = hour >= 5 && hour <= 10;
-        const isMid  = hour >= 11 && hour <= 16;
-        if (currentPollenLevel >= 4)
-            timeChip = isPeak
-                ? { icon: '⏰', text: 'High pollen + peak hours — minimize outdoor time' }
-                : { icon: '⏰', text: 'High pollen today — keep outdoor trips short' };
-        else if (currentPollenLevel >= 2)
-            timeChip = isPeak
-                ? { icon: '⏰', text: 'Moderate pollen + peak hours — plan shorter outings' }
-                : isMid
-                ? { icon: '⏰', text: 'Moderate pollen — afternoon outdoor activity OK' }
-                : { icon: '⏰', text: 'Pollen levels lower now — good time to go out' };
-        else
-            timeChip = { icon: '⏰', text: isPeak ? 'Low pollen — enjoy the outdoors' : 'Good conditions for outdoor activity' };
-
-        // Chip 3 — protection tip: season-based, intensity scaled by level
-        const protectTips = {
-            tree: [
-                { icon: '🌳', text: 'Tree pollen season — change clothes after being outside' },
-                { icon: '🌳', text: 'Tree pollen elevated — avoid shaking out clothing indoors' },
-                { icon: '🌳', text: 'High tree pollen — shower after extended time outdoors' },
-            ],
-            grass: [
-                { icon: '👟', text: 'Grass pollen season — wipe shoes before entering home' },
-                { icon: '👟', text: 'Moderate grass pollen — mow with a dust mask if needed' },
-                { icon: '👟', text: 'High grass pollen — avoid mowing and sitting in grass' },
-            ],
-            ragweed: [
-                { icon: '🚿', text: 'Ragweed season — rinse hair after prolonged time outdoors' },
-                { icon: '🚿', text: 'Ragweed elevated — keep car windows up when driving' },
-                { icon: '🚿', text: 'High ragweed — rinse hair and wash face after going out' },
-            ],
-            general: [
-                { icon: '🧤', text: 'Wash hands and face after extended time outdoors' },
-                { icon: '🧤', text: 'Elevated pollen — rinse off after outdoor activity' },
-                { icon: '🧤', text: 'High pollen — shower and change clothes when returning inside' },
-            ]
-        };
-        const tipIdx = currentPollenLevel === null ? 0
-                     : currentPollenLevel <= 1     ? 0
-                     : currentPollenLevel <= 2     ? 1 : 2;
-        const protectChip = protectTips[pollenType][tipIdx];
-
-        const chips = [windowChip, timeChip, protectChip];
-        const container = document.getElementById('pollen-chips');
-        container.innerHTML = chips.map(c =>
-            `<div class="chip"><span class="chip-icon">${c.icon}</span>${c.text}</div>`
-        ).join('');
-    }
-
-    // ── Sunrise / Sunset (NOAA algorithm) ────────────────────────────────────
-    function calcSunTimes(lat, lon) {
-        const now = new Date();
-        const JD = Math.floor(now.getTime() / 86400000) + 2440587.5;
-        const n = JD - 2451545.0;
-        const L = (280.46 + 0.9856474 * n) % 360;
-        const g = (357.528 + 0.9856003 * n) % 360;
-        const gR = g * Math.PI / 180;
-        const lambda = L + 1.915 * Math.sin(gR) + 0.02 * Math.sin(2 * gR);
-        const lambdaR = lambda * Math.PI / 180;
-        const epsilon = 23.439 - 0.0000004 * n;
-        const epsilonR = epsilon * Math.PI / 180;
-        const sinDec = Math.sin(epsilonR) * Math.sin(lambdaR);
-        const dec = Math.asin(sinDec);
-        const cosHA = (Math.cos(90.833 * Math.PI / 180) - Math.sin(lat * Math.PI / 180) * sinDec) /
-                      (Math.cos(lat * Math.PI / 180) * Math.cos(dec));
-        if (cosHA < -1 || cosHA > 1) return null;
-        const HA = Math.acos(cosHA) * 180 / Math.PI;
-        const EqT = 0;
-        const noon = 720 - 4 * lon - EqT;
-        const sunriseMin = noon - HA * 4;
-        const sunsetMin  = noon + HA * 4;
-        function minsToLocal(utcMins) {
-            const d = new Date(now); d.setUTCHours(0,0,0,0);
-            d.setTime(d.getTime() + utcMins * 60000);
-            return d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
-        }
-        const nowMins = now.getUTCHours() * 60 + now.getUTCMinutes();
-        return {
-            sunrise: minsToLocal(sunriseMin),
-            sunset:  minsToLocal(sunsetMin),
-            daylight: ((sunsetMin - sunriseMin) / 60).toFixed(1),
-            progressPct: nowMins < sunriseMin ? 0 : nowMins > sunsetMin ? 1 : (nowMins - sunriseMin) / (sunsetMin - sunriseMin)
-        };
-    }
-
-    function updateSunWidget(lat, lon) {
-        const sun = calcSunTimes(lat, lon);
-        if (!sun) return;
-        document.getElementById('sunrise-time').innerText = sun.sunrise;
-        document.getElementById('sunset-time').innerText  = sun.sunset;
-        document.getElementById('daylight-label').innerText = sun.daylight + ' hrs daylight';
-        const arcLength = 157;
-        const progress = document.getElementById('sun-arc-progress');
-        progress.style.transition = 'stroke-dashoffset 1s ease';
-        progress.setAttribute('stroke-dashoffset', arcLength - sun.progressPct * arcLength);
-        const angle = Math.PI - sun.progressPct * Math.PI;
-        document.getElementById('sun-dot').setAttribute('cx', 60 - 50 * Math.cos(angle));
-        document.getElementById('sun-dot').setAttribute('cy', 55 - 50 * Math.sin(angle));
-    }
-
-    // ── VPN detection ─────────────────────────────────────────────────────────
-    async function checkVPN() {
-        try {
-            const res = await fetch('https://ipapi.co/json/');
-            const data = await res.json();
-            const org = (data.org || '').toLowerCase();
-            const isVPN = org.includes('apple') || org.includes('icloud') || org.includes('private relay') ||
-                          org.includes('vpn') || org.includes('mullvad') || org.includes('nordvpn') ||
-                          org.includes('expressvpn') || org.includes('proton') || org.includes('tor project') ||
-                          data.privacy?.vpn || data.privacy?.proxy || data.privacy?.relay;
-            if (isVPN) {
-                document.getElementById('vpn-badge').classList.add('visible');
-                document.getElementById('gps-btn').classList.add('pulse');
-            }
-        } catch(e) {}
-    }
-
-    function clearVPNWarning() {
-        document.getElementById('vpn-badge').classList.remove('visible');
-        document.getElementById('gps-btn').classList.remove('pulse');
-    }
-
-    function updatePollenWidget(zip) {
-        currentZip = zip;
-        document.getElementById('pollen-iframe').src = `/pollen-test.html?zip=${zip}&t=${Date.now()}`;
-    }
-
-    function updateRadar(lat, lon) {
-        document.getElementById('radar-iframe').src =
-            `https://www.rainviewer.com/map.html?loc=${lat},${lon},8&oFa=0&oC=0&oU=0&oCS=1&oF=0&oAP=0&rmt=4&c=3&o=83&lm=1&layer=radar&sm=1&sn=1`;
-    }
-
-    async function getGPS() {
-        document.getElementById('gps-text').innerText = "Locating...";
-        if (!navigator.geolocation) { document.getElementById('gps-text').innerText = "GPS Not Supported"; return; }
-        navigator.geolocation.getCurrentPosition(
-            p => { clearVPNWarning(); update(p.coords.latitude, p.coords.longitude, null, null); },
-            e => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
-        );
-    }
-
-    async function searchZip() {
-        const zip = document.getElementById('zip-input').value.trim();
-        if (!/^\d{5}$/.test(zip)) {
-            document.getElementById('zip-input').style.outline = '2px solid #f87171';
-            setTimeout(() => document.getElementById('zip-input').style.outline = '', 1500);
-            return;
-        }
-        document.getElementById('zip-input').style.outline = '';
-        try {
-            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
-            if (!res.ok) throw new Error("Invalid ZIP");
-            const data = await res.json();
-            clearVPNWarning();
-            update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
-        } catch(e) { document.getElementById('updated').innerText = "Invalid ZIP code."; }
-    }
-
-    async function update(lat = null, lon = null, name = null, zip = null) {
-        try {
-            let url = `https://pollen-data.acekallas.com/`;
-            const params = [];
-            if (lat) { params.push(`lat=${lat}`, `lon=${lon}`); }
-            if (name) { params.push(`name=${encodeURIComponent(name)}`); }
-            if (params.length) url += '?' + params.join('&');
-
-            const r = await fetch(url);
-            const d = await r.json();
-
-            weatherData = d;
-
-            document.getElementById('city-title').innerText = d.city;
-            document.getElementById('temp').innerText  = d.temp + "°";
-            document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
-            document.getElementById('hum').innerText   = d.humidity + "%";
-            document.getElementById('uv').innerText    = d.uv;
-            document.getElementById('wind').innerText  = d.wind + " mph";
-
-            const workerCache = r.headers.get('X-Cache');
-            const cfCache     = r.headers.get('cf-cache-status');
-            const cacheLabel  = (workerCache === 'HIT' || cfCache === 'HIT') ? ' · ⚡ Cached' : '';
-            document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}`;
-
-            document.getElementById('wash-text').innerText =
-                (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-
-            if (lat) document.getElementById('gps-text').innerText = "Location Verified";
-
-            // Update info panel content (silently — only shown when tapped)
-            document.getElementById('temp-info-text').innerHTML  = getTempInfo(d.temp, d.feelsLike, d.humidity);
-            document.getElementById('hum-info-text').innerHTML   = getHumidityInfo(d.humidity);
-            document.getElementById('uv-info-text').innerHTML    = getUVInfo(d.uv);
-            document.getElementById('wind-info-text').innerHTML  = getWindInfo(d.wind);
-
-            // Update trigger risks
-            updateTriggers(d.temp, d.humidity, d.wind);
-
-            // Update pollen chips
-            updatePollenChips();
-
-            // Sun widget + radar
-            currentLat = d.lat || lat || currentLat;
-            currentLon = d.lon || lon || currentLon;
-            updateSunWidget(currentLat, currentLon);
-            updateRadar(currentLat, currentLon);
-
-            // Pollen iframe
-            const targetZip = zip || '78015';
-            if (targetZip !== currentZip) updatePollenWidget(targetZip);
-
-        } catch(e) {
-            console.error("Update error:", e);
-            document.getElementById('updated').innerText = "Unable to connect — retrying...";
-            setTimeout(() => update(lat, lon, name, zip), 5000);
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => { update(); checkVPN(); });
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.getElementById('zip-input').addEventListener('keydown', e => { if(e.key==='Enter') searchZip(); });
+document.addEventListener('DOMContentLoaded', () => {
+    update();
+    checkVPN();
+    updatePollenChips();
+});
 </script>
 </body>
 </html>
