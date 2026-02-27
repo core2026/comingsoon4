@@ -41,10 +41,6 @@
     </div>
 
     <div class="grid">
-        <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
-        </div>
-
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
@@ -60,17 +56,8 @@
     </div>
 </div>
 
-<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
-
 <script>
     lucide.createIcons();
-
-    function initPollenWidget() {
-        // Force re-initialization if AA object exists
-        if (window.AA && typeof window.AA.init === 'function') {
-            window.AA.init();
-        }
-    }
 
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
@@ -107,9 +94,6 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // Re-initialize after weather update too
-            setTimeout(initPollenWidget, 500);
-            
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
@@ -118,9 +102,8 @@
 
     window.onload = () => {
         update();
-        // Give the script extra time to load
-        setTimeout(initPollenWidget, 1500); 
     };
 </script>
+
 </body>
 </html>
