@@ -20,7 +20,11 @@
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; background: var(--card); border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; padding: 10px 0; }
+        
+        /* Allergy Widget Styling with Loader */
+        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; background: var(--card); border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; padding: 10px 0; min-height: 270px; position: relative;}
+        .loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--label); font-weight: 700; font-size: 0.8rem; }
+        
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         h1 { font-size: 2rem; font-weight: 800; margin: 0; }
@@ -40,6 +44,7 @@
 
     <div class="grid">
         <div class="widget-card" id="allergy-container">
+            <div class="loader">Loading Allergy Data...</div>
             </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -60,15 +65,22 @@
 <script>
     lucide.createIcons();
 
-    // FIX: Rebuilds the inner HTML to force widget re-render
+    // FIX: Rebuilds the inner HTML to force widget re-render and adds loading state
     function refreshAllergyWidget(zipCode) {
         const container = document.getElementById('allergy-container');
-        container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zipCode}" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>`;
         
-        // Re-initialize the widget script if it exists
-        if (window.AA && typeof window.AA.init === 'function') {
-            window.AA.init();
-        }
+        // Show loading indicator
+        container.innerHTML = `<div class="loader">Loading Allergy Data...</div>`;
+        
+        // Re-inject the widget structure after a short delay to allow for DOM update
+        setTimeout(() => {
+            container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zipCode}" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>`;
+            
+            // Re-initialize the widget script if it exists
+            if (window.AA && typeof window.AA.init === 'function') {
+                window.AA.init();
+            }
+        }, 300);
     }
 
     async function getGPS() {
