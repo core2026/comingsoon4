@@ -13,7 +13,6 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; position: relative; }
 
-        /* GPS button — pulses when VPN/relay detected */
         #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; box-sizing: border-box; transition: border-color 0.3s; }
         #gps-btn.pulse { border-color: #fb923c; animation: gps-pulse 1.8s ease-in-out infinite; }
         @keyframes gps-pulse {
@@ -29,40 +28,25 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
 
-        /* VPN warning badge next to city name */
-        #vpn-badge {
-            display: none;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.7rem;
-            font-weight: 800;
-            color: #fb923c;
-            background: rgba(251, 146, 60, 0.12);
-            border: 1px solid rgba(251, 146, 60, 0.3);
-            border-radius: 8px;
-            padding: 3px 8px;
-            margin-left: 10px;
-            vertical-align: middle;
-            cursor: default;
-            white-space: nowrap;
-        }
+        /* VPN warning badge */
+        #vpn-badge { display: none; align-items: center; gap: 5px; font-size: 0.7rem; font-weight: 800; color: #fb923c; background: rgba(251, 146, 60, 0.12); border: 1px solid rgba(251, 146, 60, 0.3); border-radius: 8px; padding: 3px 8px; margin-left: 10px; vertical-align: middle; cursor: default; white-space: nowrap; }
         #vpn-badge.visible { display: inline-flex; }
 
-        /* Allergy Widget iframe — fills the card cleanly */
-        .widget-spacer {
-            grid-column: span 2;
-            background: #fff;
-            border-radius: 24px;
-            overflow: hidden;
-            padding: 0;
-            line-height: 0; /* removes inline gap under iframe */
-        }
-        #pollen-iframe {
-            width: 100%;
-            height: 270px;
-            border: none;
-            display: block;
-        }
+        /* Pollen iframe — dark background, no white flash */
+        .widget-spacer { grid-column: span 2; background: var(--card); border-radius: 24px; overflow: hidden; padding: 0; line-height: 0; border: 1px solid rgba(255,255,255,0.05); position: relative; }
+        #pollen-iframe { width: 100%; height: 270px; border: none; display: block; }
+
+        /* Sunrise/Sunset card */
+        .sun-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); padding: 20px; }
+        .sun-row { display: flex; justify-content: space-around; align-items: center; }
+        .sun-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .sun-item .sun-icon { width: 32px; height: 32px; }
+        .sun-item .sun-time { font-size: 1.4rem; font-weight: 800; color: #fff; }
+        .sun-item .sun-label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
+        .sun-divider { width: 1px; height: 50px; background: rgba(255,255,255,0.1); }
+
+        /* Progress arc container */
+        .sun-arc { grid-column: span 2; position: relative; display: flex; flex-direction: column; align-items: center; }
 
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
@@ -102,6 +86,36 @@
             </div>
         </div>
 
+        <!-- Sunrise / Sunset -->
+        <div class="sun-card">
+            <span class="label" style="display:block; margin-bottom: 14px;">☀️ Sun Schedule</span>
+            <div class="sun-row">
+                <div class="sun-item">
+                    <i data-lucide="sunrise" style="color: #fbbf24; width:32px; height:32px;"></i>
+                    <span class="sun-time" id="sunrise-time">--:--</span>
+                    <span class="sun-label">Sunrise</span>
+                </div>
+                <div class="sun-divider"></div>
+                <div class="sun-item">
+                    <svg id="sun-arc-svg" viewBox="0 0 120 60" style="width:80px; height:40px;">
+                        <!-- Arc track -->
+                        <path d="M10,55 A50,50 0 0,1 110,55" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="4" stroke-linecap="round"/>
+                        <!-- Arc progress -->
+                        <path id="sun-arc-progress" d="M10,55 A50,50 0 0,1 110,55" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157"/>
+                        <!-- Sun dot -->
+                        <circle id="sun-dot" cx="10" cy="55" r="5" fill="#fbbf24"/>
+                    </svg>
+                    <span class="sun-label" id="daylight-label">-- hrs daylight</span>
+                </div>
+                <div class="sun-divider"></div>
+                <div class="sun-item">
+                    <i data-lucide="sunset" style="color: #f97316; width:32px; height:32px;"></i>
+                    <span class="sun-time" id="sunset-time">--:--</span>
+                    <span class="sun-label">Sunset</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Pollen widget in isolated iframe -->
         <div class="widget-spacer">
             <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
@@ -113,41 +127,102 @@
     lucide.createIcons();
 
     let currentZip = '78015';
+    let currentLat = 29.7408;
+    let currentLon = -98.6444;
 
-    // Enter key on zip input
     document.getElementById('zip-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') searchZip();
     });
 
-    // VPN / iCloud Private Relay detection
-    // Strategy: compare the IP the worker sees (cf.latitude/longitude) against
-    // a known IP geolocation service. If they disagree significantly, flag it.
-    // Simpler approach: check if the Cloudflare-detected city matches a known
-    // relay/proxy ASN by fetching ipapi and comparing ASN org name.
+    // ── Sunrise / Sunset calculation (NOAA algorithm, no API needed) ──────────
+    function calcSunTimes(lat, lon) {
+        const now = new Date();
+        const JD = Math.floor(now.getTime() / 86400000) + 2440587.5;
+        const n = JD - 2451545.0;
+        const L = (280.46 + 0.9856474 * n) % 360;
+        const g = (357.528 + 0.9856003 * n) % 360;
+        const gR = g * Math.PI / 180;
+        const lambda = L + 1.915 * Math.sin(gR) + 0.02 * Math.sin(2 * gR);
+        const lambdaR = lambda * Math.PI / 180;
+        const epsilon = 23.439 - 0.0000004 * n;
+        const epsilonR = epsilon * Math.PI / 180;
+        const sinDec = Math.sin(epsilonR) * Math.sin(lambdaR);
+        const dec = Math.asin(sinDec);
+        const cosHA = (Math.cos(90.833 * Math.PI / 180) - Math.sin(lat * Math.PI / 180) * sinDec) /
+                      (Math.cos(lat * Math.PI / 180) * Math.cos(dec));
+        if (cosHA < -1 || cosHA > 1) return null; // polar day/night
+        const HA = Math.acos(cosHA) * 180 / Math.PI;
+        const EqT = (L - lambda + (180 - 357.528 - 0.9856003 * n > 0 ? 0 : 0)) * 4;
+        const noon = 720 - 4 * lon - EqT;
+        const sunriseMin = noon - HA * 4;
+        const sunsetMin  = noon + HA * 4;
+
+        // Convert minutes-from-midnight UTC to local time string
+        function minsToLocal(utcMins) {
+            const d = new Date(now);
+            d.setUTCHours(0, 0, 0, 0);
+            d.setTime(d.getTime() + utcMins * 60000);
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        }
+
+        const daylightHours = ((sunsetMin - sunriseMin) / 60).toFixed(1);
+
+        return {
+            sunrise: minsToLocal(sunriseMin),
+            sunset:  minsToLocal(sunsetMin),
+            daylight: daylightHours,
+            progressPct: (() => {
+                const nowMins = now.getUTCHours() * 60 + now.getUTCMinutes();
+                if (nowMins < sunriseMin) return 0;
+                if (nowMins > sunsetMin)  return 1;
+                return (nowMins - sunriseMin) / (sunsetMin - sunriseMin);
+            })()
+        };
+    }
+
+    function updateSunWidget(lat, lon) {
+        const sun = calcSunTimes(lat, lon);
+        if (!sun) return;
+
+        document.getElementById('sunrise-time').innerText = sun.sunrise;
+        document.getElementById('sunset-time').innerText  = sun.sunset;
+        document.getElementById('daylight-label').innerText = sun.daylight + ' hrs daylight';
+
+        // Animate the arc progress
+        const arcLength = 157;
+        const offset = arcLength - (sun.progressPct * arcLength);
+        const progress = document.getElementById('sun-arc-progress');
+        progress.style.transition = 'stroke-dashoffset 1s ease';
+        progress.setAttribute('stroke-dashoffset', offset);
+
+        // Move the sun dot along the arc
+        const angle = Math.PI - (sun.progressPct * Math.PI); // 180° to 0°
+        const cx = 60 - 50 * Math.cos(angle);
+        const cy = 55 - 50 * Math.sin(angle);
+        document.getElementById('sun-dot').setAttribute('cx', cx);
+        document.getElementById('sun-dot').setAttribute('cy', cy);
+    }
+
+    // ── VPN / iCloud Private Relay detection ─────────────────────────────────
     async function checkVPN() {
         try {
             const res = await fetch('https://ipapi.co/json/');
             const data = await res.json();
             const org = (data.org || '').toLowerCase();
-            const isVPN = org.includes('apple') || 
-                          org.includes('icloud') || 
-                          org.includes('private relay') ||
-                          org.includes('vpn') ||
-                          org.includes('mullvad') ||
-                          org.includes('nordvpn') ||
-                          org.includes('expressvpn') ||
-                          org.includes('proton') ||
-                          org.includes('tor project') ||
-                          data.privacy?.vpn || 
-                          data.privacy?.proxy || 
-                          data.privacy?.relay;
+            const isVPN = org.includes('apple') || org.includes('icloud') || org.includes('private relay') ||
+                          org.includes('vpn') || org.includes('mullvad') || org.includes('nordvpn') ||
+                          org.includes('expressvpn') || org.includes('proton') || org.includes('tor project') ||
+                          data.privacy?.vpn || data.privacy?.proxy || data.privacy?.relay;
             if (isVPN) {
                 document.getElementById('vpn-badge').classList.add('visible');
                 document.getElementById('gps-btn').classList.add('pulse');
             }
-        } catch (e) {
-            // Silently fail — don't block anything if this check errors
-        }
+        } catch (e) { /* silently fail */ }
+    }
+
+    function clearVPNWarning() {
+        document.getElementById('vpn-badge').classList.remove('visible');
+        document.getElementById('gps-btn').classList.remove('pulse');
     }
 
     function updatePollenWidget(zip) {
@@ -162,12 +237,7 @@
             return;
         }
         navigator.geolocation.getCurrentPosition(
-            p => {
-                // GPS confirmed — remove VPN warning since user has verified location
-                document.getElementById('vpn-badge').classList.remove('visible');
-                document.getElementById('gps-btn').classList.remove('pulse');
-                update(p.coords.latitude, p.coords.longitude, null, null);
-            },
+            p => { clearVPNWarning(); update(p.coords.latitude, p.coords.longitude, null, null); },
             e => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
         );
     }
@@ -184,9 +254,7 @@
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
             if (!res.ok) throw new Error("Invalid ZIP");
             const data = await res.json();
-            // Manual zip entry also clears VPN warning
-            document.getElementById('vpn-badge').classList.remove('visible');
-            document.getElementById('gps-btn').classList.remove('pulse');
+            clearVPNWarning();
             update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
         } catch (e) {
             document.getElementById('updated').innerText = "Invalid ZIP code.";
@@ -221,11 +289,14 @@
 
             if (lat) document.getElementById('gps-text').innerText = "Location Verified";
 
+            // Store lat/lon and update sun widget
+            currentLat = d.lat || lat || currentLat;
+            currentLon = d.lon || lon || currentLon;
+            updateSunWidget(currentLat, currentLon);
+
             // Update pollen widget if zip changed
             const targetZip = zip || '78015';
-            if (targetZip !== currentZip) {
-                updatePollenWidget(targetZip);
-            }
+            if (targetZip !== currentZip) updatePollenWidget(targetZip);
 
         } catch (e) {
             console.error("Update error:", e);
