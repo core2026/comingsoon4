@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Acekallas | Personal Weather Station</title>
+    <title>Acekallas | Personal Weather Hub</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -13,21 +13,26 @@
         .container { width: 100%; max-width: 480px; padding-bottom: 60px; }
         
         /* Proxy / Relay Badge */
-        .proxy-badge { display: none; font-size: 10px; background: var(--warning); color: #000; padding: 4px 8px; border-radius: 20px; font-weight: 800; vertical-align: middle; margin-left: 10px; }
+        .proxy-badge { display: none; font-size: 9px; background: var(--warning); color: #000; padding: 5px 10px; border-radius: 8px; font-weight: 800; margin-left: 10px; line-height: 1.2; border: 1px solid rgba(0,0,0,0.1); }
         
         #ticker { display: none; background: var(--alert); color: white; padding: 12px; font-weight: 800; font-size: 0.75rem; text-align: center; border-radius: 12px; margin-bottom: 15px; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
-        #gps-btn { background: var(--accent); color: white; border: none; font-size: 0.7rem; font-weight: 800; padding: 12px; border-radius: 12px; width: 100%; margin-top: 10px; cursor: pointer; transition: 0.3s; }
-        .pulse { animation: p-ring 2s infinite; }
-        @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(56,189,248,0.4); } 70% { box-shadow: 0 0 0 10px rgba(56,189,248,0); } }
+        
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center; }
+        
+        /* Pulsing GPS Button */
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; font-weight: 800; padding: 14px; border-radius: 16px; width: 100%; margin-top: 10px; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .pulse-warning { background: var(--warning) !important; color: #000 !important; animation: p-ring 1.5s infinite; border: none !important; }
+        
+        @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); } 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); } }
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); position: relative; overflow: hidden; }
-        .map-card { grid-column: span 2; padding: 0 !important; background: #000; border: 1px solid rgba(255,255,255,0.1); height: 320px; margin-top: 5px; }
+        .map-card { grid-column: span 2; padding: 0 !important; background: #000; height: 320px; margin-top: 5px; }
         .map-title { margin: 25px 0 8px 8px; display: block; font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         iframe { width: 100%; height: 100%; border: none; }
         .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         .val { font-size: 1.3rem; font-weight: 800; display: block; margin: 4px 0; }
-        .wash-status { grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 15px; font-weight: 700; border-radius: 18px; font-size: 0.85rem; }
+        .wash-status { grid-column: span 2; display: flex; align-items: center; gap: 10px; padding: 15px; font-weight: 700; border-radius: 18px; }
         .theme-btn { background: var(--card); border: none; color: var(--text); padding: 12px; border-radius: 12px; cursor: pointer; }
     </style>
 </head>
@@ -35,15 +40,19 @@
 <div class="container">
     <div id="ticker">⚠️ EMERGENCY ALERT</div>
     <div class="header">
-        <div class="city-box">
-            <h1 style="display:flex; align-items:center;">
-                <span id="city-title">...</span>
-                <span id="proxy-badge" class="proxy-badge">🛡️ RELAY ACTIVE</span>
-            </h1>
-            <button id="gps-btn" class="pulse" onclick="getGPS()">📍 Precise Location Search</button>
+        <div class="city-box" style="flex:1;">
+            <div style="display:flex; align-items:center;">
+                <h1 id="city-title" style="margin:0;">...</h1>
+                <span id="proxy-badge" class="proxy-badge">🛡️ RELAY ACTIVE<br>USE GPS BELOW</span>
+            </div>
+            <button id="gps-btn" onclick="getGPS()">
+                <i data-lucide="map-pin"></i> 
+                <span id="gps-text">Checking Location...</span>
+            </button>
         </div>
-        <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙</button>
+        <button class="theme-btn" onclick="toggleTheme()" style="margin-left:15px;">🌙</button>
     </div>
+
     <div class="grid">
         <div class="card wash-status" id="wash-card"><i data-lucide="car"></i> <span id="wash-text">Analyzing...</span></div>
         <div class="card"><span class="label">Temp</span><span class="val" id="temp">--°</span><span class="label" id="feels">Feels --°</span></div>
@@ -64,11 +73,14 @@
 <script>
     function toggleTheme() {
         const isLight = document.body.classList.toggle('light-mode');
-        document.getElementById('theme-btn').innerText = isLight ? '☀️' : '🌙';
+        document.querySelector('.theme-btn').innerText = isLight ? '☀️' : '🌙';
     }
+    
     function getGPS() {
+        document.getElementById('gps-text').innerText = "Locating...";
         navigator.geolocation.getCurrentPosition(p => update(p.coords.latitude, p.coords.longitude));
     }
+
     async function update(lat = null, lon = null) {
         try {
             let url = "https://pollen-data.acekallas.com";
@@ -77,8 +89,29 @@
             const d = await r.json();
             
             document.getElementById('city-title').innerText = d.city;
-            document.getElementById('proxy-badge').style.display = d.isProxy && !d.isPrecise ? 'inline-block' : 'none';
             
+            // RELAY & BUTTON LOGIC
+            const badge = document.getElementById('proxy-badge');
+            const btn = document.getElementById('gps-btn');
+            const btnText = document.getElementById('gps-text');
+
+            if(d.isPrecise) {
+                badge.style.display = 'none';
+                btn.classList.remove('pulse-warning');
+                btn.style.background = "#22c55e";
+                btn.style.color = "white";
+                btnText.innerText = `Precise Location: ${d.city}`;
+                btn.onclick = null; 
+            } else if (d.isProxy) {
+                badge.style.display = 'inline-block';
+                btn.classList.add('pulse-warning');
+                btnText.innerText = "Not your location? Click here";
+            } else {
+                badge.style.display = 'none';
+                btnText.innerText = "Refine Location";
+            }
+            
+            // Standard Weather Updates
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
             document.getElementById('hum-val').innerText = d.humidity + "%";
@@ -87,26 +120,26 @@
             document.getElementById('wind').innerText = d.wind + " mph";
             document.getElementById('updated').innerText = "Sync Active: " + d.updated;
 
-            // Pollen Logic
             const levels = ["None", "Very Low", "Low", "Medium", "High", "Very High"];
             document.getElementById('tree').innerText = levels[Math.round(d.tree)] || "None";
 
-            // Solar Logic
+            // Solar Calculation
             const sunset = new Date(d.sunset);
             const sunrise = new Date(d.sunrise);
             const now = new Date();
             const sunVal = document.getElementById('sun-val');
             const sunSub = document.getElementById('sun-sub');
+            const sunLabel = document.getElementById('sun-label');
 
             if (now < sunset && now > sunrise) {
                 const diff = sunset - now;
                 sunVal.innerText = `${Math.floor(diff/3600000)}h ${Math.round((diff%3600000)/60000)}m`;
-                sunSub.innerText = "Until Sunset";
+                sunLabel.innerText = "Sun Left"; sunSub.innerText = "Until Sunset";
             } else {
                 let nextSun = sunrise; if(now > sunrise) nextSun.setDate(nextSun.getDate()+1);
                 const diff = nextSun - now;
                 sunVal.innerText = `${Math.floor(diff/3600000)}h ${Math.round((diff%3600000)/60000)}m`;
-                sunSub.innerText = "Until Sunrise";
+                sunLabel.innerText = "Dark Left"; sunSub.innerText = "Until Sunrise";
             }
 
             // Alerts
@@ -114,16 +147,8 @@
             ticker.style.display = d.activeAlert ? 'block' : 'none';
             if(d.activeAlert) ticker.innerText = "⚠️ " + d.activeAlert;
 
-            // Wash Logic
-            const isWashOk = d.uv > 0 && d.wind < 20; // Simplified example
-            document.getElementById('wash-text').innerText = isWashOk ? "✨ Wash OK" : "⚠️ Skip Wash";
-
-            // GPS Button
-            if(d.isPrecise) {
-                document.getElementById('gps-btn').innerHTML = `✅ Precise: ${d.city}`;
-                document.getElementById('gps-btn').style.background = "#22c55e";
-                document.getElementById('gps-btn').classList.remove('pulse');
-            }
+            // Wash Advice
+            document.getElementById('wash-text').innerText = (d.uv > 0 && d.wind < 15) ? "✨ Wash OK" : "⚠️ Skip Wash";
 
             // Radars
             document.getElementById('wind-frame').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=6&overlay=wind&metricWind=mph`;
