@@ -6,8 +6,6 @@
     <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
-    
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
@@ -20,30 +18,18 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling - ABSOLUTE FORCE (Approach 1) */
+        /* Allergy Widget Spacer Container - Ensures space exists */
         .widget-spacer { 
-            grid-column: span 2 !important; 
-            min-height: 270px !important; 
-            height: 270px !important;
-            display: flex !important; 
-            justify-content: center !important; 
-            align-items: center !important; 
-            background: #fff !important; 
-            border-radius: 24px !important; 
-            overflow: hidden !important; 
-            visibility: visible !important;
-            opacity: 1 !important;
-            position: relative !important;
-            z-index: 10 !important;
-        }
-        
-        /* Force Pollen Div to accept dimensions */
-        #allergyalert {
-            width: 300px !important;
-            height: 250px !important;
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
+            grid-column: span 2; 
+            min-height: 270px; 
+            height: 270px;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            background: #fff; 
+            border-radius: 24px; 
+            overflow: hidden; 
+            position: relative;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -65,7 +51,7 @@
 
     <div class="grid">
         <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
+            <div id="shadow-host"></div>
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -83,17 +69,43 @@
     </div>
 </div>
 
-<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
-
 <script>
     lucide.createIcons();
 
-    // FORCE RENDER & REFRESH (Approach 2 & 3)
-    function refreshWidget() {
-        if (window.AA && typeof window.AA.init === 'function') {
-            // Force the init function to run
-            window.AA.init();
-        }
+    // FUNCTION: Creates Shadow DOM and injects widget
+    function initShadowWidget(zip) {
+        const host = document.getElementById('shadow-host');
+        const zipCode = zip || '78015';
+        
+        // Clear previous shadow content
+        host.innerHTML = '';
+        const shadow = host.attachShadow({mode: 'open'});
+        
+        // 1. Inject Official Stylesheet into Shadow DOM
+        const style = document.createElement('link');
+        style.rel = 'stylesheet';
+        style.href = 'https://www.pollenapps.com/df/tools/aa/css/load.css';
+        shadow.appendChild(style);
+
+        // 2. Inject Official Div Structure into Shadow DOM
+        const widgetDiv = document.createElement('div');
+        widgetDiv.id = 'allergyalert';
+        widgetDiv.setAttribute('data-aa_account', '10757');
+        widgetDiv.setAttribute('data-aa_location', zipCode);
+        widgetDiv.style.width = '300px';
+        widgetDiv.style.height = '250px';
+        shadow.appendChild(widgetDiv);
+
+        // 3. Inject and Run Official Script into Shadow DOM
+        const script = document.createElement('script');
+        script.src = 'https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js';
+        script.onload = () => {
+            // Re-scan when script loads
+            if (window.AA && typeof window.AA.init === 'function') {
+                window.AA.init();
+            }
+        };
+        shadow.appendChild(script);
     }
 
     async function getGPS() {
@@ -133,17 +145,17 @@
             
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
             
-            // Re-initialize after data updates (Approach 2)
-            setTimeout(refreshWidget, 500);
+            // Re-initialize widget with new zip code
+            initShadowWidget(zip);
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
         }
     }
 
-    // Delayed initiation to ensure DOM is ready (Approach 2)
     window.onload = () => {
         update();
-        setTimeout(refreshWidget, 1000); // Initial load check
+        // Fallback initiation
+        setTimeout(() => initShadowWidget('78015'), 1000);
     };
 </script>
 </body>
