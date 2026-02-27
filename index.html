@@ -30,7 +30,7 @@
             background: #fff; 
             border-radius: 24px; 
             overflow: hidden; 
-            position: relative; /* Required for loader overlay */
+            position: relative; 
         }
         
         /* loading overlay specific to pollen */
@@ -86,7 +86,7 @@
         <div id="pollen-embed-wrapper">
             <div id="pollen-loader">Loading Pollen Data...</div>
             <div id="allergyalert" data-aa_account="10757" data-aa_location="78006" style="width:300px; height:250px;"></div>
-            <script async src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
+            <script defer src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
         </div>
     </div>
 </div>
@@ -94,17 +94,25 @@
 <script>
     lucide.createIcons();
 
+    // Check if widget is actually loaded in the DOM
+    function checkWidgetContent() {
+        const iframe = document.querySelector('#allergyalert iframe');
+        if (iframe && iframe.contentWindow.document.body.innerHTML.length > 50) {
+            console.log("Widget content loaded");
+            document.getElementById('pollen-loader').style.display = 'none';
+        } else {
+            console.log("Waiting for widget...");
+            setTimeout(checkWidgetContent, 500);
+        }
+    }
+
     // Stricter initialization of Pollen Widget
     function initPollenWidget() {
         if (typeof AA !== 'undefined' && typeof AA.init === 'function') {
             try {
                 AA.init();
                 console.log("Pollen Widget Initialized");
-                
-                // Hide the loader once initialized
-                setTimeout(() => {
-                    document.getElementById('pollen-loader').style.display = 'none';
-                }, 1000);
+                checkWidgetContent(); // Use new check to hide loader
             } catch (e) {
                 console.error("Pollen Init Error", e);
             }
@@ -154,8 +162,8 @@
                 throw new Error("Invalid data format");
             }
             
-            // Pollen widget script might take time to load, re-init
-            setTimeout(initPollenWidget, 1000);
+            // Re-initialize widget after weather update
+            setTimeout(initPollenWidget, 500);
             
         } catch (e) {
             console.error("Update error:", e);
@@ -167,7 +175,7 @@
     document.addEventListener("DOMContentLoaded", () => {
         update();
         // Initial init call
-        setTimeout(initPollenWidget, 1500); 
+        setTimeout(initPollenWidget, 1000); 
     });
 </script>
 </body>
