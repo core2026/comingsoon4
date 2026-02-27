@@ -56,14 +56,12 @@
             </div>
         </div>
 
-        <!-- Pollen/Allergy Widget -->
+        <!-- Pollen/Allergy Widget — loaded in iframe to isolate from page JS/CSS -->
         <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
+            <iframe id="pollen-iframe" src="/pollen-test.html" width="320" height="260" frameborder="0" scrolling="no" style="border:none; display:block;"></iframe>
         </div>
     </div>
 </div>
-
-<script src="//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
 
 <script>
     lucide.createIcons();
@@ -74,19 +72,9 @@
     });
 
     function updatePollenWidget(zip) {
-        document.querySelectorAll('script[data-pollen]').forEach(s => s.remove());
-
-        const el = document.getElementById('allergyalert');
-        el.innerHTML = '';
-        el.setAttribute('data-aa_location', zip);
-        // Ensure required styles are always present
-        el.style.cssText = 'width:300px; height:250px; background-color:#eee; position:relative; display:inline-block;';
-
-        const newScript = document.createElement('script');
-        newScript.setAttribute('data-pollen', 'true');
-        newScript.src = '//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js?v=' + Date.now();
-        newScript.onload = () => {};
-        document.body.appendChild(newScript);
+        // Swap iframe src to reload widget for new zip
+        // pollen-test.html accepts ?zip= parameter
+        document.getElementById('pollen-iframe').src = `/pollen-test.html?zip=${zip}&t=${Date.now()}`;
     }
 
     async function getGPS() {
