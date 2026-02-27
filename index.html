@@ -10,15 +10,30 @@
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
-        .header { margin-bottom: 25px; }
+        .header { margin-bottom: 20px; }
         
         #gps-btn { 
             background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); 
             padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; 
             font-weight: 800; display: flex; align-items: center; justify-content: center; 
-            gap: 10px; transition: 0.3s; 
+            gap: 10px; transition: 0.3s; margin-bottom: 15px;
+        }
+
+        .search-container {
+            display: flex; gap: 10px; background: var(--card); padding: 5px; 
+            border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
         }
         
+        .search-container input {
+            background: transparent; border: none; color: #fff; padding: 10px; 
+            width: 100%; outline: none; font-family: inherit; font-weight: 600;
+        }
+
+        .search-container button {
+            background: var(--accent); color: #0b1120; border: none; 
+            border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800;
+        }
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { 
             background: var(--card); padding: 20px; border-radius: 24px; 
@@ -34,8 +49,8 @@
         iframe { width: 100%; height: 100%; border: none; }
         .val { font-size: 1.5rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; letter-spacing: 0.5px; }
-        
-        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin-bottom: 10px; }
+        h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -1px; margin: 0 0 15px 0; }
+        #zip-error { color: #f87171; font-size: 11px; margin: -15px 0 15px 10px; display: none; }
     </style>
 </head>
 <body>
@@ -46,11 +61,18 @@
             <i data-lucide="map-pin"></i>
             <span id="gps-text">Sync Precise Location</span>
         </button>
+        
+        <div class="search-container">
+            <input type="text" id="zip-input" placeholder="Enter US Zip (e.g. 90210)" 
+                   inputmode="numeric" maxlength="5">
+            <button onclick="searchZip()">Search</button>
+        </div>
+        <div id="zip-error">Invalid US Zip Code</div>
     </div>
 
     <div class="grid">
         <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 10px;">
-            <i data-lucide="droplets" style="color: var(--accent); width: 18px;"></i>
+            <i data-lucide="sparkles" style="color: var(--accent); width: 18px;"></i>
             <span id="wash-text" style="font-weight: 700;">Analyzing conditions...</span>
         </div>
         
@@ -66,60 +88,56 @@
             <span id="sun-sub" class="label">Calculated...</span>
         </div>
         
-        <div class="card">
-            <span class="label">Atmosphere</span>
-            <span class="val" id="hum-val">--%</span>
-            <span class="label">Humidity</span>
-        </div>
+        <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span class="label">In Air</span></div>
+        <div class="card"><span class="label">Sun Safety</span><span class="val" id="uv">--</span><span class="label">UV Index</span></div>
         
-        <div class="card">
-            <span class="label">Sun Safety</span>
-            <span class="val" id="uv">--</span>
-            <span class="label">UV Index</span>
-        </div>
-        
-        <div class="card" style="grid-column: span 2;">
-            <span class="label">Surface Velocity</span>
-            <span class="val" id="wind">-- mph</span>
-            <span class="label">Wind Speed</span>
-        </div>
+        <div class="card" style="grid-column: span 2;"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Surface Velocity</span></div>
 
-        <span class="label" style="margin-top:20px; display:block; padding-left:5px;">🛰️ Live Doppler Radar</span>
-        <div class="map-card">
-            <iframe id="rain-map" allow="geolocation"></iframe>
-        </div>
+        <span class="label" style="margin-top:20px; display:block; padding-left:5px;">🌧️ Live Doppler Radar (HD)</span>
+        <div class="map-card"><iframe id="rain-map" allow="geolocation"></iframe></div>
     </div>
     
     <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label); opacity:0.6;">...</div>
 </div>
 
 <script>
-    // Initialize Lucide Icons
     lucide.createIcons();
 
     async function getGPS() {
-        const btnText = document.getElementById('gps-text');
-        btnText.innerText = "Locating...";
-        
+        document.getElementById('gps-text').innerText = "Locating...";
         navigator.geolocation.getCurrentPosition(
             p => update(p.coords.latitude, p.coords.longitude),
-            e => { 
-                console.warn("Location blocked, using IP fallback.");
-                update(); 
-            },
+            e => { console.warn("GPS Denied"); update(); },
             { timeout: 8000 }
         );
+    }
+
+    async function searchZip() {
+        const zip = document.getElementById('zip-input').value;
+        const err = document.getElementById('zip-error');
+        if (!/^\d{5}$/.test(zip)) { err.style.display = 'block'; return; }
+        err.style.display = 'none';
+
+        try {
+            const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            update(data.places[0].latitude, data.places[0].longitude);
+            
+            // Reset GPS button style
+            document.getElementById('gps-text').innerText = "Sync Precise Location";
+            document.getElementById('gps-btn').style.background = "var(--card)";
+            document.getElementById('gps-btn').style.borderColor = "rgba(255,255,255,0.1)";
+        } catch (e) { err.innerText = "Zip code not found"; err.style.display = 'block'; }
     }
 
     async function update(lat = null, lon = null) {
         try {
             const apiBase = "https://pollen-data.acekallas.com";
             const url = lat ? `${apiBase}?lat=${lat}&lon=${lon}` : apiBase;
-            
             const r = await fetch(url);
             const d = await r.json();
 
-            // Display Logic
             document.getElementById('city-title').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
@@ -128,29 +146,19 @@
             document.getElementById('wind').innerText = d.wind + " mph";
             document.getElementById('updated').innerText = "Last Updated: " + d.updated;
 
-            // Car Wash Logic
-            if (d.temp !== "--") {
-                const isGoodWash = (d.uv > 1 && d.wind < 18);
-                document.getElementById('wash-text').innerText = isGoodWash ? 
-                    "✨ Perfect day for a car wash" : "⚠️ Skip the wash today";
-            }
+            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? 
+                "✨ Perfect day for a car wash" : "⚠️ Skip the wash today";
 
-            // Sunset/Sunrise Logic
             if (d.sunset && d.sunrise) {
                 const sunset = new Date(d.sunset), sunrise = new Date(d.sunrise), now = new Date();
                 let target = (now < sunset && now > sunrise) ? sunset : sunrise;
                 if (now > sunrise && target === sunrise) target.setDate(target.getDate() + 1);
                 const diff = target - now;
-                
-                const hours = Math.floor(diff/3600000);
-                const mins = Math.round((diff%3600000)/60000);
-                
-                document.getElementById('sun-val').innerText = `${hours}h ${mins}m`;
+                document.getElementById('sun-val').innerText = `${Math.floor(diff/3600000)}h ${Math.round((diff%3600000)/60000)}m`;
                 document.getElementById('sun-label').innerText = (now < sunset && now > sunrise) ? "Sun Left" : "Dark Left";
                 document.getElementById('sun-sub').innerText = (now < sunset && now > sunrise) ? "Until Sunset" : "Until Sunrise";
             }
 
-            // Visual confirmation for GPS sync
             if(d.isPrecise) {
                 const btn = document.getElementById('gps-btn');
                 document.getElementById('gps-text').innerText = "Location Verified";
@@ -158,17 +166,9 @@
                 btn.style.background = "rgba(34, 197, 94, 0.1)";
             }
 
-            // Updated Radar Source (RainViewer 2026 Stable)
-            // Zoom level 8 is perfect for "Regional" view (City + Suburbs)
-            document.getElementById('rain-map').src = `https://www.rainviewer.com/map.html?loc=${d.lat},${d.lon},8&control=1&map=1&type=radar&ped=1&v=1`;
-
-        } catch(e) { 
-            console.error("Dashboard Error:", e);
-            document.getElementById('city-title').innerText = "Connection Error";
-        }
+            document.getElementById('rain-map').src = `https://www.rainviewer.com/map.html?loc=${d.lat},${d.lon},9&control=1&map=1&type=radar&ped=1&v=1`;
+        } catch(e) { document.getElementById('city-title').innerText = "Offline"; }
     }
-
-    // Run on load
     update();
 </script>
 </body>
