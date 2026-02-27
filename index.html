@@ -2,81 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Acekallas Weather Hub</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acekallas Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; --warning: #f59e0b; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; margin: 0; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 480px; padding-bottom: 60px; }
-        .header { margin-bottom: 20px; }
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 14px; border-radius: 16px; width: 100%; margin-top: 10px; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.3s; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
+        .container { width: 100%; max-width: 500px; }
+        .header { margin-bottom: 25px; }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
+        .map-card { grid-column: span 2; height: 350px; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid rgba(255,255,255,0.1); margin-top: 5px; }
+        iframe { width: 100%; height: 100%; border: none; }
+        .val { font-size: 1.5rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
+        .label { font-size: 0.7rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         .pulse-warning { background: var(--warning) !important; color: #000 !important; animation: p-ring 1.5s infinite; }
         @keyframes p-ring { 0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); } 70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); } }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .card { background: var(--card); padding: 18px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-        .map-card { grid-column: span 2; height: 350px; border-radius: 24px; overflow: hidden; background: #000; margin-top: 5px; border: 1px solid rgba(255,255,255,0.1); }
-        iframe { width: 100%; height: 100%; border: none; }
-        .val { font-size: 1.4rem; font-weight: 800; display: block; margin: 4px 0; color: #fff; }
-        .label { font-size: 0.65rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="header">
-        <h1 id="city-title" style="margin:0; font-size: 1.8rem;">...</h1>
-        <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Syncing Location...</span></button>
+        <h1 id="city-title" style="margin:0;">...</h1>
+        <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Checking Location...</span></button>
     </div>
 
     <div class="grid">
-        <div class="card" style="grid-column: span 2;"><i data-lucide="sparkles" style="width:14px; vertical-align:middle;"></i> <span id="wash-text">Calculating Wash Potential...</span></div>
-        <div class="card"><span class="label">Current Temp</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
-        <div class="card"><span class="label" id="sun-label">Solar Status</span><span class="val" id="sun-val">--</span><span id="sun-sub" class="label">Loading...</span></div>
-        <div class="card"><span class="label">Tree Pollen</span><span class="val" id="tree">--</span><span class="label">Local Level</span></div>
+        <div class="card" style="grid-column: span 2;"><span id="wash-text">Analyzing...</span></div>
+        <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
+        <div class="card"><span class="label" id="sun-label">Solar</span><span class="val" id="sun-val">--</span><span id="sun-sub" class="label">Syncing...</span></div>
+        <div class="card"><span class="label">Pollen Index</span><span class="val" id="tree">--</span><span class="label">Tree Level</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum-val">--%</span><span id="hum-desc" class="label">--</span></div>
-        <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Skin Safety</span></div>
-        <div class="card"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Surface</span></div>
+        <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Safety</span></div>
+        <div class="card"><span class="label">Wind</span><span class="val" id="wind">-- mph</span><span class="label">Surface</span></div>
 
-        <span class="label" style="margin-top:20px; display:block; padding-left:10px;">🌿 Tree Pollen Heatmap</span>
+        <span class="label" style="margin-top:20px; display:block;">🌿 Pollen/Dust Heatmap</span>
         <div class="map-card"><iframe id="pollen-map"></iframe></div>
-        
-        <span class="label" style="margin-top:10px; display:block; padding-left:10px;">🌧️ Precipitation Radar</span>
+        <span class="label" style="margin-top:10px; display:block;">🌧️ Rain Radar</span>
         <div class="map-card"><iframe id="rain-map"></iframe></div>
-
-        <span class="label" style="margin-top:10px; display:block; padding-left:10px;">🌬️ Surface Wind Flow</span>
+        <span class="label" style="margin-top:10px; display:block;">🌬️ Wind Flow</span>
         <div class="map-card"><iframe id="wind-map"></iframe></div>
     </div>
-    <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label); opacity:0.6;">...</div>
+    <div id="updated" style="text-align:center; margin-top:30px; font-size:10px; color:var(--label); opacity:0.5;">...</div>
 </div>
 
 <script>
     async function getGPS() {
-        document.getElementById('gps-text').innerText = "Acquiring GPS...";
-        navigator.geolocation.getCurrentPosition(p => update(p.coords.latitude, p.coords.longitude));
+        if (!navigator.geolocation) return alert("Browser does not support GPS");
+        document.getElementById('gps-text').innerText = "Locating...";
+        navigator.geolocation.getCurrentPosition(
+            p => update(p.coords.latitude, p.coords.longitude),
+            e => { console.warn("GPS Denied", e); update(); } // Fallback to IP
+        );
     }
 
     async function update(lat = null, lon = null) {
         try {
-            const url = `https://pollen-data.acekallas.com${lat ? `?lat=${lat}&lon=${lon}` : ''}`;
+            const apiBase = "https://pollen-data.acekallas.com";
+            const url = lat ? `${apiBase}?lat=${lat}&lon=${lon}` : apiBase;
+            
             const r = await fetch(url);
             const d = await r.json();
-            
-            // Force text updates
-            document.getElementById('city-title').innerText = d.city;
+
+            // Text Updates (Now protected from map failure)
+            document.getElementById('city-title').innerText = d.city || "San Antonio";
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
             document.getElementById('hum-val').innerText = d.humidity + "%";
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = Math.round(d.wind) + " mph";
-            document.getElementById('updated').innerText = "Synced at " + d.updated;
+            document.getElementById('updated').innerText = "Last Updated: " + d.updated;
 
-            // Pollen Index
-            const pLevels = ["None", "Very Low", "Low", "Medium", "High", "Very High"];
+            const pLevels = ["None", "Low", "Low", "Medium", "High", "Very High"];
             document.getElementById('tree').innerText = pLevels[Math.round(d.tree)] || "Low";
-            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 15) ? "✨ Perfect Conditions for a Wash" : "⚠️ Better to Skip the Wash Today";
+            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 15) ? "✨ Perfect day for a wash" : "⚠️ Hold off on the wash";
 
-            // Solar Logic with forced refresh
             if (d.sunset && d.sunrise) {
                 const sunset = new Date(d.sunset), sunrise = new Date(d.sunrise), now = new Date();
                 let target = (now < sunset && now > sunrise) ? sunset : sunrise;
@@ -87,22 +89,8 @@
                 document.getElementById('sun-sub').innerText = (now < sunset && now > sunrise) ? "Until Sunset" : "Until Sunrise";
             }
 
-            // GPS Status
-            const btn = document.getElementById('gps-btn');
-            if(d.isPrecise) {
-                btn.style.background = "#22c55e"; btn.style.color = "#fff";
-                document.getElementById('gps-text').innerText = "Location Verified";
-                btn.classList.remove('pulse-warning');
-            } else if (d.isProxy) {
-                btn.classList.add('pulse-warning');
-                document.getElementById('gps-text').innerText = "VPN Detected: Click to Fix";
-            } else {
-                document.getElementById('gps-text').innerText = "Refine Location";
-            }
-
-            // Corrected Maps
-            // Using Tomorrow.io's Map Gallery (official tree pollen layer)
-            document.getElementById('pollen-map').src = `https://www.tomorrow.io/weather/maps/?lat=${d.lat}&lon=${d.lon}&zoom=6&overlays=pollen_tree`;
+            // Maps - Windy is the only reliable iframe source that doesn't 403
+            document.getElementById('pollen-map').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=5&overlay=dust&metricWind=mph`;
             document.getElementById('rain-map').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=8&overlay=radar`;
             document.getElementById('wind-map').src = `https://embed.windy.com/embed2.html?lat=${d.lat}&lon=${d.lon}&zoom=5&overlay=wind`;
 
