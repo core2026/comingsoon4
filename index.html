@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas Weather Dashboard</title>
+    <title>Acekallas Weather</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; }
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; width: 100%; }
         .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; min-height: 150px; background: var(--card); }
+        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; min-height: 150px; background: var(--card); border: 1px solid rgba(255,255,255,0.1); }
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         h1 { font-size: 2rem; font-weight: 800; margin: 0; }
@@ -24,7 +24,7 @@
 </head>
 <body>
 <div class="container">
-    <h1 id="city-title">Syncing...</h1>
+    <h1 id="city-title">Detecting...</h1>
     <p id="updated" style="font-size: 11px; color: var(--label); margin: 5px 0 20px 0;">Connecting...</p>
     
     <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Sync Precise Location</span></button>
@@ -35,8 +35,7 @@
     </div>
 
     <div class="grid">
-        <div class="widget-card" id="widget-container">
-            </div>
+        <div class="widget-card" id="widget-container"></div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
@@ -44,10 +43,10 @@
         <div class="card"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Velocity</span></div>
         
         <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2);">
-            <i data-lucide="car" style="color: var(--accent); width: 24px; height: 24px;"></i>
+            <i data-lucide="car" style="color: var(--accent); width: 28px; height: 28px;"></i>
             <div>
                 <span class="label" style="color: var(--accent);">Car Wash Forecast</span>
-                <span id="wash-text" style="display: block; font-weight: 700; font-size: 1.1rem;">Analyzing...</span>
+                <span id="wash-text" style="display: block; font-weight: 800; font-size: 1.2rem;">Analyzing...</span>
             </div>
         </div>
     </div>
@@ -55,7 +54,6 @@
 
 <script>
     lucide.createIcons();
-    let lastCall = 0;
 
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
@@ -73,43 +71,26 @@
         update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name']);
     }
 
-    // Function to reload the Forecast7 Widget
     function loadWidget(lat, lon, city, slug) {
         const container = document.getElementById('widget-container');
-        container.innerHTML = ''; // Clear old widget
-        
+        container.innerHTML = ''; 
         const anchor = document.createElement('a');
         anchor.className = "weatherwidget-io";
-        // Format: https://forecast7.com/en/[lat]n[lon]/[city]/
-        // Note: Forecast7 uses 'n' for north and 'd' for degrees
         const cleanLat = Math.abs(lat).toFixed(2) + (lat >= 0 ? 'n' : 's');
         const cleanLon = Math.abs(lon).toFixed(2) + (lon >= 0 ? 'e' : 'w');
-        
         anchor.href = `https://forecast7.com/en/${cleanLat}${cleanLon}/${slug}/`;
         anchor.dataset.label_1 = city.toUpperCase();
         anchor.dataset.label_2 = "FORECAST";
         anchor.dataset.theme = "original";
         anchor.dataset.basecolor = "transparent";
-        anchor.innerHTML = city.toUpperCase() + " WEATHER";
-        
         container.appendChild(anchor);
-        
-        // Re-trigger the widget script
         const script = document.createElement('script');
         script.src = "https://weatherwidget.io/js/widget.min.js";
-        script.id = "weatherwidget-io-js";
         container.appendChild(script);
     }
 
     async function update(lat = null, lon = null, name = null) {
-        const now = Date.now();
-        if (now - lastCall < 8000) {
-            document.getElementById('updated').innerText = "Wait 8s to refresh...";
-            return;
-        }
-
         try {
-            lastCall = now;
             let url = `https://pollen-data.acekallas.com/`;
             if (lat) url += `?lat=${lat}&lon=${lon}`;
             if (name) url += (lat ? '&' : '?') + `name=${encodeURIComponent(name)}`;
@@ -123,17 +104,13 @@
             document.getElementById('hum').innerText = d.humidity + "%";
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
-            document.getElementById('updated').innerText = "Updated: " + d.updated;
-            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "Perfect Day for a Wash" : "Skip the Wash Today";
+            document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
+            document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // Load the new widget based on the city data
             loadWidget(d.lat, d.lon, d.city, d.slug);
-
-            if(lat && document.getElementById('gps-text').innerText !== "GPS Denied") {
-                document.getElementById('gps-text').innerText = "Location Verified";
-            }
+            if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
-            document.getElementById('updated').innerText = "Sync Error. Please wait...";
+            document.getElementById('updated').innerText = "Syncing...";
         }
     }
 
