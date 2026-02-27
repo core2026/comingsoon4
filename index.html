@@ -9,27 +9,73 @@
     <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
+
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
         .container { width: 100%; max-width: 500px; position: relative; }
-        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; box-sizing: border-box; }
+
+        /* GPS button — pulses when VPN/relay detected */
+        #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; box-sizing: border-box; transition: border-color 0.3s; }
+        #gps-btn.pulse { border-color: #fb923c; animation: gps-pulse 1.8s ease-in-out infinite; }
+        @keyframes gps-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(251, 146, 60, 0); }
+        }
+
         .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
         .search-container input::placeholder { color: var(--label); }
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; white-space: nowrap; }
+
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
 
-        /* Allergy Widget */
-        .widget-spacer { grid-column: span 2; min-height: 270px; display: block; text-align: center; padding: 10px 0; background: #fff; border-radius: 24px; }
+        /* VPN warning badge next to city name */
+        #vpn-badge {
+            display: none;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            color: #fb923c;
+            background: rgba(251, 146, 60, 0.12);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+            border-radius: 8px;
+            padding: 3px 8px;
+            margin-left: 10px;
+            vertical-align: middle;
+            cursor: default;
+            white-space: nowrap;
+        }
+        #vpn-badge.visible { display: inline-flex; }
+
+        /* Allergy Widget iframe — fills the card cleanly */
+        .widget-spacer {
+            grid-column: span 2;
+            background: #fff;
+            border-radius: 24px;
+            overflow: hidden;
+            padding: 0;
+            line-height: 0; /* removes inline gap under iframe */
+        }
+        #pollen-iframe {
+            width: 100%;
+            height: 270px;
+            border: none;
+            display: block;
+        }
 
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
-        h1 { font-size: 2rem; font-weight: 800; margin: 0; }
+        h1 { font-size: 2rem; font-weight: 800; margin: 0; display: inline; }
+        .title-row { margin-bottom: 5px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1 id="city-title">Syncing...</h1>
+    <div class="title-row">
+        <h1 id="city-title">Syncing...</h1>
+        <span id="vpn-badge" title="VPN or iCloud Private Relay detected — location may be inaccurate">⚠ VPN / Relay</span>
+    </div>
     <p id="updated" style="font-size: 11px; color: var(--label); margin: 5px 0 20px 0;">Connecting...</p>
 
     <button id="gps-btn" onclick="getGPS()">
@@ -56,9 +102,9 @@
             </div>
         </div>
 
-        <!-- Pollen/Allergy Widget — loaded in iframe to isolate from page JS/CSS -->
-        <div class="widget-spacer" id="allergy-container">
-            <iframe id="pollen-iframe" src="/pollen-test.html" width="320" height="260" frameborder="0" scrolling="no" style="border:none; display:block;"></iframe>
+        <!-- Pollen widget in isolated iframe -->
+        <div class="widget-spacer">
+            <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
         </div>
     </div>
 </div>
@@ -66,14 +112,46 @@
 <script>
     lucide.createIcons();
 
-    // Enter key support on zip input
+    let currentZip = '78015';
+
+    // Enter key on zip input
     document.getElementById('zip-input').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') searchZip();
     });
 
+    // VPN / iCloud Private Relay detection
+    // Strategy: compare the IP the worker sees (cf.latitude/longitude) against
+    // a known IP geolocation service. If they disagree significantly, flag it.
+    // Simpler approach: check if the Cloudflare-detected city matches a known
+    // relay/proxy ASN by fetching ipapi and comparing ASN org name.
+    async function checkVPN() {
+        try {
+            const res = await fetch('https://ipapi.co/json/');
+            const data = await res.json();
+            const org = (data.org || '').toLowerCase();
+            const isVPN = org.includes('apple') || 
+                          org.includes('icloud') || 
+                          org.includes('private relay') ||
+                          org.includes('vpn') ||
+                          org.includes('mullvad') ||
+                          org.includes('nordvpn') ||
+                          org.includes('expressvpn') ||
+                          org.includes('proton') ||
+                          org.includes('tor project') ||
+                          data.privacy?.vpn || 
+                          data.privacy?.proxy || 
+                          data.privacy?.relay;
+            if (isVPN) {
+                document.getElementById('vpn-badge').classList.add('visible');
+                document.getElementById('gps-btn').classList.add('pulse');
+            }
+        } catch (e) {
+            // Silently fail — don't block anything if this check errors
+        }
+    }
+
     function updatePollenWidget(zip) {
-        // Swap iframe src to reload widget for new zip
-        // pollen-test.html accepts ?zip= parameter
+        currentZip = zip;
         document.getElementById('pollen-iframe').src = `/pollen-test.html?zip=${zip}&t=${Date.now()}`;
     }
 
@@ -84,7 +162,12 @@
             return;
         }
         navigator.geolocation.getCurrentPosition(
-            p => update(p.coords.latitude, p.coords.longitude, null, null),
+            p => {
+                // GPS confirmed — remove VPN warning since user has verified location
+                document.getElementById('vpn-badge').classList.remove('visible');
+                document.getElementById('gps-btn').classList.remove('pulse');
+                update(p.coords.latitude, p.coords.longitude, null, null);
+            },
             e => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
         );
     }
@@ -101,6 +184,9 @@
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
             if (!res.ok) throw new Error("Invalid ZIP");
             const data = await res.json();
+            // Manual zip entry also clears VPN warning
+            document.getElementById('vpn-badge').classList.remove('visible');
+            document.getElementById('gps-btn').classList.remove('pulse');
             update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
         } catch (e) {
             document.getElementById('updated').innerText = "Invalid ZIP code.";
@@ -135,9 +221,8 @@
 
             if (lat) document.getElementById('gps-text').innerText = "Location Verified";
 
-            // Only reload pollen widget if zip actually changed
-            const targetZip = zip || "78015";
-            const currentZip = document.getElementById('allergyalert').getAttribute('data-aa_location');
+            // Update pollen widget if zip changed
+            const targetZip = zip || '78015';
             if (targetZip !== currentZip) {
                 updatePollenWidget(targetZip);
             }
@@ -151,6 +236,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         update();
+        checkVPN();
     });
 </script>
 </body>
