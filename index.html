@@ -13,7 +13,7 @@
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; display: flex; justify-content: center; }
-        .container { width: 100%; max-width: 500px; }
+        .container { width: 100%; max-width: 500px; position: relative;}
         #gps-btn { background: var(--card); color: var(--text); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; width: 100%; cursor: pointer; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 15px; }
         .search-container { display: flex; gap: 10px; background: var(--card); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .search-container input { background: transparent; border: none; color: #fff; padding: 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; }
@@ -21,8 +21,19 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Styling */
-        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; background: #fff; min-height: 270px; display: flex; justify-content: center; align-items: center; position: relative;}
+        /* Allergy Widget Styling - Separated */
+        .widget-spacer { grid-column: span 2; height: 270px; }
+        #allergyalert { 
+            background: #fff; 
+            border-radius: 24px; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            width: 300px; 
+            height: 250px; 
+            margin: 0 auto;
+        }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
@@ -42,7 +53,7 @@
     </div>
 
     <div class="grid">
-        <div class="widget-card" id="allergy-container">
+        <div class="widget-spacer">
             <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
         </div>
 
@@ -64,16 +75,8 @@
 <script>
     lucide.createIcons();
 
-    // FIX: Updates the data-aa_location attribute and forces the widget to re-render
-    function refreshAllergyWidget(zipCode) {
-        const widgetDiv = document.getElementById('allergyalert');
-        widgetDiv.setAttribute('data-aa_location', zipCode);
-        
-        // Force re-initialization if AA object exists
-        if (window.AA && typeof window.AA.init === 'function') {
-            window.AA.init();
-        }
-    }
+    // REMOVED: refreshAllergyWidget function is no longer needed.
+    // The widget is now static.
 
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
@@ -110,8 +113,7 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // Refresh Allergy Widget with the new ZIP
-            refreshAllergyWidget(zip);
+            // NOTE: The widget is no longer updated here. It stays static at 78015.
 
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
