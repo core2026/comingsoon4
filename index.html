@@ -20,34 +20,7 @@
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
 
         /* Allergy Widget */
-        .widget-spacer {
-            grid-column: span 2;
-            min-height: 270px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #fff;
-            border-radius: 24px;
-            overflow: hidden;
-            position: relative;
-        }
-        #allergy-inner {
-            width: 300px;
-            height: 250px;
-        }
-        /* Loading overlay for widget reload — uses grid trick since flex doesn't work on ::after */
-        .widget-spacer.loading::after {
-            content: "Updating allergy data...";
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,0.85);
-            display: grid;
-            place-items: center;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-weight: 700;
-            color: #0b1120;
-            font-size: 0.85rem;
-        }
+        .widget-spacer { grid-column: span 2; min-height: 270px; display: flex; justify-content: center; align-items: center; background: #fff; border-radius: 24px; overflow: hidden; }
 
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
@@ -85,9 +58,7 @@
 
         <!-- Pollen/Allergy Widget -->
         <div class="widget-spacer" id="allergy-container">
-            <div id="allergy-inner">
-                <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
-            </div>
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px; height:250px;"></div>
         </div>
     </div>
 </div>
@@ -103,34 +74,19 @@
         if (e.key === 'Enter') searchZip();
     });
 
-    /**
-     * Reloads the pollen widget for a new zip code.
-     * Strategy: Remove old script tag + widget div, rebuild both fresh.
-     * This is required because the PollenApps script only scans for #allergyalert on initial execution
-     * and has no public API to re-render for a new location.
-     */
-    function reloadPollenWidget(zip) {
-        const container = document.getElementById('allergy-container');
-        container.classList.add('loading');
-
-        // Step 1: Remove old pollen script
+    function updatePollenWidget(zip) {
+        // PollenApps has no public re-init API — the only reliable way to change location
+        // is to replace the div's data attribute and re-inject the script fresh.
         const oldScript = document.getElementById('pollen-script');
         if (oldScript) oldScript.remove();
 
-        // Step 2: Rebuild the inner widget div with new zip
-        const inner = document.getElementById('allergy-inner');
-        inner.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zip}" style="width:300px; height:250px;"></div>`;
+        const el = document.getElementById('allergyalert');
+        el.innerHTML = '';
+        el.setAttribute('data-aa_location', zip);
 
-        // Step 3: Re-inject pollen script — browser will re-execute it, scanning for #allergyalert
         const newScript = document.createElement('script');
         newScript.id = 'pollen-script';
         newScript.src = 'https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js';
-        newScript.onload = () => {
-            container.classList.remove('loading');
-        };
-        newScript.onerror = () => {
-            container.classList.remove('loading');
-        };
         document.body.appendChild(newScript);
     }
 
@@ -142,10 +98,7 @@
         }
         navigator.geolocation.getCurrentPosition(
             p => update(p.coords.latitude, p.coords.longitude, null, null),
-            e => {
-                document.getElementById('gps-text').innerText = "GPS Denied";
-                update();
-            }
+            e => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
         );
     }
 
@@ -157,7 +110,6 @@
             return;
         }
         document.getElementById('zip-input').style.outline = '';
-
         try {
             const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
             if (!res.ok) throw new Error("Invalid ZIP");
@@ -168,16 +120,8 @@
         }
     }
 
-    /**
-     * Main update function.
-     * @param {number|null} lat
-     * @param {number|null} lon
-     * @param {string|null} name - City name (from zip lookup)
-     * @param {string|null} zip  - ZIP code for pollen widget (null = use default 78015)
-     */
     async function update(lat = null, lon = null, name = null, zip = null) {
         try {
-            // Build worker URL
             let url = `https://pollen-data.acekallas.com/`;
             const params = [];
             if (lat) { params.push(`lat=${lat}`, `lon=${lon}`); }
@@ -187,7 +131,6 @@
             const r = await fetch(url);
             const d = await r.json();
 
-            // Update weather cards
             document.getElementById('city-title').innerText = d.city;
             document.getElementById('temp').innerText = d.temp + "°";
             document.getElementById('feels').innerText = "Feels " + d.feelsLike + "°";
@@ -195,37 +138,30 @@
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
 
-            // Cache status — check both X-Cache (worker) and cf-cache-status (Cloudflare CDN)
             const workerCache = r.headers.get('X-Cache');
             const cfCache = r.headers.get('cf-cache-status');
             const cacheLabel = (workerCache === 'HIT' || cfCache === 'HIT') ? ' · ⚡ Cached' : '';
             document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}`;
 
-            // Car wash logic
             document.getElementById('wash-text').innerText =
-                (d.uv > 1 && d.wind < 18)
-                    ? "✨ Perfect Day for a Wash"
-                    : "⚠️ Skip the Wash Today";
+                (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
 
-            // GPS button feedback
             if (lat) document.getElementById('gps-text').innerText = "Location Verified";
 
-            // Update pollen widget if zip changed — skip reload if same location
+            // Only reload pollen widget if zip actually changed
             const targetZip = zip || "78015";
-            const currentZip = document.querySelector('#allergyalert')?.getAttribute('data-aa_location');
+            const currentZip = document.getElementById('allergyalert').getAttribute('data-aa_location');
             if (targetZip !== currentZip) {
-                reloadPollenWidget(targetZip);
+                updatePollenWidget(targetZip);
             }
 
         } catch (e) {
             console.error("Update error:", e);
             document.getElementById('updated').innerText = "Unable to connect — retrying...";
-            // Retry once after 5 seconds on failure
             setTimeout(() => update(lat, lon, name, zip), 5000);
         }
     }
 
-    // Initial load — use worker's Cloudflare geo-detection (no params needed)
     window.onload = () => update();
 </script>
 </body>
