@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
-    <script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
     
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -65,22 +64,24 @@
 <script>
     lucide.createIcons();
 
-    // FIX: Rebuilds the inner HTML to force widget re-render and adds loading state
+    // FIX: Rebuilds the inner HTML to force widget re-render
     function refreshAllergyWidget(zipCode) {
         const container = document.getElementById('allergy-container');
-        
-        // Show loading indicator
         container.innerHTML = `<div class="loader">Loading Allergy Data...</div>`;
         
-        // Re-inject the widget structure after a short delay to allow for DOM update
         setTimeout(() => {
             container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zipCode}" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>`;
             
             // Re-initialize the widget script if it exists
             if (window.AA && typeof window.AA.init === 'function') {
                 window.AA.init();
+            } else {
+                // If script not loaded, inject it
+                const script = document.createElement('script');
+                script.src = "https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js";
+                document.body.appendChild(script);
             }
-        }, 300);
+        }, 500);
     }
 
     async function getGPS() {
@@ -115,11 +116,9 @@
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
             
-            // Displays if data was cached
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // Refresh Allergy Widget with the current ZIP
             refreshAllergyWidget(zip);
 
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
