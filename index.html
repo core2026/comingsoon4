@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acekallas Weather</title>
+    <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://www.pollenapps.com/df/tools/aa/css/load.css">
+    <script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
+    
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root { --bg: #0b1120; --text: #f8fafc; --card: rgba(30, 41, 59, 0.4); --label: #94a3b8; --accent: #38bdf8; }
@@ -16,7 +20,7 @@
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 12px; padding: 0 20px; cursor: pointer; font-weight: 800; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
-        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; min-height: 150px; background: var(--card); border: 1px solid rgba(255,255,255,0.1); }
+        .widget-card { grid-column: span 2; border-radius: 24px; overflow: hidden; background: var(--card); border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; padding: 10px 0; }
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
         .label { font-size: 0.75rem; text-transform: uppercase; color: var(--label); font-weight: 800; }
         h1 { font-size: 2rem; font-weight: 800; margin: 0; }
@@ -24,7 +28,7 @@
 </head>
 <body>
 <div class="container">
-    <h1 id="city-title">Detecting...</h1>
+    <h1 id="city-title">Syncing...</h1>
     <p id="updated" style="font-size: 11px; color: var(--label); margin: 5px 0 20px 0;">Connecting...</p>
     
     <button id="gps-btn" onclick="getGPS()"><i data-lucide="map-pin"></i><span id="gps-text">Sync Precise Location</span></button>
@@ -35,7 +39,9 @@
     </div>
 
     <div class="grid">
-        <div class="widget-card" id="widget-container"></div>
+        <div class="widget-card" id="allergy-container">
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>
+        </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
@@ -54,6 +60,23 @@
 
 <script>
     lucide.createIcons();
+    let lastCall = 0;
+
+    // Helper to refresh the Pollen.com widget dynamically
+    function refreshAllergyWidget(zipCode) {
+        const container = document.getElementById('allergy-container');
+        container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zipCode}" style="width:300px;height:250px;background-color:#eee;position:relative;display:inline-block;"></div>`;
+        
+        // Re-run the Pollenapps script logic
+        if (window.AA && typeof window.AA.init === 'function') {
+            window.AA.init();
+        } else {
+            // Fallback: Re-inject script if init isn't global
+            const script = document.createElement('script');
+            script.src = "https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js";
+            document.head.appendChild(script);
+        }
+    }
 
     async function getGPS() {
         document.getElementById('gps-text').innerText = "Locating...";
@@ -68,28 +91,10 @@
         if (!/^\d{5}$/.test(zip)) return;
         const res = await fetch(`https://api.zippopotam.us/us/${zip}`);
         const data = await res.json();
-        update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name']);
+        update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
     }
 
-    function loadWidget(lat, lon, city, slug) {
-        const container = document.getElementById('widget-container');
-        container.innerHTML = ''; 
-        const anchor = document.createElement('a');
-        anchor.className = "weatherwidget-io";
-        const cleanLat = Math.abs(lat).toFixed(2) + (lat >= 0 ? 'n' : 's');
-        const cleanLon = Math.abs(lon).toFixed(2) + (lon >= 0 ? 'e' : 'w');
-        anchor.href = `https://forecast7.com/en/${cleanLat}${cleanLon}/${slug}/`;
-        anchor.dataset.label_1 = city.toUpperCase();
-        anchor.dataset.label_2 = "FORECAST";
-        anchor.dataset.theme = "original";
-        anchor.dataset.basecolor = "transparent";
-        container.appendChild(anchor);
-        const script = document.createElement('script');
-        script.src = "https://weatherwidget.io/js/widget.min.js";
-        container.appendChild(script);
-    }
-
-    async function update(lat = null, lon = null, name = null) {
+    async function update(lat = null, lon = null, name = null, zip = "78015") {
         try {
             let url = `https://pollen-data.acekallas.com/`;
             if (lat) url += `?lat=${lat}&lon=${lon}`;
@@ -104,10 +109,12 @@
             document.getElementById('hum').innerText = d.humidity + "%";
             document.getElementById('uv').innerText = d.uv;
             document.getElementById('wind').innerText = d.wind + " mph";
-            document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
+            document.getElementById('updated').innerText = "Updated: " + d.updated;
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            loadWidget(d.lat, d.lon, d.city, d.slug);
+            // Refresh Allergy Widget
+            refreshAllergyWidget(zip);
+
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
