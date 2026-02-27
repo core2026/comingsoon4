@@ -20,11 +20,10 @@
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); backdrop-filter: blur(10px); }
         
-        /* Allergy Widget Spacer Container - Forced Dimensions */
+        /* Fixed Allergy Widget Styling */
         .widget-spacer { 
             grid-column: span 2 !important; 
             min-height: 270px !important; 
-            height: 270px !important;
             display: flex !important; 
             justify-content: center !important; 
             align-items: center !important; 
@@ -32,17 +31,13 @@
             border-radius: 24px !important; 
             overflow: hidden !important; 
             position: relative !important;
-            margin-top: 15px !important;
-            visibility: visible !important;
-            opacity: 1 !important;
         }
         
-        /* Ensure the Pollen widget itself takes up space */
-        .widget-spacer div[id^="aa_"] {
+        /* Ensure Pollen div takes space */
+        #allergyalert {
             width: 300px !important;
             height: 250px !important;
             display: block !important;
-            visibility: visible !important;
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -63,6 +58,10 @@
     </div>
 
     <div class="grid">
+        <div class="widget-spacer" id="allergy-container">
+            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
+        </div>
+
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
         <div class="card"><span class="label">Humidity</span><span class="val" id="hum">--%</span><span class="label">Atmosphere</span></div>
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
@@ -75,10 +74,6 @@
                 <span id="wash-text" style="display: block; font-weight: 800; font-size: 1.2rem;">Analyzing...</span>
             </div>
         </div>
-        
-        <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
-        </div>
     </div>
 </div>
 
@@ -87,7 +82,7 @@
 <script>
     lucide.createIcons();
 
-    // Re-initialization function
+    // Forced re-initialization function
     function forcePollenScan() {
         if (window.AA && typeof window.AA.init === 'function') {
             window.AA.init();
@@ -112,6 +107,7 @@
 
     async function update(lat = null, lon = null, name = null, zip = "78015") {
         try {
+            // Frontend calls your worker backend
             let url = `https://pollen-data.acekallas.com/`;
             if (lat) url += `?lat=${lat}&lon=${lon}`;
             if (name) url += (lat ? '&' : '?') + `name=${encodeURIComponent(name)}`;
@@ -129,14 +125,16 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            if(lat) document.getElementById('gps-text').innerText = "Location Verified";
+            // --- FIX FOR BLANK WIDGET ---
+            // 1. Update the data-aa_location attribute on the div
+            const widgetDiv = document.getElementById('allergyalert');
+            widgetDiv.setAttribute('data-aa_location', zip);
             
-            // Update widget location
-            const widget = document.getElementById('allergyalert');
-            widget.setAttribute('data-aa_location', zip);
-            
-            // Force re-scan after data updates
+            // 2. Force the Pollen library to re-scan for the updated div
             forcePollenScan();
+            // -----------------------------
+            
+            if(lat) document.getElementById('gps-text').innerText = "Location Verified";
         } catch (e) {
             document.getElementById('updated').innerText = "Syncing...";
         }
