@@ -42,7 +42,7 @@
 
     <div class="grid">
         <div class="widget-spacer" id="allergy-container">
-            <div id="allergyalert" data-aa_account="10757" data-aa_location="78015"></div>
+            Loading Widget...
         </div>
 
         <div class="card"><span class="label">Temperature</span><span class="val" id="temp">--°</span><span id="feels" class="label">Feels --°</span></div>
@@ -65,11 +65,12 @@
 <script>
     lucide.createIcons();
 
+    // FIX: Aggressively re-renders the widget div
     function initPollenWidget(zip) {
-        const widgetDiv = document.getElementById('allergyalert');
-        if (zip) {
-            widgetDiv.setAttribute('data-aa_location', zip);
-        }
+        const container = document.getElementById('allergy-container');
+        const zipCode = zip || '78015';
+        
+        container.innerHTML = `<div id="allergyalert" data-aa_account="10757" data-aa_location="${zipCode}" style="width:300px; height:250px;"></div>`;
         
         // Force re-initialization if AA object exists
         if (window.AA && typeof window.AA.init === 'function') {
@@ -123,8 +124,8 @@
 
     window.onload = () => {
         update();
-        // Final check to make sure widget loads
-        setTimeout(initPollenWidget, 1000);
+        // Give the script extra time to load
+        setTimeout(initPollenWidget, 1000); 
     };
 </script>
 </body>
