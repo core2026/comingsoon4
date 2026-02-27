@@ -30,7 +30,7 @@
             background: #fff; 
             border-radius: 24px; 
             overflow: hidden; 
-            border: 2px solid #38bdf8; /* Highlight for troubleshooting */
+            border: 2px solid #38bdf8; /* Troubleshooting border */
         }
         
         .val { font-size: 1.8rem; font-weight: 800; display: block; margin: 5px 0; color: #fff; }
@@ -56,7 +56,7 @@
         <div class="card"><span class="label">UV Index</span><span class="val" id="uv">--</span><span class="label">Sun Safety</span></div>
         <div class="card"><span class="label">Wind Speed</span><span class="val" id="wind">-- mph</span><span class="label">Velocity</span></div>
         
-        <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2);">
+        <div class="card" style="grid-column: span 2; display: flex; align-items: center; gap: 12px; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(255, 255, 255, 0.05);">
             <i data-lucide="car" style="color: var(--accent); width: 28px; height: 28px;"></i>
             <div>
                 <span class="label" style="color: var(--accent);">Car Wash Forecast</span>
@@ -66,17 +66,15 @@
 
         <div id="pollen-embed-wrapper">
             <div id="allergyalert" data-aa_account="10757" data-aa_location="78006" style="width:300px; height:250px;"></div>
+            <script async src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
         </div>
     </div>
 </div>
-
-<script src="https://www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
 
 <script>
     lucide.createIcons();
 
     function initPollenWidget() {
-        // Stricter check and re-initialization
         if (typeof AA !== 'undefined' && typeof AA.init === 'function') {
             AA.init();
             console.log("Pollen Widget Initialized");
@@ -118,7 +116,7 @@
             document.getElementById('updated').innerText = "Updated: " + d.updated + (r.headers.get('cf-cache-status') === 'HIT' ? ' (Cached)' : '');
             document.getElementById('wash-text').innerText = (d.uv > 1 && d.wind < 18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
             
-            // Re-initialize after weather update too
+            // Re-initialize after weather update
             setTimeout(initPollenWidget, 500);
             
             if(lat) document.getElementById('gps-text').innerText = "Location Verified";
@@ -130,8 +128,8 @@
 
     window.onload = () => {
         update();
-        // Give the script extra time to load
-        setTimeout(initPollenWidget, 1500); 
+        // Initial init call
+        setTimeout(initPollenWidget, 1000); 
     };
 </script>
 </body>
