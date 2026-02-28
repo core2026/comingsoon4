@@ -1,5 +1,5 @@
-const CACHE_NAME = 'acekallas-weather-v1';
-const STATIC_ASSETS = ['/', '/index.html', '/pollen-test.html'];
+const CACHE_NAME = 'acekallas-weather-v2';
+const STATIC_ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -20,28 +20,27 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Never intercept cross-origin requests or non-GET — let them go straight to network
+  // Only handle same-origin GET requests
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // Network-first for the weather worker API
-  if (url.hostname.includes('pollen-data.acekallas.com')) {
-    e.respondWith(
-      fetch(e.request, { redirect: 'follow' })
-        .then(res => {
-          // Only cache valid, non-redirected same-origin responses
-          if (res.ok && res.type === 'basic') {
-            const clone = res.clone();
-            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-          }
-          return res;
-        })
-        .catch(() => caches.match(e.request))
-    );
-    return;
-  }
+  // Never intercept pollen widget — it loads third-party scripts that use redirects
+  if (url.pathname.startsWith('/pollen-test')) return;
 
-  // Cache-first for local static assets only
+  // Never intercept manifest or icons — let them hit network normally
+  if (url.pathname.includes('manifest') || url.pathname.includes('icon-')) return;
+
+  // Cache-first for static assets (index.html, sw.js)
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request, { redirect: 'follow' }))
+    caches.match(e.request).then(cached => {
+      if (cached) return cached;
+      return fetch(e.request, { redirect: 'follow' }).then(res => {
+        // Only cache clean same-origin responses
+        if (res.ok && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        }
+        return res;
+      });
+    })
   );
 });
