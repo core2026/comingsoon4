@@ -1,9 +1,11 @@
+<!-- Acekallas Weather & Allergy — v1.4 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" id="theme-meta" content="#0b1120">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Weather">
@@ -383,6 +385,10 @@ let currentLat = 29.7408, currentLon = -98.6444;
 let weatherData = {};
 let currentPollenLevel = null;
 let autoRefreshTimer = null;
+let userHasInteracted = false; // gate vibrate until user taps something
+
+// Mark interaction on first tap/click anywhere
+document.addEventListener('pointerdown', () => { userHasInteracted = true; }, { once: true });
 
 lucide.createIcons();
 
@@ -419,7 +425,7 @@ function shareLocation() {
     } else {
         navigator.clipboard.writeText(url).then(() => showToast('📋 Link copied!')).catch(() => showToast('Copy failed'));
     }
-    if (navigator.vibrate) navigator.vibrate(30);
+    if (userHasInteracted && navigator.vibrate) navigator.vibrate(30);
 }
 
 // ── Pull to refresh ───────────────────────────────────────────────────────────
@@ -439,7 +445,7 @@ document.addEventListener('touchend', () => {
         const ptr = document.getElementById('ptr-indicator');
         document.getElementById('ptr-text').innerText = 'Refreshing...';
         document.getElementById('ptr-spinner').classList.add('spin');
-        if (navigator.vibrate) navigator.vibrate(40);
+        if (userHasInteracted && navigator.vibrate) navigator.vibrate(40);
         update(currentLat, currentLon).finally(() => {
             setTimeout(() => {
                 ptr.classList.remove('visible');
@@ -475,7 +481,7 @@ function toggleInfo(id, btn) {
     document.querySelectorAll('.card-info').forEach(p => p.classList.remove('open'));
     document.querySelectorAll('.card-toggle').forEach(b => b.classList.remove('open'));
     if (!isOpen) { panel.classList.add('open'); btn.classList.add('open'); }
-    if (navigator.vibrate) navigator.vibrate(15);
+    if (userHasInteracted && navigator.vibrate) navigator.vibrate(15);
 }
 
 // ── Info panel content builders ───────────────────────────────────────────────
@@ -565,7 +571,7 @@ function setPollenLevel(level) {
         btn.className = 'plvl-btn';
         if (parseInt(btn.dataset.level) === level) btn.classList.add('active-' + level);
     });
-    if (navigator.vibrate) navigator.vibrate(15);
+    if (userHasInteracted && navigator.vibrate) navigator.vibrate(15);
     updatePollenChips();
 }
 function updatePollenChips() {
@@ -661,7 +667,7 @@ async function checkVPN() {
     // Secondary client-side check as fallback — worker's cf.asOrganization is primary
     // ip-api.com has better CORS support than ipapi.co
     try {
-        const d = await (await fetch('http://ip-api.com/json/?fields=org,proxy,hosting')).json();
+        const d = await (await fetch('https://ip-api.com/json/?fields=org,proxy,hosting')).json();
         const org = (d.org||'').toLowerCase();
         const isVPN = d.proxy || d.hosting ||
             ['apple','icloud','private relay','vpn','mullvad','nordvpn','expressvpn','proton','tor project','relay']
@@ -690,7 +696,7 @@ function updateRadar(lat, lon) {
 // ── GPS ───────────────────────────────────────────────────────────────────────
 async function getGPS() {
     document.getElementById('gps-text').innerText = "Locating...";
-    if (navigator.vibrate) navigator.vibrate(20);
+    if (userHasInteracted && navigator.vibrate) navigator.vibrate(20);
     if (!navigator.geolocation) { document.getElementById('gps-text').innerText = "GPS Not Supported"; return; }
     navigator.geolocation.getCurrentPosition(
         async p => {
@@ -723,7 +729,7 @@ async function searchZip() {
         return;
     }
     document.getElementById('zip-input').style.outline = '';
-    if (navigator.vibrate) navigator.vibrate(20);
+    if (userHasInteracted && navigator.vibrate) navigator.vibrate(20);
     try {
         const data = await (await fetch(`https://api.zippopotam.us/us/${zip}`)).json();
         clearVPNWarning();
@@ -795,7 +801,7 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         }
 
         // Haptic on success
-        if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+        if (userHasInteracted && navigator.vibrate) navigator.vibrate([30, 50, 30]);
 
         // Persist location so page restores it on next load
         localStorage.setItem('lastLat', currentLat);
