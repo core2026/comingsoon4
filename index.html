@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v1.7 -->
+<!-- Acekallas Weather & Allergy — v1.8 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -127,19 +127,21 @@
         .info-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; margin-bottom: 5px; }
 
         /* ── Pollen wrapper ── */
-        .pollen-wrapper { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); overflow: hidden; }
-        #pollen-iframe { width: 100%; height: 270px; border: none; display: block; }
+        .pollen-wrapper { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); }
 
         /* ── Pollen loading notice (overlay on iframe) ── */
-        .pollen-notice-wrap { position: relative; }
+        .pollen-notice-wrap { position: relative; height: 270px; }
+        #pollen-iframe { width: 100%; height: 270px; border: none; display: block; }
         #pollen-notice {
-            position: absolute; inset: 0; z-index: 10;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 10px; background: #151e2e; border-radius: 24px 24px 0 0;
+            gap: 10px; background: #151e2e;
             transition: opacity 0.6s ease;
-            pointer-events: none;
+            /* Force compositor layer so notice paints above iframe */
+            transform: translateZ(0);
+            will-change: opacity;
         }
-        #pollen-notice.hidden { opacity: 0; }
+        #pollen-notice.hidden { opacity: 0; pointer-events: none; }
         .pn-icon { font-size: 1.8rem; animation: pn-bounce 1.4s ease-in-out infinite; }
         @keyframes pn-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
         .pn-title { font-size: 0.85rem; font-weight: 800; color: #f8fafc; text-align: center; padding: 0 16px; }
@@ -217,12 +219,12 @@
         </div>
     </div>
 
-    <!-- Relay/VPN warning banner — shown when Cloudflare detects iCloud Private Relay or VPN -->
+    <!-- Relay/VPN warning banner -->
     <div id="relay-banner">
         <span class="relay-icon">⚠️</span>
         <div class="relay-text">
             <span class="relay-title">Location may be inaccurate</span>
-            <span class="relay-sub">iCloud Private Relay or a VPN is masking your real location. Tap <strong>Sync Precise Location</strong> below to fix this.</span>
+            <span class="relay-sub">iCloud Private Relay or a VPN is masking your real location. Tap the button below to fix it.</span>
         </div>
     </div>
 
@@ -230,7 +232,7 @@
 
     <button id="gps-btn" onclick="getGPS()">
         <i data-lucide="map-pin"></i>
-        <span id="gps-text">Sync Precise Location</span>
+        <span id="gps-text">Use My Current Location</span>
     </button>
 
     <div class="search-container">
@@ -286,24 +288,40 @@
 
         <!-- Precip Chance -->
         <div class="card skeleton" id="card-precip">
+            <button class="card-toggle" onclick="toggleInfo('precip-info', this)">
+                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+            </button>
             <span class="label">Rain Chance</span>
             <span class="val" id="precip">--%</span>
             <span class="label">Precipitation</span>
+            <div class="card-info" id="precip-info"><div class="card-info-inner" id="precip-info-text"></div></div>
         </div>
 
         <!-- Visibility -->
         <div class="card skeleton" id="card-vis">
+            <button class="card-toggle" onclick="toggleInfo('vis-info', this)">
+                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+            </button>
             <span class="label">Visibility</span>
             <span class="val" id="visibility">-- mi</span>
             <span class="label">Clarity</span>
+            <div class="card-info" id="vis-info"><div class="card-info-inner" id="vis-info-text"></div></div>
         </div>
 
         <!-- Car Wash -->
-        <div class="card" style="grid-column:span 2; display:flex; align-items:center; gap:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2);">
-            <i data-lucide="car" style="color:var(--accent); width:28px; height:28px; flex-shrink:0;"></i>
-            <div>
-                <span class="label" style="color:var(--accent);">Car Wash Forecast</span>
-                <span id="wash-text" style="display:block; font-weight:800; font-size:1.2rem;">Analyzing...</span>
+        <div class="card" id="card-wash" style="grid-column:span 2; display:flex; align-items:flex-start; gap:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2); flex-direction:column; padding:20px;">
+            <div style="display:flex; align-items:center; gap:12px; width:100%; position:relative;">
+                <i data-lucide="car" style="color:var(--accent); width:28px; height:28px; flex-shrink:0;"></i>
+                <div style="flex:1;">
+                    <span class="label" style="color:var(--accent);">Car Wash Forecast</span>
+                    <span id="wash-text" style="display:block; font-weight:800; font-size:1.2rem;">Analyzing...</span>
+                </div>
+                <button class="card-toggle" style="position:relative; top:auto; right:auto; flex-shrink:0;" onclick="toggleInfo('wash-info', this)">
+                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                </button>
+            </div>
+            <div class="card-info" id="wash-info" style="width:100%; margin-top:0;">
+                <div class="card-info-inner" id="wash-info-text"></div>
             </div>
         </div>
 
@@ -322,7 +340,10 @@
         -->
 
         <!-- Sun Schedule -->
-        <div class="sun-card">
+        <div class="sun-card" style="position:relative;">
+            <button class="card-toggle" onclick="toggleInfo('sun-info', this)">
+                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+            </button>
             <span class="label" style="display:block; margin-bottom:14px;">☀️ Sun Schedule</span>
             <div class="sun-row">
                 <div class="sun-item">
@@ -346,10 +367,14 @@
                     <span class="sun-label">Sunset</span>
                 </div>
             </div>
+            <div class="card-info" id="sun-info"><div class="card-info-inner" id="sun-info-text"></div></div>
         </div>
 
         <!-- Related Triggers -->
-        <div class="triggers-card">
+        <div class="triggers-card" style="position:relative;">
+            <button class="card-toggle" onclick="toggleInfo('triggers-info', this)">
+                <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+            </button>
             <span class="label">🌿 Related Allergy Triggers</span>
             <div class="triggers-grid">
                 <div class="trigger-item">
@@ -377,6 +402,7 @@
                     <span class="trigger-note" id="rain-note"></span>
                 </div>
             </div>
+            <div class="card-info" id="triggers-info"><div class="card-info-inner" id="triggers-info-text"></div></div>
         </div>
 
         <!-- Rain Radar -->
@@ -392,15 +418,15 @@
 
         <!-- Pollen widget -->
         <div class="pollen-wrapper">
-            <!-- Notice overlays the iframe — lives in index.html so document.write() can't destroy it -->
             <div class="pollen-notice-wrap">
+                <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
+                <!-- Notice is AFTER iframe in DOM so it paints on top of it -->
                 <div id="pollen-notice">
                     <div class="pn-icon">🌿</div>
                     <div class="pn-title">Loading Allergy Forecast</div>
                     <div class="pn-sub">A short ad may appear first —<br>your pollen data shows right after.</div>
                     <div class="pn-bar"><div class="pn-bar-fill"></div></div>
                 </div>
-                <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
             </div>
             <div class="pollen-level-row">
                 <span class="pollen-level-label">Set level shown in widget above:</span>
@@ -580,7 +606,44 @@ function getWindInfo(wind) {
     return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
 }
 
-// ── Trigger risks ─────────────────────────────────────────────────────────────
+function getPrecipInfo(pct) {
+    let badge, color, desc;
+    if (pct <= 10)      { badge='☀️ Very Unlikely'; color='#4ade80'; desc='Clear skies expected. No rain gear needed.'; }
+    else if (pct <= 30) { badge='🌤 Slight Chance'; color='#a3e635'; desc='Rain possible but unlikely. You probably won\'t need an umbrella.'; }
+    else if (pct <= 50) { badge='🌦 Possible';       color='#fbbf24'; desc='A coin flip. Consider keeping an umbrella handy.'; }
+    else if (pct <= 70) { badge='🌧 Likely';          color='#f97316'; desc='Rain is probable. Bring an umbrella and plan accordingly.'; }
+    else                { badge='⛈ Very Likely';    color='#f87171'; desc='Rain is highly expected. Plan outdoor activities around it.'; }
+    return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
+}
+function getVisibilityInfo(vis) {
+    let badge, color, desc;
+    if (vis >= 7)       { badge='👁 Clear';         color='#4ade80'; desc='Excellent visibility. Great for driving and outdoor activities.'; }
+    else if (vis >= 4)  { badge='🌤 Good';           color='#a3e635'; desc='Good visibility with minor haze possible.'; }
+    else if (vis >= 2)  { badge='🌫 Reduced';        color='#fbbf24'; desc='Moderate haze or fog. Drive with headlights on.'; }
+    else                { badge='🌁 Poor';           color='#f87171'; desc='Low visibility. Exercise caution when driving. Fog or heavy conditions possible.'; }
+    return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
+}
+function getWashInfo(uv, wind) {
+    if (uv > 1 && wind < 18) return `<span class="info-badge" style="background:#38bdf822;color:#38bdf8;">✨ Great Conditions</span><br>Low wind and good sun means your car will dry quickly and evenly without water spots. Perfect time to wash.`;
+    if (wind >= 18) return `<span class="info-badge" style="background:#f9731622;color:#f97316;">💨 Too Windy</span><br>Wind above 18 mph will blow dust and debris back onto a freshly washed car. Wait for calmer conditions.`;
+    return `<span class="info-badge" style="background:#94a3b822;color:#94a3b8;">🌙 Low UV</span><br>Low UV means slow drying and potential water spots. Better to wash on a sunnier day.`;
+}
+function getSunInfo(sunrise, sunset, daylight) {
+    const hrs = parseFloat(daylight);
+    let desc = '';
+    if (hrs >= 14)      desc = 'Long summer day with lots of daylight. UV peaks sharply around midday — plan shade breaks.';
+    else if (hrs >= 12) desc = 'Near equal day and night. A balanced day — enjoy the long light while it lasts.';
+    else if (hrs >= 10) desc = 'Shorter autumn or winter day. Outdoor time is limited, make the most of the midday light.';
+    else                desc = 'Short day with limited daylight. The sun sets early — plan outdoor activities for the morning.';
+    return `<span class="info-badge" style="background:#fbbf2422;color:#fbbf24;">🌅 ${daylight} hrs of daylight</span><br>${desc}<br><br>Pollen counts are typically highest from <strong>5am–10am</strong>, peaking before noon.`;
+}
+function getTriggersInfo(humidity, wind, precipChance) {
+    return `Trigger levels are calculated from current conditions — no separate data source needed.<br><br>
+<strong>🍄 Mold</strong> rises when humidity exceeds 60%. Damp surfaces and standing water accelerate spore release.<br><br>
+<strong>💨 Dust</strong> stirs at wind speeds above 10 mph. Higher winds carry particulates farther and keep them airborne longer.<br><br>
+<strong>🌡️ Heat Stress</strong> uses the Rothfusz heat index formula combining temperature and humidity to estimate how the body actually feels.<br><br>
+<strong>🌧️ Rain Relief</strong> reflects how likely incoming rain is to wash pollen out of the air. Above 60% chance, the air gets a reset.`;
+}
 function updateTriggers(temp, humidity, wind, precipChance) {
     const set = (id, noteId, cls, text, note) => {
         document.getElementById(id).className = 'trigger-level ' + cls;
@@ -791,8 +854,8 @@ async function getGPS() {
             }
         },
         (err) => {
-            const msg = err.code === 1 ? "GPS Denied" : err.code === 2 ? "GPS Unavailable" : "GPS Timeout";
-            document.getElementById('gps-text').innerText = msg;
+            const msg = err.code === 1 ? "Location Access Denied" : err.code === 2 ? "Location Unavailable" : "Location Timed Out";
+            document.getElementById('gps-text').innerText = msg + " — Try Zip Instead";
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -847,13 +910,18 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         const relayDebug = d.asOrg ? ` · ASN: ${d.asOrg}` : '';
         document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}${relayDebug}`;
         document.getElementById('wash-text').innerText = (d.uv>1&&d.wind<18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-        if (lat) document.getElementById('gps-text').innerText = "Location Verified";
+        if (lat) document.getElementById('gps-text').innerText = "📍 Location Set — Tap to Update";
 
         // Info panels
-        document.getElementById('temp-info-text').innerHTML = getTempInfo(d.temp, d.feelsLike, d.humidity);
-        document.getElementById('hum-info-text').innerHTML  = getHumidityInfo(d.humidity);
-        document.getElementById('uv-info-text').innerHTML   = getUVInfo(d.uv);
-        document.getElementById('wind-info-text').innerHTML = getWindInfo(d.wind);
+        document.getElementById('temp-info-text').innerHTML     = getTempInfo(d.temp, d.feelsLike, d.humidity);
+        document.getElementById('hum-info-text').innerHTML      = getHumidityInfo(d.humidity);
+        document.getElementById('uv-info-text').innerHTML       = getUVInfo(d.uv);
+        document.getElementById('wind-info-text').innerHTML     = getWindInfo(d.wind);
+        document.getElementById('precip-info-text').innerHTML   = getPrecipInfo(d.precipChance ?? 0);
+        document.getElementById('vis-info-text').innerHTML      = getVisibilityInfo(d.visibility ?? 10);
+        document.getElementById('wash-info-text').innerHTML     = getWashInfo(d.uv, d.wind);
+        document.getElementById('triggers-info-text').innerHTML = getTriggersInfo(d.humidity, d.wind, d.precipChance ?? 0);
+        // Sun info populated after sun widget updates below
 
         // Derived widgets
         updateTriggers(d.temp, d.humidity, d.wind, d.precipChance || 0);
@@ -872,6 +940,9 @@ async function update(lat=null, lon=null, name=null, zip=null) {
 
         updateSunWidget(currentLat, currentLon);
         updateRadar(currentLat, currentLon);
+        // Populate sun info panel after widget runs (so sunrise/sunset times are filled in)
+        const sunTimes = calcSunTimes(currentLat, currentLon);
+        if (sunTimes) document.getElementById('sun-info-text').innerHTML = getSunInfo(sunTimes.sunrise, sunTimes.sunset, sunTimes.daylight);
 
         // Always update pollen if we have a zip — always reload when zip actually changed
         const targetZip = zip || currentZip;
