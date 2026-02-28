@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v1.9 -->
+<!-- Acekallas Weather & Allergy — v1.8 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -92,31 +92,16 @@
         }
 
         /* ── Search ── */
-        .search-container { display: flex; gap: 0; background: var(--input-bg); padding: 4px;
-                            border-radius: 14px; border: 1px solid var(--border); margin-bottom: 20px; align-items: center; }
+        .search-container { display: flex; gap: 6px; background: var(--input-bg); padding: 5px 5px 5px 10px;
+                            border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; align-items: center; }
         .search-container input { background: transparent; border: none; color: var(--search-input-color);
-                                  padding: 10px 10px; width: 100%; outline: none; font-family: inherit; font-weight: 600; font-size: 0.95rem; min-width: 0; }
+                                  padding: 8px 0; width: 100%; outline: none; font-family: inherit; font-weight: 600; font-size: 1rem; }
         .search-container input::placeholder { color: var(--label); }
         .search-container button { background: var(--accent); color: #0b1120; border: none; border-radius: 10px;
-                                   padding: 10px 14px; cursor: pointer; font-weight: 800; white-space: nowrap;
-                                   font-size: 0.88rem; flex-shrink: 0; letter-spacing: 0.02em; }
+                                   padding: 10px 16px; cursor: pointer; font-weight: 800; white-space: nowrap;
+                                   font-size: 0.9rem; flex-shrink: 0; }
 
-        /* ── Outdoor score card ── */
-        .outdoor-card { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border);
-                        backdrop-filter: blur(10px); padding: 20px; position: relative; overflow: hidden; }
-        .outdoor-score-row { display: flex; align-items: center; gap: 16px; }
-        .outdoor-score-circle { width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column;
-                                align-items: center; justify-content: center; flex-shrink: 0; border: 3px solid; }
-        .outdoor-score-num { font-size: 1.6rem; font-weight: 800; line-height: 1; }
-        .outdoor-score-label { font-size: 0.55rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.05em; }
-        .outdoor-score-detail { flex: 1; }
-        .outdoor-score-title { font-size: 1rem; font-weight: 800; display: block; }
-        .outdoor-score-desc { font-size: 0.72rem; color: var(--label); display: block; margin-top: 3px; line-height: 1.4; }
-        .outdoor-score-factors { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-        .score-factor { font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 8px;
-                        background: rgba(255,255,255,0.06); color: var(--label); }
-        /* ── Weather condition subtitle ── */
-        #condition-line { font-size: 0.78rem; color: var(--label); margin: 2px 0 0 0; font-weight: 600; }
+        /* ── Grid & cards ── */
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .card { background: var(--card); padding: 20px; border-radius: 24px; border: 1px solid var(--border);
                 backdrop-filter: blur(10px); position: relative; overflow: hidden; transition: background 0.3s; }
@@ -144,23 +129,24 @@
         /* ── Pollen wrapper ── */
         .pollen-wrapper { grid-column: span 2; background: var(--card); border-radius: 24px; border: 1px solid var(--border); }
 
-        /* ── Pollen loading notice (banner above widget) ── */
-        .pollen-notice-wrap { position: relative; }
+        /* ── Pollen loading notice (overlay on iframe) ── */
+        .pollen-notice-wrap { position: relative; height: 270px; }
         #pollen-iframe { width: 100%; height: 270px; border: none; display: block; }
         #pollen-notice {
-            display: flex; align-items: center; gap: 12px;
-            padding: 14px 18px; background: rgba(56,189,248,0.08);
-            border-bottom: 1px solid rgba(56,189,248,0.15);
-            transition: max-height 0.5s ease, opacity 0.5s ease, padding 0.5s ease;
-            max-height: 100px; overflow: hidden;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 10px; background: #151e2e;
+            transition: opacity 0.6s ease;
+            /* Force compositor layer so notice paints above iframe */
+            transform: translateZ(0);
+            will-change: opacity;
         }
-        #pollen-notice.hidden { max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0; }
-        .pn-icon { font-size: 1.4rem; flex-shrink: 0; animation: pn-bounce 2s ease-in-out infinite; }
-        @keyframes pn-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
-        .pn-text { flex: 1; }
-        .pn-title { font-size: 0.8rem; font-weight: 800; color: #38bdf8; display: block; }
-        .pn-sub { font-size: 0.68rem; color: var(--label); display: block; margin-top: 2px; line-height: 1.5; }
-        .pn-bar { width: 60px; height: 3px; background: rgba(56,189,248,0.2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+        #pollen-notice.hidden { opacity: 0; pointer-events: none; }
+        .pn-icon { font-size: 1.8rem; animation: pn-bounce 1.4s ease-in-out infinite; }
+        @keyframes pn-bounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        .pn-title { font-size: 0.85rem; font-weight: 800; color: #f8fafc; text-align: center; padding: 0 16px; }
+        .pn-sub { font-size: 0.68rem; color: #94a3b8; text-align: center; padding: 0 20px; line-height: 1.6; }
+        .pn-bar { width: 100px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
         .pn-bar-fill { height: 100%; width: 35%; background: #38bdf8; border-radius: 2px; animation: pn-slide 1.4s ease-in-out infinite; }
         @keyframes pn-slide { 0%{transform:translateX(-200%)} 100%{transform:translateX(450%)} }
         .pollen-level-row { padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
@@ -221,10 +207,7 @@
     <div class="header-row">
         <div class="header-left">
             <span class="weather-icon" id="weather-icon">🌤</span>
-            <div>
-                <h1 id="city-title">Syncing...</h1>
-                <p id="condition-line">—</p>
-            </div>
+            <h1 id="city-title">Syncing...</h1>
         </div>
         <div class="header-actions">
             <button class="icon-btn" onclick="shareLocation()" title="Share">
@@ -245,7 +228,7 @@
         </div>
     </div>
 
-    <p id="updated" style="font-size:11px; color:var(--label); margin:5px 0 14px 0;">Connecting... <span id="data-age"></span></p>
+    <p id="updated" style="font-size:11px; color:var(--label); margin:5px 0 14px 0;">Connecting...</p>
 
     <button id="gps-btn" onclick="getGPS()">
         <i data-lucide="map-pin"></i>
@@ -356,22 +339,6 @@
         </div>
         -->
 
-        <!-- Outdoor Score -->
-        <div class="outdoor-card">
-            <span class="label" style="display:block; margin-bottom:12px;">🏃 Outdoor Conditions Score</span>
-            <div class="outdoor-score-row">
-                <div class="outdoor-score-circle" id="outdoor-circle">
-                    <span class="outdoor-score-num" id="outdoor-num">--</span>
-                    <span class="outdoor-score-label">/ 100</span>
-                </div>
-                <div class="outdoor-score-detail">
-                    <span class="outdoor-score-title" id="outdoor-title">Calculating...</span>
-                    <span class="outdoor-score-desc" id="outdoor-desc"></span>
-                    <div class="outdoor-score-factors" id="outdoor-factors"></div>
-                </div>
-            </div>
-        </div>
-
         <!-- Sun Schedule -->
         <div class="sun-card" style="position:relative;">
             <button class="card-toggle" onclick="toggleInfo('sun-info', this)">
@@ -451,17 +418,15 @@
 
         <!-- Pollen widget -->
         <div class="pollen-wrapper">
-            <!-- Notice banner sits ABOVE iframe — no overlay, guaranteed visible on all browsers -->
-            <div id="pollen-notice">
-                <span class="pn-icon">🌿</span>
-                <div class="pn-text">
-                    <span class="pn-title">Loading Allergy Forecast</span>
-                    <span class="pn-sub">A short ad may appear first — pollen data follows right after.</span>
-                </div>
-                <div class="pn-bar"><div class="pn-bar-fill"></div></div>
-            </div>
             <div class="pollen-notice-wrap">
                 <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
+                <!-- Notice is AFTER iframe in DOM so it paints on top of it -->
+                <div id="pollen-notice">
+                    <div class="pn-icon">🌿</div>
+                    <div class="pn-title">Loading Allergy Forecast</div>
+                    <div class="pn-sub">A short ad may appear first —<br>your pollen data shows right after.</div>
+                    <div class="pn-bar"><div class="pn-bar-fill"></div></div>
+                </div>
             </div>
             <div class="pollen-level-row">
                 <span class="pollen-level-label">Set level shown in widget above:</span>
@@ -568,7 +533,7 @@ const skeletonIds = ['card-temp','card-hum','card-uv','card-wind','card-precip',
 function showSkeletons() { skeletonIds.forEach(id => document.getElementById(id)?.classList.add('skeleton')); }
 function hideSkeletons() { skeletonIds.forEach(id => document.getElementById(id)?.classList.remove('skeleton')); }
 
-// ── Weather condition icon + description ─────────────────────────────────────
+// ── Weather condition icon (Tomorrow.io weatherCode) ─────────────────────────
 const weatherIcons = {
     1000:'☀️', 1001:'☁️', 1100:'🌤', 1101:'⛅', 1102:'🌥',
     2000:'🌫', 2100:'🌁',
@@ -578,95 +543,7 @@ const weatherIcons = {
     7000:'🌩', 7101:'🌩', 7102:'🌩',
     8000:'⛈'
 };
-const weatherDesc = {
-    1000:'Clear', 1001:'Cloudy', 1100:'Mostly Clear', 1101:'Partly Cloudy', 1102:'Mostly Cloudy',
-    2000:'Fog', 2100:'Light Fog',
-    4000:'Drizzle', 4001:'Rain', 4200:'Light Rain', 4201:'Heavy Rain',
-    5000:'Snow', 5001:'Flurries', 5100:'Light Snow', 5101:'Heavy Snow',
-    6000:'Freezing Drizzle', 6001:'Freezing Rain', 6200:'Light Freezing Rain', 6201:'Heavy Freezing Rain',
-    7000:'Ice Pellets', 7101:'Heavy Ice Pellets', 7102:'Light Ice Pellets',
-    8000:'Thunderstorm'
-};
 function getWeatherIcon(code) { return weatherIcons[code] || '🌤'; }
-function getWeatherDesc(code) { return weatherDesc[code] || 'Partly Cloudy'; }
-
-// ── Outdoor score ─────────────────────────────────────────────────────────────
-function updateOutdoorScore(temp, uv, wind, precipChance, humidity) {
-    // Score each factor 0–25, sum to 100
-    let score = 100;
-    const factors = [];
-
-    // Temperature comfort (ideal 65–80°F)
-    if (temp < 32)       { score -= 30; factors.push('🥶 Freezing'); }
-    else if (temp < 50)  { score -= 15; factors.push('❄️ Cold'); }
-    else if (temp < 60)  { score -= 5;  factors.push('🧥 Cool'); }
-    else if (temp <= 85) { /* ideal */  factors.push('🌡️ Great temp'); }
-    else if (temp <= 95) { score -= 15; factors.push('🔥 Hot'); }
-    else                 { score -= 30; factors.push('🌋 Extreme heat'); }
-
-    // UV
-    if (uv >= 8)       { score -= 20; factors.push('🔴 Extreme UV'); }
-    else if (uv >= 6)  { score -= 10; factors.push('🟠 High UV'); }
-    else if (uv >= 3)  { score -= 3;  factors.push('🟡 Moderate UV'); }
-    else               { factors.push('🟢 Low UV'); }
-
-    // Wind
-    if (wind >= 30)      { score -= 20; factors.push('💨 Very windy'); }
-    else if (wind >= 18) { score -= 8;  factors.push('🌬 Breezy'); }
-    else                 { factors.push('✅ Calm wind'); }
-
-    // Rain chance
-    if (precipChance >= 70)      { score -= 20; factors.push('⛈ Likely rain'); }
-    else if (precipChance >= 40) { score -= 10; factors.push('🌧 Possible rain'); }
-    else if (precipChance >= 20) { score -= 3;  factors.push('🌦 Slight chance'); }
-    else                         { factors.push('☀️ Dry'); }
-
-    // Humidity comfort
-    if (humidity >= 80)      { score -= 10; factors.push('💦 Very humid'); }
-    else if (humidity >= 65) { score -= 4;  factors.push('😓 Humid'); }
-    else if (humidity < 20)  { score -= 4;  factors.push('🏜️ Very dry'); }
-
-    score = Math.max(0, Math.min(100, score));
-
-    let title, color, borderColor;
-    if (score >= 85)      { title = 'Excellent — Get Outside!'; color = '#4ade80'; borderColor = '#4ade80'; }
-    else if (score >= 70) { title = 'Good Conditions';          color = '#a3e635'; borderColor = '#a3e635'; }
-    else if (score >= 55) { title = 'Fair — Plan Accordingly';  color = '#fbbf24'; borderColor = '#fbbf24'; }
-    else if (score >= 35) { title = 'Poor — Limit Exposure';    color = '#f97316'; borderColor = '#f97316'; }
-    else                  { title = 'Stay Indoors';             color = '#f87171'; borderColor = '#f87171'; }
-
-    const descs = {
-        'Excellent — Get Outside!': 'Near-perfect conditions. Great for any outdoor activity.',
-        'Good Conditions': 'Comfortable outside with minor considerations.',
-        'Fair — Plan Accordingly': 'Manageable but some factors worth noting.',
-        'Poor — Limit Exposure': 'Multiple conditions making outdoor time uncomfortable.',
-        'Stay Indoors': 'Conditions are harsh. Plan indoor activities instead.'
-    };
-
-    document.getElementById('outdoor-num').innerText = score;
-    document.getElementById('outdoor-num').style.color = color;
-    document.getElementById('outdoor-title').innerText = title;
-    document.getElementById('outdoor-title').style.color = color;
-    document.getElementById('outdoor-desc').innerText = descs[title];
-    const circle = document.getElementById('outdoor-circle');
-    circle.style.borderColor = borderColor;
-    circle.style.background = borderColor + '15';
-    document.getElementById('outdoor-factors').innerHTML = factors.map(f =>
-        `<span class="score-factor">${f}</span>`).join('');
-}
-
-// ── Live data age counter ─────────────────────────────────────────────────────
-let lastUpdateTime = null;
-let ageTimer = null;
-function startAgeCounter() {
-    lastUpdateTime = Date.now();
-    clearInterval(ageTimer);
-    ageTimer = setInterval(() => {
-        const mins = Math.floor((Date.now() - lastUpdateTime) / 60000);
-        const el = document.getElementById('data-age');
-        if (el) el.innerText = mins < 1 ? 'just now' : `${mins}m ago`;
-    }, 30000); // update every 30s
-}
 
 // ── Card toggle ───────────────────────────────────────────────────────────────
 function toggleInfo(id, btn) {
@@ -893,14 +770,13 @@ function updateSunWidget(lat, lon) {
     document.getElementById('sun-dot').setAttribute('cy', 55-50*Math.sin(a));
 }
 
-// ── Pollen notice — shows above widget, collapses after delay ────────────────
+// ── Pollen notice — hide after delay (can't poll iframe DOM cross-origin) ────
 function showPollenNotice() {
     const n = document.getElementById('pollen-notice');
     if (!n) return;
     n.classList.remove('hidden');
-    // Collapse after 5 seconds — enough time to read it
-    clearTimeout(window._pollenNoticeTimer);
-    window._pollenNoticeTimer = setTimeout(() => n.classList.add('hidden'), 5000);
+    // Hide after 4s — enough to read, widget should be loaded by then
+    setTimeout(() => n.classList.add('hidden'), 4000);
 }
 
 // ── Auto-GPS if permission already granted (avoids Dallas on repeat visits) ──
@@ -1017,11 +893,9 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         const d = await r.json();
         weatherData = d;
 
-        // Weather icon + city + condition subtitle
+        // Weather icon + city
         document.getElementById('weather-icon').innerText = getWeatherIcon(d.weatherCode || 1000);
         document.getElementById('city-title').innerText = d.city;
-        document.getElementById('condition-line').innerText =
-            `${getWeatherDesc(d.weatherCode || 1000)} · Feels like ${d.feelsLike}°`;
 
         // Cards
         document.getElementById('temp').innerText      = d.temp + "°";
@@ -1051,9 +925,7 @@ async function update(lat=null, lon=null, name=null, zip=null) {
 
         // Derived widgets
         updateTriggers(d.temp, d.humidity, d.wind, d.precipChance || 0);
-        updateOutdoorScore(d.temp, d.uv, d.wind, d.precipChance || 0, d.humidity);
         updatePollenChips();
-        startAgeCounter();
 
         // Persist location — save the user-confirmed city name separately from worker city
         // (worker city can be wrong if cf.city returns edge location like Dallas)
