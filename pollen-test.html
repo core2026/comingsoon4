@@ -66,19 +66,23 @@
     <!-- Widget script runs after zip is set -->
     <script src="//www.pollenapps.com/df/tools/aa/js/one.1.0.min.js"></script>
     <script>
-        // Poll for widget content — hide notice once it renders
         const notice = document.getElementById('loading-notice');
         const target = document.getElementById('allergyalert');
+        // Always show notice for at least 3 seconds so user reads it
+        // Then poll until widget content appears (or 20s max)
+        const MINIMUM_MS = 3000;
+        const startTime = Date.now();
         let attempts = 0;
         const check = setInterval(() => {
             attempts++;
+            const elapsed = Date.now() - startTime;
             const hasContent = target.children.length > 0 ||
                                target.innerHTML.replace(/<!--.*?-->/g,'').trim().length > 20;
-            if (hasContent || attempts > 200) {
+            if (elapsed >= MINIMUM_MS && (hasContent || attempts > 200)) {
                 notice.classList.add('hidden');
                 clearInterval(check);
             }
-        }, 100);
+        }, 200);
     </script>
 </body>
 </html>
