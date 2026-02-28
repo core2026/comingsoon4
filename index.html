@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Weather">
     <link rel="manifest" href="/manifest.json">
-    <title>Weather & Allergy</title>
+    <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="//www.pollenapps.com/df/tools/aa/css/load.css">
@@ -658,8 +658,9 @@ function updateSunWidget(lat, lon) {
 
 // ── VPN detection ─────────────────────────────────────────────────────────────
 async function checkVPN() {
+    // Secondary client-side check as fallback — worker's cf.asOrganization is primary
+    // ip-api.com has better CORS support than ipapi.co
     try {
-        // ip-api.com is more reliable and has better CORS support than ipapi.co
         const d = await (await fetch('http://ip-api.com/json/?fields=org,proxy,hosting')).json();
         const org = (d.org||'').toLowerCase();
         const isVPN = d.proxy || d.hosting ||
@@ -669,9 +670,7 @@ async function checkVPN() {
             document.getElementById('vpn-badge').classList.add('visible');
             document.getElementById('gps-btn').classList.add('pulse');
         }
-    } catch(e) {
-        // Silently fail — don't block page load
-    }
+    } catch(e) { /* silently fail */ }
 }
 function clearVPNWarning() {
     document.getElementById('vpn-badge').classList.remove('visible');
@@ -698,14 +697,17 @@ async function getGPS() {
             clearVPNWarning();
             const lat = p.coords.latitude;
             const lon = p.coords.longitude;
-            // Reverse-geocode to get a zip code so pollen widget can update too
+            // Reverse-geocode to get real city name + zip from actual GPS coords
+            // This prevents Cloudflare's edge IP city (e.g. Dallas) from overriding
             try {
                 const geo = await (await fetch(`https://api.zippopotam.us/us/${lat},${lon}`)).json();
                 const zip = geo['post code'];
-                update(lat, lon, null, zip);
+                const city = geo.places?.[0]?.['place name'] || null;
+                update(lat, lon, city, zip);
             } catch(e) {
-                // If reverse geocode fails, update weather without changing pollen zip
-                update(lat, lon, null, null);
+                // Reverse geocode failed — still update weather with real coords,
+                // pass a space as name to prevent worker from using cf.city (Dallas)
+                update(lat, lon, ' ', null);
             }
         },
         () => { document.getElementById('gps-text').innerText = "GPS Denied"; }
@@ -777,10 +779,20 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         updateSunWidget(currentLat, currentLon);
         updateRadar(currentLat, currentLon);
 
+        // Always update pollen if we have a zip — always reload when zip actually changed
         const targetZip = zip || currentZip;
+        if (targetZip !== currentZip || zip) {
+            currentZip = targetZip;
+            updatePollenWidget(targetZip);
+        }
         // updateAQI(targetZip); // ← uncomment when AirNow API key is ready
-        if (targetZip !== currentZip) updatePollenWidget(targetZip);
-        else currentZip = targetZip;
+
+        // VPN/relay detection — worker checks ASN via Cloudflare, more reliable than client-side
+        // Only show if user hasn't already confirmed location via GPS or zip
+        if (d.isRelay && !lat) {
+            document.getElementById('vpn-badge').classList.add('visible');
+            document.getElementById('gps-btn').classList.add('pulse');
+        }
 
         // Haptic on success
         if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
@@ -835,4 +847,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
