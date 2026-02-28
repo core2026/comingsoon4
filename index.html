@@ -378,7 +378,7 @@ if ('serviceWorker' in navigator) {
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let currentZip = new URLSearchParams(location.search).get('zip') || '78015';
+let currentZip = '78015'; // overridden in DOMContentLoaded
 let currentLat = 29.7408, currentLon = -98.6444;
 let weatherData = {};
 let currentPollenLevel = null;
@@ -659,12 +659,19 @@ function updateSunWidget(lat, lon) {
 // ── VPN detection ─────────────────────────────────────────────────────────────
 async function checkVPN() {
     try {
-        const d = await (await fetch('https://ipapi.co/json/')).json();
+        // ip-api.com is more reliable and has better CORS support than ipapi.co
+        const d = await (await fetch('http://ip-api.com/json/?fields=org,proxy,hosting')).json();
         const org = (d.org||'').toLowerCase();
-        const isVPN = ['apple','icloud','private relay','vpn','mullvad','nordvpn','expressvpn','proton','tor project']
-            .some(k=>org.includes(k)) || d.privacy?.vpn || d.privacy?.proxy || d.privacy?.relay;
-        if (isVPN) { document.getElementById('vpn-badge').classList.add('visible'); document.getElementById('gps-btn').classList.add('pulse'); }
-    } catch(e) {}
+        const isVPN = d.proxy || d.hosting ||
+            ['apple','icloud','private relay','vpn','mullvad','nordvpn','expressvpn','proton','tor project','relay']
+            .some(k => org.includes(k));
+        if (isVPN) {
+            document.getElementById('vpn-badge').classList.add('visible');
+            document.getElementById('gps-btn').classList.add('pulse');
+        }
+    } catch(e) {
+        // Silently fail — don't block page load
+    }
 }
 function clearVPNWarning() {
     document.getElementById('vpn-badge').classList.remove('visible');
@@ -687,8 +694,21 @@ async function getGPS() {
     if (navigator.vibrate) navigator.vibrate(20);
     if (!navigator.geolocation) { document.getElementById('gps-text').innerText = "GPS Not Supported"; return; }
     navigator.geolocation.getCurrentPosition(
-        p => { clearVPNWarning(); update(p.coords.latitude, p.coords.longitude, null, null); },
-        () => { document.getElementById('gps-text').innerText = "GPS Denied"; update(); }
+        async p => {
+            clearVPNWarning();
+            const lat = p.coords.latitude;
+            const lon = p.coords.longitude;
+            // Reverse-geocode to get a zip code so pollen widget can update too
+            try {
+                const geo = await (await fetch(`https://api.zippopotam.us/us/${lat},${lon}`)).json();
+                const zip = geo['post code'];
+                update(lat, lon, null, zip);
+            } catch(e) {
+                // If reverse geocode fails, update weather without changing pollen zip
+                update(lat, lon, null, null);
+            }
+        },
+        () => { document.getElementById('gps-text').innerText = "GPS Denied"; }
     );
 }
 
@@ -705,7 +725,8 @@ async function searchZip() {
     try {
         const data = await (await fetch(`https://api.zippopotam.us/us/${zip}`)).json();
         clearVPNWarning();
-        update(data.places[0].latitude, data.places[0].longitude, data.places[0]['place name'], zip);
+        // Parse as floats — zippopotam returns strings
+        update(parseFloat(data.places[0].latitude), parseFloat(data.places[0].longitude), data.places[0]['place name'], zip);
     } catch(e) { document.getElementById('updated').innerText = "Invalid ZIP code."; }
 }
 
@@ -764,6 +785,12 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         // Haptic on success
         if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
 
+        // Persist location so page restores it on next load
+        localStorage.setItem('lastLat', currentLat);
+        localStorage.setItem('lastLon', currentLon);
+        localStorage.setItem('lastZip', currentZip);
+        if (d.city) localStorage.setItem('lastCity', d.city);
+
         hideSkeletons();
 
         // Schedule next auto-refresh in 10 min
@@ -781,7 +808,27 @@ async function update(lat=null, lon=null, name=null, zip=null) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.getElementById('zip-input').addEventListener('keydown', e => { if(e.key==='Enter') searchZip(); });
 document.addEventListener('DOMContentLoaded', () => {
-    update();
+    // Restore last location from localStorage, fallback to URL param, then San Antonio
+    const savedLat  = parseFloat(localStorage.getItem('lastLat'));
+    const savedLon  = parseFloat(localStorage.getItem('lastLon'));
+    const savedZip  = localStorage.getItem('lastZip');
+    const urlZip    = new URLSearchParams(location.search).get('zip');
+
+    if (urlZip) {
+        // URL param takes priority (shared links)
+        currentZip = urlZip;
+        update(null, null, null, urlZip);
+    } else if (savedLat && savedLon) {
+        // Restore last known position
+        currentLat = savedLat;
+        currentLon = savedLon;
+        if (savedZip) currentZip = savedZip;
+        update(savedLat, savedLon, localStorage.getItem('lastCity'), savedZip);
+    } else {
+        // First-ever load — default to San Antonio
+        update();
+    }
+
     checkVPN();
     updatePollenChips();
 });
