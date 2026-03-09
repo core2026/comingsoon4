@@ -1561,7 +1561,8 @@ function handleAPILimit(lat, lon, zip) {
     hideSkeletons();
 }
 
-
+// ── Main update ───────────────────────────────────────────────────────────────
+async function update(lat=null, lon=null, name=null, zip=null) {
     showSkeletons();
     try {
         let url = `https://pollen-data.acekallas.com/`;
