@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v2.5.1 -->
+<!-- Acekallas Weather & Allergy — v2.6 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -342,6 +342,33 @@
         .nws-empty span { font-size: 1.6rem; }
         .nws-footer { font-size: 0.62rem; color: var(--label); margin-top: 10px; text-align: right; }
         .nws-footer a { color: var(--accent); text-decoration: none; }
+
+        /* ── NWS top alert bar (appears near top when active alerts exist) ── */
+        #nws-alert-bar { display: none; margin-bottom: 10px; }
+        #nws-alert-bar.visible { display: block; }
+        .nws-bar-item { display: flex; align-items: center; gap: 10px;
+                        background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.35);
+                        border-left: 4px solid #f87171; border-radius: 14px;
+                        padding: 10px 14px; margin-bottom: 6px;
+                        cursor: pointer; text-decoration: none; transition: background 0.2s; }
+        .nws-bar-item:hover { background: rgba(248,113,113,0.18); }
+        .nws-bar-item.bar-watch    { border-left-color: #fbbf24; background: rgba(251,191,36,0.08); }
+        .nws-bar-item.bar-watch:hover { background: rgba(251,191,36,0.15); }
+        .nws-bar-item.bar-advisory { border-left-color: #60a5fa; background: rgba(96,165,250,0.08); }
+        .nws-bar-item.bar-advisory:hover { background: rgba(96,165,250,0.15); }
+        .nws-bar-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .nws-bar-text { flex: 1; min-width: 0; }
+        .nws-bar-tag   { font-size: 0.58rem; font-weight: 800; text-transform: uppercase;
+                         letter-spacing: 0.06em; display: block; }
+        .nws-bar-tag.btag-warning  { color: #f87171; }
+        .nws-bar-tag.btag-watch    { color: #fbbf24; }
+        .nws-bar-tag.btag-advisory { color: #60a5fa; }
+        .nws-bar-tag.btag-other    { color: var(--label); }
+        .nws-bar-headline { font-size: 0.75rem; font-weight: 700; color: var(--text);
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .nws-bar-arrow { color: var(--label); font-size: 0.8rem; flex-shrink: 0; }
+        .nws-bar-more  { font-size: 0.65rem; color: var(--label); text-align: center;
+                         padding: 4px 0 2px; }
     </style>
 </head>
 <body>
@@ -390,6 +417,9 @@
             <span class="severe-sub" id="severe-sub"></span>
         </div>
     </div>
+
+    <!-- NWS active alert bar — shows near top when real alerts exist, links to full card -->
+    <div id="nws-alert-bar"></div>
 
     <!-- API rate limit banner -->
     <div id="api-limit-banner">
@@ -1319,7 +1349,6 @@ function updateHourlyStrip(hourly) {
             '<div style="color:var(--label);font-size:0.75rem;padding:10px;">No hourly data available.</div>';
         return;
     }
-    const now = new Date();
     const html = hourly.map((h, i) => {
         const t = new Date(h.time);
         const timeLabel = i === 0 ? 'Now' : t.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
@@ -1328,19 +1357,26 @@ function updateHourlyStrip(hourly) {
         let cls = isNow ? 'hourly-item hourly-now' : rainHigh ? 'hourly-item rain-likely' : 'hourly-item';
         const precipStr = h.precip > 0 ? `💧${h.precip}%` : '';
         const windStr = h.wind > 0 ? `${h.wind}mph` : '';
+        // For "Now" slot show feels-like below temp if meaningfully different
+        const feelsNote = (isNow && Math.abs(h.temp - h.feelsLike) >= 4)
+            ? `<span class="hourly-wind">FL:${h.feelsLike}°</span>` : '';
         return `<div class="${cls}">
             <span class="hourly-time">${timeLabel}</span>
             <span class="hourly-icon">${getWeatherIcon(h.weatherCode)}</span>
             <span class="hourly-temp">${h.temp}°</span>
+            ${feelsNote}
             ${precipStr ? `<span class="hourly-precip">${precipStr}</span>` : ''}
-            ${windStr ? `<span class="hourly-wind">${windStr}</span>` : ''}
+            ${windStr && !feelsNote ? `<span class="hourly-wind">${windStr}</span>` : ''}
         </div>`;
     }).join('');
     document.getElementById('hourly-scroll').innerHTML = html;
     document.getElementById('hourly-info-text').innerHTML =
-        `<strong>How to read this strip:</strong> Each card shows the hour, weather icon, temperature, rain chance (💧) if above 0%, and wind speed. ` +
-        `Blue border = rain likely (40%+). Cyan border = current hour.<br><br>` +
-        `<strong>Tip:</strong> Scroll horizontally to see all 12 hours. Data refreshes every 10 minutes.`;
+        `<strong>Why does "Now" show a different temp than the main card?</strong><br>` +
+        `The main card shows a <em>realtime observation</em> — the actual measured reading right now. ` +
+        `The "Now" slot here comes from the <em>forecast model</em> for the current hour, which can differ by 1–3° because it's a prediction, not a live sensor read. Both are correct — they're just different data sources.<br><br>` +
+        `<strong>How to read this strip:</strong> Icon = conditions, 💧 = rain chance (shown if above 0%), small text = wind. ` +
+        `Cyan border = current hour. Blue border = rain likely (40%+).<br><br>` +
+        `<strong>Tip:</strong> Scroll right to see all 12 hours. Refreshes every 10 minutes.`;
 }
 
 // ── 5-day forecast card ───────────────────────────────────────────────────────
@@ -1382,11 +1418,11 @@ function updateForecastCard(daily) {
     }).join('');
     document.getElementById('forecast-rows').innerHTML = html;
     document.getElementById('forecast-info-text').innerHTML =
-        `The colored bar shows each day's temperature range relative to the week's overall spread — ` +
-        `a wider bar means a bigger swing between high and low.<br><br>` +
-        `<strong>💧 Rain chance</strong> is the daily average probability. ` +
-        `<strong>Wind</strong> and <strong>UV</strong> peaks are factored into the outdoor score each day. ` +
-        `Data updates every 10 minutes from Tomorrow.io.`;
+        `<strong>Why does "Today" show a different temp than the main card?</strong><br>` +
+        `The main card is the <em>current reading</em>. "Today" shows the predicted <em>high for the day</em> — ` +
+        `so if it's morning and it'll warm up later, the forecast high will be higher than it is right now. That's correct.<br><br>` +
+        `<strong>The bar</strong> shows each day's temp range relative to the week's full spread — a wider bar means a bigger swing between low and high.<br><br>` +
+        `💧 Rain chance is the daily average probability. Data updates every 10 minutes.`;
 }
 
 // ── Best time to go outside (from hourly data) ────────────────────────────────
@@ -1499,13 +1535,44 @@ async function updateNWSAlerts(lat, lon, cityName) {
 
         if (!alerts.length) {
             badge.style.display = 'none';
+            document.getElementById('nws-alert-bar').classList.remove('visible');
+            document.getElementById('nws-alert-bar').innerHTML = '';
             listEl.innerHTML = `<div class="nws-empty"><span>✅</span><strong>No active alerts</strong><br>No NWS watches, warnings, or advisories for your area right now.</div>`;
             return;
         }
 
-        // Show count badge
+        // Show count badge on bottom card
         badge.style.display = 'inline';
         badge.innerText = alerts.length + (alerts.length === 1 ? ' Alert' : ' Alerts');
+
+        // ── Populate top alert bar ──────────────────────────────────────────
+        // Show up to 2 most severe alerts at top; rest visible in bottom card
+        const topAlerts = alerts.slice(0, 2);
+        const barEl = document.getElementById('nws-alert-bar');
+        barEl.innerHTML = topAlerts.map(a => {
+            const p = a.properties || {};
+            const event = (p.event || '').toLowerCase();
+            const headline = p.headline || p.event || 'Weather Alert';
+            const alertUrl = p.id || '#';
+            let barCls = 'nws-bar-item', tagCls = 'nws-bar-tag btag-warning', tagText = '🚨 Warning', icon = '⚠️';
+            if (event.includes('warning'))       { barCls += ''; tagCls = 'nws-bar-tag btag-warning'; tagText = '🚨 Warning'; icon = '🚨'; }
+            else if (event.includes('watch'))    { barCls += ' bar-watch'; tagCls = 'nws-bar-tag btag-watch'; tagText = '👀 Watch'; icon = '👀'; }
+            else if (event.includes('advisory')) { barCls += ' bar-advisory'; tagCls = 'nws-bar-tag btag-advisory'; tagText = '🔵 Advisory'; icon = '🔵'; }
+            else                                 { barCls += ' bar-advisory'; tagCls = 'nws-bar-tag btag-other'; tagText = 'ℹ️ Notice'; icon = 'ℹ️'; }
+            return `<a class="${barCls}" href="${alertUrl}" target="_blank" rel="noopener">
+                <span class="nws-bar-icon">${icon}</span>
+                <span class="nws-bar-text">
+                    <span class="${tagCls}">${tagText} · ${p.event || 'Alert'}</span>
+                    <span class="nws-bar-headline">${headline}</span>
+                </span>
+                <span class="nws-bar-arrow">↗</span>
+            </a>`;
+        }).join('') + (alerts.length > 2
+            ? `<div class="nws-bar-more">+${alerts.length - 2} more alert${alerts.length - 2 > 1 ? 's' : ''} — see full list below ↓</div>`
+            : '');
+        barEl.classList.add('visible');
+
+        // ── Populate bottom detail card ─────────────────────────────────────
 
         listEl.innerHTML = alerts.map(a => {
             const p = a.properties || {};
@@ -1539,6 +1606,7 @@ async function updateNWSAlerts(lat, lon, cityName) {
 
     } catch(e) {
         console.warn('NWS alerts error:', e);
+        document.getElementById('nws-alert-bar').classList.remove('visible');
         listEl.innerHTML = `<div class="nws-empty"><span>📡</span>Unable to load alerts — check <a href="https://alerts.weather.gov" target="_blank" style="color:var(--accent)">alerts.weather.gov</a> directly.</div>`;
         badge.style.display = 'none';
     }
