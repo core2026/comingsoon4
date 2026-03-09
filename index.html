@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v2.0 -->
+<!-- Acekallas Weather & Allergy — v2.2 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -167,6 +167,104 @@
         .pn-bar { width: 60px; height: 3px; background: rgba(56,189,248,0.2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
         .pn-bar-fill { height: 100%; width: 35%; background: #38bdf8; border-radius: 2px; animation: pn-slide 1.4s ease-in-out infinite; }
         @keyframes pn-slide { 0%{transform:translateX(-200%)} 100%{transform:translateX(450%)} }
+        /* ── Open-Meteo pollen card ── */
+        .om-pollen-card {
+            grid-column: span 2; background: var(--card); border-radius: 24px;
+            border: 1px solid var(--border); backdrop-filter: blur(10px); padding: 20px;
+            position: relative;
+        }
+        .om-pollen-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .om-pollen-title { font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--label); }
+        .om-pollen-updated { font-size: 0.65rem; color: var(--label); opacity: 0.7; }
+        .om-pollen-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .om-pollen-item {
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            border-radius: 16px; padding: 12px 10px; text-align: center;
+            position: relative; overflow: hidden; transition: border-color 0.3s;
+        }
+        .om-pollen-item.level-none  { border-color: rgba(148,163,184,0.2); }
+        .om-pollen-item.level-low   { border-color: rgba(74,222,128,0.4);  background: rgba(74,222,128,0.06); }
+        .om-pollen-item.level-mod   { border-color: rgba(251,191,36,0.4);  background: rgba(251,191,36,0.06); }
+        .om-pollen-item.level-high  { border-color: rgba(249,115,22,0.4);  background: rgba(249,115,22,0.06); }
+        .om-pollen-item.level-vhigh { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.06); }
+        .om-pollen-emoji { font-size: 1.4rem; display: block; margin-bottom: 5px; }
+        .om-pollen-name  { font-size: 0.6rem; text-transform: uppercase; font-weight: 800; color: var(--label); display: block; margin-bottom: 6px; }
+        .om-pollen-val   { font-size: 1.1rem; font-weight: 800; display: block; line-height: 1; }
+        .om-pollen-badge { font-size: 0.6rem; font-weight: 800; display: inline-block; margin-top: 5px;
+                           padding: 2px 7px; border-radius: 6px; }
+        .badge-none  { background: rgba(148,163,184,0.15); color: #94a3b8; }
+        .badge-low   { background: rgba(74,222,128,0.15);  color: #4ade80; }
+        .badge-mod   { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+        .badge-high  { background: rgba(249,115,22,0.15);  color: #f97316; }
+        .badge-vhigh { background: rgba(248,113,113,0.15); color: #f87171; }
+        .om-pollen-summary {
+            margin-top: 14px; padding: 10px 14px; border-radius: 12px;
+            background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+            font-size: 0.72rem; color: var(--label); line-height: 1.5;
+            display: flex; align-items: flex-start; gap: 8px;
+        }
+        .om-pollen-summary-icon { font-size: 1rem; flex-shrink: 0; }
+        .om-pollen-skeleton { animation: shimmer 1.4s infinite; background: linear-gradient(90deg, transparent, var(--shimmer-to), transparent); background-size: 200% 100%; border-radius: 8px; height: 16px; margin: 4px auto; width: 70%; }
+        .om-source { font-size: 0.58rem; color: var(--label); opacity: 0.5; text-align: right; margin-top: 10px; }
+
+        /* ── Season badge ── */
+        .om-season-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.65rem; font-weight: 800; padding: 3px 10px;
+            border-radius: 20px; margin-left: 8px; vertical-align: middle;
+            background: rgba(56,189,248,0.12); color: #38bdf8;
+            border: 1px solid rgba(56,189,248,0.25);
+        }
+        .om-season-badge.season-active {
+            background: rgba(249,115,22,0.12); color: #f97316;
+            border-color: rgba(249,115,22,0.3);
+        }
+
+        /* ── Species breakdown panel (tap to expand on each tile) ── */
+        .om-pollen-item { cursor: pointer; }
+        .om-species-panel {
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.35s ease, opacity 0.3s ease;
+            opacity: 0;
+        }
+        .om-species-panel.open { max-height: 200px; opacity: 1; }
+        .om-species-inner {
+            border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px;
+        }
+        .om-species-row {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.62rem; padding: 2px 0; color: var(--label);
+        }
+        .om-species-row span:last-child { font-weight: 800; color: var(--text); }
+
+        /* ── 5-day forecast strip ── */
+        .om-forecast-strip {
+            margin-top: 14px; padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .om-forecast-label {
+            font-size: 0.6rem; text-transform: uppercase; font-weight: 800;
+            color: var(--label); margin-bottom: 8px; display: block;
+        }
+        .om-forecast-days {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+        }
+        .om-forecast-day {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 4px; background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border); border-radius: 12px;
+            padding: 8px 4px; text-align: center;
+            transition: border-color 0.3s;
+        }
+        .om-forecast-day.fc-low   { border-color: rgba(74,222,128,0.35); }
+        .om-forecast-day.fc-mod   { border-color: rgba(251,191,36,0.35); }
+        .om-forecast-day.fc-high  { border-color: rgba(249,115,22,0.35); }
+        .om-forecast-day.fc-vhigh { border-color: rgba(248,113,113,0.4); }
+        .om-fc-dow   { font-size: 0.6rem; font-weight: 800; color: var(--label); text-transform: uppercase; }
+        .om-fc-emoji { font-size: 1rem; }
+        .om-fc-badge { font-size: 0.55rem; font-weight: 800; padding: 2px 5px; border-radius: 5px; }
+        .om-fc-val   { font-size: 0.6rem; color: var(--label); }
+
         /* ── Pollen ad notice (persistent warning) ── */
         .pollen-ad-notice {
             display: flex; align-items: flex-start; gap: 10px;
@@ -471,6 +569,45 @@
                 style="width:100%; height:320px; border:none; display:block;" allowfullscreen></iframe>
         </div>
 
+        <!-- Open-Meteo Real Pollen Data — sits above PollenApps widget -->
+        <div class="om-pollen-card">
+            <div class="om-pollen-header">
+                <div>
+                    <span class="om-pollen-title">🌿 Live Pollen Forecast</span>
+                    <span class="om-season-badge" id="om-season-badge">Loading season...</span>
+                </div>
+                <span class="om-pollen-updated" id="om-pollen-updated">Loading...</span>
+            </div>
+            <div class="om-pollen-grid" id="om-pollen-grid">
+                <!-- Skeleton placeholders while loading -->
+                <div class="om-pollen-item level-none">
+                    <span class="om-pollen-emoji">🌳</span>
+                    <span class="om-pollen-name">Tree</span>
+                    <div class="om-pollen-skeleton"></div>
+                </div>
+                <div class="om-pollen-item level-none">
+                    <span class="om-pollen-emoji">🌾</span>
+                    <span class="om-pollen-name">Grass</span>
+                    <div class="om-pollen-skeleton"></div>
+                </div>
+                <div class="om-pollen-item level-none">
+                    <span class="om-pollen-emoji">🍂</span>
+                    <span class="om-pollen-name">Weed</span>
+                    <div class="om-pollen-skeleton"></div>
+                </div>
+            </div>
+            <div class="om-pollen-summary" id="om-pollen-summary">
+                <span class="om-pollen-summary-icon">⏳</span>
+                <span id="om-pollen-summary-text">Fetching your local pollen forecast...</span>
+            </div>
+            <!-- 5-day forecast strip -->
+            <div class="om-forecast-strip" id="om-forecast-strip" style="display:none;">
+                <span class="om-forecast-label">5-Day Pollen Outlook — Tap a card above for species detail</span>
+                <div class="om-forecast-days" id="om-forecast-days"></div>
+            </div>
+            <div class="om-source">Data: Open-Meteo Air Quality API (CAMS European) · No key required · Updates hourly</div>
+        </div>
+
         <!-- Pollen widget -->
         <div class="pollen-wrapper">
             <!-- Notice banner sits ABOVE iframe — no overlay, guaranteed visible on all browsers -->
@@ -621,6 +758,226 @@ const weatherDesc = {
 };
 function getWeatherIcon(code) { return weatherIcons[code] || '🌤'; }
 function getWeatherDesc(code) { return weatherDesc[code] || 'Partly Cloudy'; }
+
+// ── Open-Meteo Live Pollen ────────────────────────────────────────────────────
+// Free, no API key, CORS-enabled. Returns hourly pollen grains/m³ for current hour.
+// Pollen types: birch+alder+olive = Tree composite | grass | mugwort+ragweed = Weed composite
+
+function classifyPollen(val) {
+    // CAMS pollen scale: grains/m³
+    if (val === null || val === undefined || isNaN(val)) return { cls: 'none',  badge: 'badge-none',  label: 'N/A',  color: '#94a3b8' };
+    if (val < 10)   return { cls: 'low',   badge: 'badge-low',   label: 'Low',       color: '#4ade80' };
+    if (val < 50)   return { cls: 'mod',   badge: 'badge-mod',   label: 'Moderate',  color: '#fbbf24' };
+    if (val < 200)  return { cls: 'high',  badge: 'badge-high',  label: 'High',      color: '#f97316' };
+    return             { cls: 'vhigh', badge: 'badge-vhigh', label: 'Very High', color: '#f87171' };
+}
+
+function sumPollen(hourly, ...keys) {
+    // Find the index for the current hour
+    const nowISO = new Date().toISOString().slice(0, 13); // "2026-03-09T14"
+    const idx = (hourly.time || []).findIndex(t => t.startsWith(nowISO));
+    if (idx === -1) return null;
+    let total = 0, anyData = false;
+    for (const key of keys) {
+        const v = hourly[key]?.[idx];
+        if (v !== null && v !== undefined) { total += v; anyData = true; }
+    }
+    return anyData ? Math.round(total) : null;
+}
+
+// ── Season awareness (San Antonio / Texas regional calendar) ─────────────────
+function getPollenSeason() {
+    const m = new Date().getMonth(); // 0=Jan
+    // Mountain cedar peaks Dec–Feb, tree pollen Mar–May, grass Jun–Aug, ragweed Aug–Oct
+    if (m === 11 || m === 0 || m === 1)
+        return { label: '🌲 Cedar Season', active: true,  note: 'Mountain cedar is the dominant allergen right now — one of the most intense seasons in Texas.' };
+    if (m >= 2 && m <= 4)
+        return { label: '🌸 Tree Season',  active: true,  note: 'Tree pollen is peaking. Oak, ash, and elm are the main contributors in San Antonio.' };
+    if (m >= 5 && m <= 7)
+        return { label: '🌾 Grass Season', active: true,  note: 'Grass pollen season is underway. Bermuda and Johnson grass are common local culprits.' };
+    if (m >= 7 && m <= 9)
+        return { label: '🍂 Weed Season',  active: true,  note: 'Ragweed season peaks Aug–Oct. One of the most widespread allergens in the US.' };
+    return { label: '😌 Low Season',      active: false, note: 'Pollen activity is generally lower this time of year. A good window for outdoor activities.' };
+}
+
+// ── Get pollen value for a specific day index (0 = today) ────────────────────
+function sumPollenDay(hourly, dayIdx, ...keys) {
+    // For a given day offset, average all non-null hourly values for that day
+    const nowDate = new Date();
+    const targetDate = new Date(nowDate);
+    targetDate.setDate(targetDate.getDate() + dayIdx);
+    const targetStr = targetDate.toISOString().slice(0, 10); // "2026-03-09"
+    const times = hourly.time || [];
+    let total = 0, count = 0;
+    times.forEach((t, idx) => {
+        if (!t.startsWith(targetStr)) return;
+        for (const key of keys) {
+            const v = hourly[key]?.[idx];
+            if (v !== null && v !== undefined) { total += v; count++; }
+        }
+    });
+    if (count === 0) return null;
+    return Math.round(total / (keys.length || 1));
+}
+
+async function updateOMPollen(lat, lon) {
+    try {
+        const params = [
+            'birch_pollen', 'alder_pollen', 'olive_pollen',
+            'grass_pollen',
+            'mugwort_pollen', 'ragweed_pollen'
+        ].join(',');
+        // Fetch 5 days so we can build the forecast strip
+        const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=${params}&timezone=auto&forecast_days=5`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const h = data.hourly;
+        if (!h) throw new Error('No hourly data');
+
+        // ── Season badge ──────────────────────────────────────────────────────
+        const season = getPollenSeason();
+        const badge = document.getElementById('om-season-badge');
+        badge.innerText = season.label;
+        badge.className = 'om-season-badge' + (season.active ? ' season-active' : '');
+        badge.title = season.note;
+
+        // ── Current hour composites ───────────────────────────────────────────
+        const birchVal  = sumPollen(h, 'birch_pollen');
+        const alderVal  = sumPollen(h, 'alder_pollen');
+        const oliveVal  = sumPollen(h, 'olive_pollen');
+        const grassVal  = sumPollen(h, 'grass_pollen');
+        const mugwortVal= sumPollen(h, 'mugwort_pollen');
+        const ragweedVal= sumPollen(h, 'ragweed_pollen');
+
+        const treeVal = (birchVal !== null || alderVal !== null || oliveVal !== null)
+            ? Math.round((birchVal||0) + (alderVal||0) + (oliveVal||0)) : null;
+        const weedVal = (mugwortVal !== null || ragweedVal !== null)
+            ? Math.round((mugwortVal||0) + (ragweedVal||0)) : null;
+
+        const tree  = classifyPollen(treeVal);
+        const grass = classifyPollen(grassVal);
+        const weed  = classifyPollen(weedVal);
+
+        const fmt  = v => v === null ? '--' : v + ' g/m³';
+        const fmts = v => v === null ? '--' : v + ' g/m³';
+
+        // ── Main tiles with tappable species breakdown ────────────────────────
+        document.getElementById('om-pollen-grid').innerHTML = `
+            <div class="om-pollen-item level-${tree.cls}" onclick="toggleOMSpecies('om-tree-species', this)">
+                <span class="om-pollen-emoji">🌳</span>
+                <span class="om-pollen-name">Tree ▾</span>
+                <span class="om-pollen-val" style="color:${tree.color}">${fmt(treeVal)}</span>
+                <span class="om-pollen-badge ${tree.badge}">${tree.label}</span>
+                <div class="om-species-panel" id="om-tree-species">
+                    <div class="om-species-inner">
+                        <div class="om-species-row"><span>🌲 Birch</span><span>${fmts(birchVal)}</span></div>
+                        <div class="om-species-row"><span>🌿 Alder</span><span>${fmts(alderVal)}</span></div>
+                        <div class="om-species-row"><span>🫒 Olive</span><span>${fmts(oliveVal)}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="om-pollen-item level-${grass.cls}" onclick="toggleOMSpecies('om-grass-species', this)">
+                <span class="om-pollen-emoji">🌾</span>
+                <span class="om-pollen-name">Grass ▾</span>
+                <span class="om-pollen-val" style="color:${grass.color}">${fmt(grassVal)}</span>
+                <span class="om-pollen-badge ${grass.badge}">${grass.label}</span>
+                <div class="om-species-panel" id="om-grass-species">
+                    <div class="om-species-inner">
+                        <div class="om-species-row"><span>🌱 All grass</span><span>${fmts(grassVal)}</span></div>
+                        <div class="om-species-row" style="font-size:0.58rem; opacity:0.7;"><span colspan="2">Bermuda, Johnson & others combined</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="om-pollen-item level-${weed.cls}" onclick="toggleOMSpecies('om-weed-species', this)">
+                <span class="om-pollen-emoji">🍂</span>
+                <span class="om-pollen-name">Weed ▾</span>
+                <span class="om-pollen-val" style="color:${weed.color}">${fmt(weedVal)}</span>
+                <span class="om-pollen-badge ${weed.badge}">${weed.label}</span>
+                <div class="om-species-panel" id="om-weed-species">
+                    <div class="om-species-inner">
+                        <div class="om-species-row"><span>🌼 Mugwort</span><span>${fmts(mugwortVal)}</span></div>
+                        <div class="om-species-row"><span>🍃 Ragweed</span><span>${fmts(ragweedVal)}</span></div>
+                    </div>
+                </div>
+            </div>`;
+
+        // ── Smart summary ─────────────────────────────────────────────────────
+        const all = [
+            { name: 'Tree', val: treeVal, info: tree },
+            { name: 'Grass', val: grassVal, info: grass },
+            { name: 'Weed', val: weedVal, info: weed }
+        ].filter(x => x.val !== null);
+
+        const worst = [...all].sort((a,b) => (b.val||0) - (a.val||0))[0];
+        const allLow  = all.every(x => x.info.cls === 'low'  || x.info.cls === 'none');
+        const anyHigh = all.some(x => x.info.cls === 'high'  || x.info.cls === 'vhigh');
+
+        let icon, summary;
+        if (!worst || allLow) {
+            icon = '✅';
+            summary = season.active
+                ? `Levels are low right now despite it being ${season.label}. Good window for outdoor activity.`
+                : 'Pollen levels are low across all types. Good conditions for outdoor activity.';
+        } else if (anyHigh) {
+            icon = '⚠️';
+            summary = `${worst.name} pollen is ${worst.info.label.toLowerCase()} (${worst.val} g/m³). Consider a mask outdoors, keep windows closed, and shower after extended time outside.`;
+        } else {
+            icon = '💛';
+            summary = `${worst.name} pollen is moderate. Sensitive individuals may notice symptoms — peak exposure is typically 5–10 AM.`;
+        }
+
+        document.getElementById('om-pollen-summary-icon').innerText = icon;
+        document.getElementById('om-pollen-summary-text').innerText = summary;
+        document.getElementById('om-pollen-updated').innerText =
+            'Updated ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        // ── 5-day forecast strip ──────────────────────────────────────────────
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        const fcHTML = [0,1,2,3,4].map(dayIdx => {
+            const d = new Date(); d.setDate(d.getDate() + dayIdx);
+            const dow = dayIdx === 0 ? 'Today' : days[d.getDay()];
+
+            // Worst composite for the day (tree/grass/weed max)
+            const tDay = sumPollenDay(h, dayIdx, 'birch_pollen','alder_pollen','olive_pollen');
+            const gDay = sumPollenDay(h, dayIdx, 'grass_pollen');
+            const wDay = sumPollenDay(h, dayIdx, 'mugwort_pollen','ragweed_pollen');
+            const vals = [tDay, gDay, wDay].filter(v => v !== null);
+            const maxVal = vals.length ? Math.max(...vals) : null;
+            const info = classifyPollen(maxVal);
+
+            const emoji = info.cls === 'none' ? '😌'
+                        : info.cls === 'low'   ? '🟢'
+                        : info.cls === 'mod'   ? '🟡'
+                        : info.cls === 'high'  ? '🟠' : '🔴';
+
+            return `<div class="om-forecast-day fc-${info.cls}">
+                <span class="om-fc-dow">${dow}</span>
+                <span class="om-fc-emoji">${emoji}</span>
+                <span class="om-fc-badge ${info.badge}" style="background:${info.color}22;color:${info.color}">${info.label}</span>
+                <span class="om-fc-val">${maxVal !== null ? maxVal + ' g/m³' : '--'}</span>
+            </div>`;
+        }).join('');
+
+        document.getElementById('om-forecast-days').innerHTML = fcHTML;
+        document.getElementById('om-forecast-strip').style.display = '';
+
+    } catch(e) {
+        document.getElementById('om-pollen-updated').innerText = 'Unavailable';
+        document.getElementById('om-pollen-summary-text').innerText = 'Could not load pollen data. Check back shortly.';
+        console.error('Open-Meteo pollen error:', e);
+    }
+}
+
+// ── Toggle species breakdown panel on tile tap ────────────────────────────────
+function toggleOMSpecies(id, tileEl) {
+    const panel = document.getElementById(id);
+    if (!panel) return;
+    const isOpen = panel.classList.contains('open');
+    // Close all panels first
+    document.querySelectorAll('.om-species-panel').forEach(p => p.classList.remove('open'));
+    if (!isOpen) panel.classList.add('open');
+    if (userHasInteracted && navigator.vibrate) navigator.vibrate(15);
+}
 
 // ── Outdoor score ─────────────────────────────────────────────────────────────
 function updateOutdoorScore(temp, uv, wind, precipChance, humidity) {
@@ -1100,6 +1457,7 @@ async function update(lat=null, lon=null, name=null, zip=null) {
 
         updateSunWidget(currentLat, currentLon);
         updateRadar(currentLat, currentLon);
+        updateOMPollen(currentLat, currentLon);
         // Populate sun info panel after widget runs (so sunrise/sunset times are filled in)
         const sunTimes = calcSunTimes(currentLat, currentLon);
         if (sunTimes) document.getElementById('sun-info-text').innerHTML = getSunInfo(sunTimes.sunrise, sunTimes.sunset, sunTimes.daylight);
