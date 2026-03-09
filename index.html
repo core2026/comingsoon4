@@ -323,8 +323,7 @@
                     scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
         .nws-item { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px;
                     background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-                    border-radius: 14px; text-decoration: none; transition: border-color 0.2s, background 0.2s; }
-        .nws-item:hover { border-color: var(--accent); background: rgba(56,189,248,0.06); }
+                    border-radius: 14px; }
         .nws-item.nws-warning  { border-left: 3px solid #f87171; }
         .nws-item.nws-watch    { border-left: 3px solid #fbbf24; }
         .nws-item.nws-advisory { border-left: 3px solid #60a5fa; }
@@ -349,13 +348,9 @@
         .nws-bar-item { display: flex; align-items: center; gap: 10px;
                         background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.35);
                         border-left: 4px solid #f87171; border-radius: 14px;
-                        padding: 10px 14px; margin-bottom: 6px;
-                        cursor: pointer; text-decoration: none; transition: background 0.2s; }
-        .nws-bar-item:hover { background: rgba(248,113,113,0.18); }
+                        padding: 10px 14px; margin-bottom: 6px; }
         .nws-bar-item.bar-watch    { border-left-color: #fbbf24; background: rgba(251,191,36,0.08); }
-        .nws-bar-item.bar-watch:hover { background: rgba(251,191,36,0.15); }
         .nws-bar-item.bar-advisory { border-left-color: #60a5fa; background: rgba(96,165,250,0.08); }
-        .nws-bar-item.bar-advisory:hover { background: rgba(96,165,250,0.15); }
         .nws-bar-icon { font-size: 1.1rem; flex-shrink: 0; }
         .nws-bar-text { flex: 1; min-width: 0; }
         .nws-bar-tag   { font-size: 0.58rem; font-weight: 800; text-transform: uppercase;
@@ -366,7 +361,6 @@
         .nws-bar-tag.btag-other    { color: var(--label); }
         .nws-bar-headline { font-size: 0.75rem; font-weight: 700; color: var(--text);
                             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-        .nws-bar-arrow { color: var(--label); font-size: 0.8rem; flex-shrink: 0; }
         .nws-bar-more  { font-size: 0.65rem; color: var(--label); text-align: center;
                          padding: 4px 0 2px; }
     </style>
@@ -1553,20 +1547,18 @@ async function updateNWSAlerts(lat, lon, cityName) {
             const p = a.properties || {};
             const event = (p.event || '').toLowerCase();
             const headline = p.headline || p.event || 'Weather Alert';
-            const alertUrl = p.id || '#';
             let barCls = 'nws-bar-item', tagCls = 'nws-bar-tag btag-warning', tagText = '🚨 Warning', icon = '⚠️';
             if (event.includes('warning'))       { barCls += ''; tagCls = 'nws-bar-tag btag-warning'; tagText = '🚨 Warning'; icon = '🚨'; }
             else if (event.includes('watch'))    { barCls += ' bar-watch'; tagCls = 'nws-bar-tag btag-watch'; tagText = '👀 Watch'; icon = '👀'; }
             else if (event.includes('advisory')) { barCls += ' bar-advisory'; tagCls = 'nws-bar-tag btag-advisory'; tagText = '🔵 Advisory'; icon = '🔵'; }
             else                                 { barCls += ' bar-advisory'; tagCls = 'nws-bar-tag btag-other'; tagText = 'ℹ️ Notice'; icon = 'ℹ️'; }
-            return `<a class="${barCls}" href="${alertUrl}" target="_blank" rel="noopener">
+            return `<div class="${barCls}">
                 <span class="nws-bar-icon">${icon}</span>
                 <span class="nws-bar-text">
                     <span class="${tagCls}">${tagText} · ${p.event || 'Alert'}</span>
                     <span class="nws-bar-headline">${headline}</span>
                 </span>
-                <span class="nws-bar-arrow">↗</span>
-            </a>`;
+            </div>`;
         }).join('') + (alerts.length > 2
             ? `<div class="nws-bar-more">+${alerts.length - 2} more alert${alerts.length - 2 > 1 ? 's' : ''} — see full list below ↓</div>`
             : '');
@@ -1581,7 +1573,6 @@ async function updateNWSAlerts(lat, lon, cityName) {
             const onset    = p.onset  ? new Date(p.onset).toLocaleString('en-US',  { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true }) : '';
             const expires  = p.expires ? new Date(p.expires).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit', hour12:true }) : '';
             const dateStr  = onset ? `Onset: ${onset}${expires ? ' · Expires: ' + expires : ''}` : (expires ? `Expires: ${expires}` : '');
-            const url      = p.id || '#';
 
             // Classify severity for color coding
             let itemCls = 'nws-item', tagCls = 'nws-tag', tagText = '📋 Statement';
@@ -1597,11 +1588,11 @@ async function updateNWSAlerts(lat, lon, cityName) {
                 tagCls += ' tag-info'; tagText = 'ℹ️ Notice';
             }
 
-            return `<a class="${itemCls}" href="${url}" target="_blank" rel="noopener">
+            return `<div class="${itemCls}">
                 <span class="${tagCls}">${tagText} · ${p.event || 'Alert'}</span>
                 <span class="nws-title">${headline}</span>
                 ${dateStr ? `<span class="nws-date">${dateStr}</span>` : ''}
-            </a>`;
+            </div>`;
         }).join('');
 
     } catch(e) {
