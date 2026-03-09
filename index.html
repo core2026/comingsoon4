@@ -9,10 +9,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Weather">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <title>Acekallas Weather & Allergy</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -464,7 +464,7 @@
                 <div class="pn-bar"><div class="pn-bar-fill"></div></div>
             </div>
             <div class="pollen-notice-wrap">
-                <iframe id="pollen-iframe" src="/pollen-test.html" scrolling="no"></iframe>
+                <iframe id="pollen-iframe" src="pollen-test.html" scrolling="no"></iframe>
             </div>
             <div class="pollen-level-row">
                 <span class="pollen-level-label">Set level shown in widget above:</span>
@@ -485,7 +485,7 @@
 <script>
 // ── PWA service worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -948,7 +948,7 @@ function clearVPNWarning() {
 // ── Widget updates ────────────────────────────────────────────────────────────
 function updatePollenWidget(zip) {
     currentZip = zip;
-    document.getElementById('pollen-iframe').src = `/pollen-test.html?zip=${zip}&t=${Date.now()}`;
+    document.getElementById('pollen-iframe').src = `pollen-test.html?zip=${zip}&t=${Date.now()}`;
     showPollenNotice();
 }
 function updateRadar(lat, lon) {
