@@ -829,9 +829,24 @@ async function updateOMPollen(lat, lon) {
         ].join(',');
         // Fetch 5 days so we can build the forecast strip
         const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=${params}&timezone=auto&forecast_days=5`;
+        console.log('[OM-Pollen] Fetching:', url);
         const res = await fetch(url);
+        console.log('[OM-Pollen] HTTP status:', res.status, res.statusText);
         const data = await res.json();
+        console.log('[OM-Pollen] Raw response:', JSON.stringify(data).slice(0, 500));
         const h = data.hourly;
+        console.log('[OM-Pollen] hourly keys:', h ? Object.keys(h) : 'NULL - no hourly object');
+        if (h && h.time) {
+            const nowISO = new Date().toISOString().slice(0, 13);
+            console.log('[OM-Pollen] Looking for hour:', nowISO);
+            console.log('[OM-Pollen] First 5 time entries:', h.time.slice(0, 5));
+            console.log('[OM-Pollen] Total time entries:', h.time.length);
+            const idx = h.time.findIndex(t => t.startsWith(nowISO));
+            console.log('[OM-Pollen] Matched hour index:', idx);
+            if (idx >= 0) {
+                console.log('[OM-Pollen] Values at that index — birch:', h.birch_pollen?.[idx], 'grass:', h.grass_pollen?.[idx], 'ragweed:', h.ragweed_pollen?.[idx]);
+            }
+        }
         if (!h) throw new Error('No hourly data');
 
         // ── Season badge ──────────────────────────────────────────────────────
