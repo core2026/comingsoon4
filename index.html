@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v2.5 -->
+<!-- Acekallas Weather & Allergy — v2.5.1 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -701,6 +701,7 @@
                 <span class="label" style="color:#f87171;">NWS Weather Alerts</span>
                 <span id="nws-badge" style="display:none; font-size:0.6rem; font-weight:800; background:rgba(248,113,113,0.2); color:#f87171; border:1px solid rgba(248,113,113,0.4); padding:2px 7px; border-radius:8px; margin-left:4px;"></span>
             </div>
+            <div id="nws-location-label" style="font-size:0.62rem; color:var(--label); margin-bottom:8px;"></div>
             <div class="nws-list" id="nws-list">
                 <div class="nws-empty"><span>📡</span>Loading alerts...</div>
             </div>
@@ -1472,10 +1473,18 @@ function updateBestTime(hourly) {
 // ── NWS Alerts (weather.gov RSS, no key needed) ───────────────────────────────
 // NWS atom feed URL uses lat/lon — we proxy via a CORS-friendly approach
 // NWS itself sends CORS headers on their API, so we can hit it directly
-async function updateNWSAlerts(lat, lon) {
+async function updateNWSAlerts(lat, lon, cityName) {
     const listEl = document.getElementById('nws-list');
     const badge  = document.getElementById('nws-badge');
     const updEl  = document.getElementById('nws-updated');
+    const locEl  = document.getElementById('nws-location-label');
+
+    // Show which location alerts are pulled for
+    if (locEl && cityName) {
+        locEl.innerText = `📍 Showing alerts for: ${cityName}`;
+    } else if (locEl) {
+        locEl.innerText = `📍 Showing alerts near ${lat.toFixed(2)}°N, ${Math.abs(lon.toFixed(2))}°W`;
+    }
     try {
         // NWS API: get active alerts for a point — returns JSON with CORS headers
         const res = await fetch(
@@ -1535,24 +1544,43 @@ async function updateNWSAlerts(lat, lon) {
     }
 }
 
-// ── API limit: show banner, still run non-Tomorrow.io widgets ─────────────────
+// ── API limit: hide Tomorrow.io cards, run independent widgets ────────────────
+// Cards that depend entirely on Tomorrow.io realtime data
+const TOMORROW_CARD_IDS = [
+    'card-temp','card-hum','card-dew','card-uv','card-wind','card-precip','card-vis','card-wash',
+    'card-besttime'
+];
+// Hourly/forecast/outdoor cards — also Tomorrow.io, identified by class
+const TOMORROW_SECTION_CLASSES = ['.hourly-card','.forecast-card','.outdoor-card'];
+
+function hideTomorrowCards() {
+    TOMORROW_CARD_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.display = 'none'; }
+    });
+    TOMORROW_SECTION_CLASSES.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => { el.style.display = 'none'; });
+    });
+}
+function showTomorrowCards() {
+    TOMORROW_CARD_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.style.display = ''; }
+    });
+    TOMORROW_SECTION_CLASSES.forEach(sel => {
+        document.querySelectorAll(sel).forEach(el => { el.style.display = ''; });
+    });
+}
+
 function handleAPILimit(lat, lon, zip) {
     document.getElementById('api-limit-banner').classList.add('visible');
-    // Mark all Tomorrow.io cards with a subtle limit indicator
-    ['temp','hum','uv','wind','precip','visibility','dew'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.innerText === '--' || (el && (el.innerText.includes('--')))) {
-            el.innerText = '—'; // clean dash instead of ugly undefined
-        }
-    });
-    document.getElementById('wash-text').innerText = '⏳ Data paused';
-    document.getElementById('condition-line').innerText = 'API limit reached — partial data';
+    hideTomorrowCards();
     // Still run everything that doesn't need Tomorrow.io
     const useLat = lat || currentLat;
     const useLon = lon || currentLon;
     updateSunWidget(useLat, useLon);
     updateRadar(useLat, useLon);
-    updateNWSAlerts(useLat, useLon);
+    updateNWSAlerts(useLat, useLon, localStorage.getItem('lastCity') || null);
     const sunTimes = calcSunTimes(useLat, useLon);
     if (sunTimes) document.getElementById('sun-info-text').innerHTML = getSunInfo(sunTimes.sunrise, sunTimes.sunset, sunTimes.daylight);
     const targetZip = zip || currentZip;
@@ -1572,20 +1600,26 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         if (params.length) url += '?' + params.join('&');
 
         const r = await fetch(url);
-        const d = await r.json();
 
-        // API limit / worker error — run non-Tomorrow.io widgets, show banner, don't retry aggressively
-        if (d.error) {
-            document.getElementById('updated').innerText = 'Tomorrow.io limit reached';
+        // API limit / worker error — check HTTP status, not response body
+        // This is reliable regardless of what fields the JSON contains
+        if (!r.ok) {
+            const errBody = await r.json().catch(() => ({}));
+            const isLimit = r.status === 429 || (errBody && errBody.error);
+            document.getElementById('updated').innerText = isLimit
+                ? 'Tomorrow.io API limit reached — retrying in 5 min'
+                : `Worker error (${r.status}) — retrying in 5 min`;
             handleAPILimit(lat, lon, zip);
-            // Retry after 5 minutes instead of hammering
             clearTimeout(autoRefreshTimer);
             autoRefreshTimer = setTimeout(() => update(currentLat, currentLon), 5 * 60 * 1000);
             return;
         }
 
+        const d = await r.json();
+
         // Clear API limit banner if a previous load had triggered it
         document.getElementById('api-limit-banner').classList.remove('visible');
+        showTomorrowCards(); // restore any hidden cards
 
         weatherData = d;
 
@@ -1652,7 +1686,7 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         if (sunTimes) document.getElementById('sun-info-text').innerHTML = getSunInfo(sunTimes.sunrise, sunTimes.sunset, sunTimes.daylight);
 
         // NWS alerts — independent of Tomorrow.io, always runs
-        updateNWSAlerts(currentLat, currentLon);
+        updateNWSAlerts(currentLat, currentLon, d.city);
 
         // Always update pollen if we have a zip — always reload when zip actually changed
         const targetZip = zip || currentZip;
