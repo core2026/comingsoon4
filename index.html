@@ -597,7 +597,7 @@
                 </div>
             </div>
             <div class="om-pollen-summary" id="om-pollen-summary">
-                <span class="om-pollen-summary-icon">⏳</span>
+                <span class="om-pollen-summary-icon" id="om-pollen-summary-icon">⏳</span>
                 <span id="om-pollen-summary-text">Fetching your local pollen forecast...</span>
             </div>
             <!-- 5-day forecast strip -->
@@ -962,8 +962,10 @@ async function updateOMPollen(lat, lon) {
         document.getElementById('om-forecast-strip').style.display = '';
 
     } catch(e) {
-        document.getElementById('om-pollen-updated').innerText = 'Unavailable';
-        document.getElementById('om-pollen-summary-text').innerText = 'Could not load pollen data. Check back shortly.';
+        const u = document.getElementById('om-pollen-updated');
+        const t = document.getElementById('om-pollen-summary-text');
+        if (u) u.innerText = 'Unavailable';
+        if (t) t.innerText = 'Could not load pollen data. Check back shortly.';
         console.error('Open-Meteo pollen error:', e);
     }
 }
