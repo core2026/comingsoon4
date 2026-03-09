@@ -811,7 +811,7 @@ document.addEventListener('touchend', () => {
         document.getElementById('ptr-text').innerText = 'Refreshing...';
         document.getElementById('ptr-spinner').classList.add('spin');
         if (userHasInteracted && navigator.vibrate) navigator.vibrate(40);
-        update(currentLat, currentLon).finally(() => {
+        update(currentLat, currentLon, localStorage.getItem('lastCity'), currentZip || null).finally(() => {
             setTimeout(() => {
                 ptr.classList.remove('visible');
                 document.getElementById('ptr-spinner').classList.remove('spin');
@@ -1265,8 +1265,9 @@ async function searchZip() {
     try {
         const data = await (await fetch(`https://api.zippopotam.us/us/${zip}`)).json();
         clearVPNWarning();
-        // Parse as floats — zippopotam returns strings
-        update(parseFloat(data.places[0].latitude), parseFloat(data.places[0].longitude), data.places[0]['place name'], zip);
+        const cityName = data.places[0]['place name'];
+        document.getElementById('gps-text').innerText = `📍 ZIP ${zip} — Tap to Use My Location`;
+        update(parseFloat(data.places[0].latitude), parseFloat(data.places[0].longitude), cityName, zip);
     } catch(e) { document.getElementById('updated').innerText = "Invalid ZIP code."; }
 }
 
@@ -1670,7 +1671,7 @@ async function update(lat=null, lon=null, name=null, zip=null) {
                 : `Worker error (${r.status}) — retrying in 5 min`;
             handleAPILimit(lat, lon, zip);
             clearTimeout(autoRefreshTimer);
-            autoRefreshTimer = setTimeout(() => update(currentLat, currentLon), 5 * 60 * 1000);
+            autoRefreshTimer = setTimeout(() => update(currentLat, currentLon, localStorage.getItem('lastCity'), currentZip || null), 5 * 60 * 1000);
             return;
         }
 
@@ -1701,7 +1702,15 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         const relayDebug = d.asOrg ? ` · ASN: ${d.asOrg}` : '';
         document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}${relayDebug}`;
         document.getElementById('wash-text').innerText = (d.uv>1&&d.wind<18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-        if (lat) document.getElementById('gps-text').innerText = "📍 Location Set — Tap to Update";
+        if (lat) {
+            const src = localStorage.getItem('lastSource');
+            const savedZipLabel = localStorage.getItem('lastZip');
+            if (src === 'zip' && savedZipLabel) {
+                document.getElementById('gps-text').innerText = `📍 ZIP ${savedZipLabel} — Tap to Use My Location`;
+            } else {
+                document.getElementById('gps-text').innerText = '📍 Location Set — Tap to Update';
+            }
+        }
 
         // Info panels
         document.getElementById('temp-info-text').innerHTML     = getTempInfo(d.temp, d.feelsLike, d.humidity);
@@ -1736,6 +1745,15 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         localStorage.setItem('lastLat', currentLat);
         localStorage.setItem('lastLon', currentLon);
         localStorage.setItem('lastZip', currentZip);
+        // Track whether this location came from zip or GPS so refresh knows whether to re-run GPS.
+        // Only update lastSource when the user deliberately changed location — not on auto-refresh.
+        // A deliberate zip search passes zip with lat/lon from zippopotam (name will be the city).
+        // A deliberate GPS action passes lat/lon with name but no zip.
+        // An auto-refresh or pull-to-refresh passes whatever currentLat/currentLon/currentZip are — don't change source.
+        const isUserZipSearch = zip && lat && name;   // came from searchZip()
+        const isUserGPS       = lat && name && !zip;  // came from getGPS()
+        if (isUserZipSearch)      localStorage.setItem('lastSource', 'zip');
+        else if (isUserGPS)       localStorage.setItem('lastSource', 'gps');
         if (cityToSave) localStorage.setItem('lastCity', cityToSave);
 
         updateSunWidget(currentLat, currentLon);
@@ -1767,17 +1785,11 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         // Haptic on success
         if (userHasInteracted && navigator.vibrate) navigator.vibrate([30, 50, 30]);
 
-        // Persist location so page restores it on next load
-        localStorage.setItem('lastLat', currentLat);
-        localStorage.setItem('lastLon', currentLon);
-        localStorage.setItem('lastZip', currentZip);
-        if (d.city) localStorage.setItem('lastCity', d.city);
-
         hideSkeletons();
 
         // Schedule next auto-refresh in 10 min
         clearTimeout(autoRefreshTimer);
-        autoRefreshTimer = setTimeout(() => update(currentLat, currentLon), 10 * 60 * 1000);
+        autoRefreshTimer = setTimeout(() => update(currentLat, currentLon, localStorage.getItem('lastCity'), currentZip || null), 10 * 60 * 1000);
 
     } catch(e) {
         console.error(e);
@@ -1794,22 +1806,30 @@ async function update(lat=null, lon=null, name=null, zip=null) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.getElementById('zip-input').addEventListener('keydown', e => { if(e.key==='Enter') searchZip(); });
 document.addEventListener('DOMContentLoaded', () => {
-    // Restore last location from localStorage, fallback to URL param, then San Antonio
-    const savedLat  = parseFloat(localStorage.getItem('lastLat'));
-    const savedLon  = parseFloat(localStorage.getItem('lastLon'));
-    const savedZip  = localStorage.getItem('lastZip');
-    const urlZip    = new URLSearchParams(location.search).get('zip');
+    const savedLat    = parseFloat(localStorage.getItem('lastLat'));
+    const savedLon    = parseFloat(localStorage.getItem('lastLon'));
+    const savedZip    = localStorage.getItem('lastZip');
+    const savedSource = localStorage.getItem('lastSource'); // 'zip' | 'gps' | null
+    const urlZip      = new URLSearchParams(location.search).get('zip');
 
     if (urlZip) {
+        // URL param always wins — share links must work
         currentZip = urlZip;
         update(null, null, null, urlZip);
     } else if (savedLat && savedLon) {
         currentLat = savedLat;
         currentLon = savedLon;
         if (savedZip) currentZip = savedZip;
+        // Restore GPS button label to reflect how location was last set
+        if (savedSource === 'zip' && savedZip) {
+            document.getElementById('gps-text').innerText = `📍 ZIP ${savedZip} — Tap to Use My Location`;
+        }
         update(savedLat, savedLon, localStorage.getItem('lastCity'), savedZip);
-        // Also try live GPS to get fresher position if permission already granted
-        tryAutoGPS();
+        // Only re-run GPS on load if the saved location came from GPS
+        // If user typed a zip, respect that choice and don't silently override it
+        if (savedSource !== 'zip') {
+            tryAutoGPS();
+        }
     } else {
         // First-ever load — try GPS first, fall back to San Antonio
         tryAutoGPS();
