@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v1.9 -->
+<!-- Acekallas Weather & Allergy — v2.0 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -167,6 +167,24 @@
         .pn-bar { width: 60px; height: 3px; background: rgba(56,189,248,0.2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
         .pn-bar-fill { height: 100%; width: 35%; background: #38bdf8; border-radius: 2px; animation: pn-slide 1.4s ease-in-out infinite; }
         @keyframes pn-slide { 0%{transform:translateX(-200%)} 100%{transform:translateX(450%)} }
+        /* ── Pollen ad notice (persistent warning) ── */
+        .pollen-ad-notice {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px;
+            background: rgba(251,191,36,0.08);
+            border-top: 1px solid rgba(251,191,36,0.2);
+            border-bottom: 1px solid rgba(251,191,36,0.2);
+            border-left: 3px solid #fbbf24;
+        }
+        .pollen-ad-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+        .pollen-ad-text { flex: 1; }
+        .pollen-ad-title {
+            display: block; font-size: 0.78rem; font-weight: 800;
+            color: #fbbf24; margin-bottom: 3px;
+        }
+        .pollen-ad-sub {
+            display: block; font-size: 0.68rem; color: var(--label); line-height: 1.5;
+        }
         .pollen-level-row { padding: 12px 16px 4px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); }
         .pollen-level-label { font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--label); }
         .pollen-level-btns { display: flex; gap: 6px; }
@@ -467,6 +485,16 @@
             <div class="pollen-notice-wrap">
                 <iframe id="pollen-iframe" src="pollen-test.html" scrolling="no"></iframe>
             </div>
+
+            <!-- Persistent ad notice — always visible so users know what to expect -->
+            <div class="pollen-ad-notice">
+                <span class="pollen-ad-icon">📢</span>
+                <div class="pollen-ad-text">
+                    <span class="pollen-ad-title">Ad plays for 5–10 seconds</span>
+                    <span class="pollen-ad-sub">Your local pollen forecast loads automatically once the ad finishes. No action needed — just wait a moment.</span>
+                </div>
+            </div>
+
             <div class="pollen-level-row">
                 <span class="pollen-level-label">Set level shown in widget above:</span>
                 <div class="pollen-level-btns">
