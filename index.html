@@ -946,7 +946,8 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     document.getElementById('theme-meta').content = theme === 'dark' ? '#0b1120' : '#f0f4f8';
     const btn = document.getElementById('theme-btn');
