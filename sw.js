@@ -1,3 +1,33 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║  ACEKALLAS WEATHER — SERVICE WORKER                                         ║
+// ║  ai-deploy-rules: sw.js                                                     ║
+// ╠══════════════════════════════════════════════════════════════════════════════╣
+// ║  ⚠️  AI ASSISTANT — READ THIS BEFORE EDITING                                ║
+// ║                                                                             ║
+// ║  REQUIRED ON EVERY DEPLOY:                                                  ║
+// ║    Bump CACHE_VERSION below (v9 → v10 → v11 etc.)                          ║
+// ║    This is what forces iOS PWA home screen users to get the new version.    ║
+// ║    Without this bump, iPhone users who added the site to their home screen  ║
+// ║    will continue seeing the old cached version indefinitely.                ║
+// ║                                                                             ║
+// ║  HOW THE UPDATE CHAIN WORKS:                                                ║
+// ║    1. CACHE_VERSION bumped → new SW file detected by browser               ║
+// ║    2. SW installs → self.skipWaiting() fires immediately                   ║
+// ║    3. SW activates → self.clients.claim() takes over all open tabs         ║
+// ║    4. index.html detects controllerchange → auto-reloads page              ║
+// ║    5. User gets new version silently on next open. No tap required.         ║
+// ║                                                                             ║
+// ║  RELATED FILES THAT MUST BE DEPLOYED TOGETHER:                              ║
+// ║    • index.html        — main app (bump version comment at top)             ║
+// ║    • sw.js             — this file (bump CACHE_VERSION)                     ║
+// ║    • index_pollen-final.js → deploy to Cloudflare Worker named             ║
+// ║                              pollen-data.acekallas.com (NOT GitHub Pages)  ║
+// ║                                                                             ║
+// ║  DO NOT TOUCH:                                                              ║
+// ║    • index_pollen_proxy.js — separate Cloudflare Worker, unrelated         ║
+// ║    • pollen-test.html      — pollen iframe page, rarely needs changes      ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
 // ── Acekallas Weather — Service Worker ────────────────────────────────────────
 // IMPORTANT: Bump CACHE_VERSION with every deploy.
 // This is the only thing you need to change — everything else is automatic.

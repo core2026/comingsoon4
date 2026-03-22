@@ -1,4 +1,46 @@
 <!-- Acekallas Weather & Allergy — v2.8 -->
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  ACEKALLAS WEATHER — MAIN APP                                               ║
+║  ai-deploy-rules: index.html                                                ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  ⚠️  AI ASSISTANT — READ THIS BEFORE EDITING                                ║
+║                                                                             ║
+║  DEPLOY CHECKLIST (every release):                                          ║
+║    1. Bump version comment at top of this file (v2.8 → v2.9 etc.)          ║
+║    2. Bump CACHE_VERSION in sw.js (v9 → v10 etc.) — REQUIRED for iOS PWA   ║
+║       Without this, iPhone home screen users get the old cached version.    ║
+║    3. If weather data fields changed, also deploy index_pollen-final.js     ║
+║       to the Cloudflare Worker at pollen-data.acekallas.com                ║
+║                                                                             ║
+║  ARCHITECTURE OVERVIEW:                                                     ║
+║    • GitHub Pages hosts: index.html, sw.js, pollen-test.html, icons        ║
+║    • Cloudflare Worker (pollen-data.acekallas.com):                         ║
+║        → index_pollen-final.js (weather data from Tomorrow.io API)         ║
+║        → Returns: temp, feelsLike, humidity, wind, uv, dewPoint,           ║
+║                   precipChance, weatherCode, visibility, hourly[12],        ║
+║                   daily[5], isRelay, asOrg                                  ║
+║    • Cloudflare Worker (separate, unrelated):                               ║
+║        → index_pollen_proxy.js (CORS proxy, do not modify with weather)    ║
+║    • NWS alerts: fetched client-side from api.weather.gov (no key needed)  ║
+║    • Pollen widget: PollenApps iframe (account 10757) in pollen-test.html  ║
+║    • Radar: RainViewer iframe (free, no key)                                ║
+║    • Zip lookup: api.zippopotam.us (free, no key)                          ║
+║    • Reverse geocode: Nominatim (free, no key)                             ║
+║                                                                             ║
+║  LOCATION PERSISTENCE:                                                      ║
+║    localStorage keys: lastLat, lastLon, lastZip, lastCity, lastSource      ║
+║    lastSource = 'zip' | 'gps' — controls whether tryAutoGPS() fires        ║
+║    on page load. NEVER call tryAutoGPS() when lastSource === 'zip' or       ║
+║    user's manually entered zip will be silently overridden on refresh.      ║
+║                                                                             ║
+║  API LIMIT HANDLING:                                                        ║
+║    Worker returns HTTP 429 when Tomorrow.io limit is hit.                   ║
+║    index.html checks !r.ok (not d.error) — do not change this check.       ║
+║    On limit: Tomorrow.io cards are hidden (display:none), non-Tomorrow      ║
+║    widgets (sun, radar, pollen, NWS alerts) continue to work.              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
