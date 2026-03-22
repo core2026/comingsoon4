@@ -1,4 +1,4 @@
-<!-- Acekallas Weather & Allergy — v2.7 -->
+<!-- Acekallas Weather & Allergy — v2.8 -->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -58,6 +58,14 @@
                     color: var(--label); cursor: pointer; width: 36px; height: 36px;
                     display: flex; align-items: center; justify-content: center; transition: all 0.2s; padding: 0; }
         .icon-btn:hover { background: var(--card-solid); color: var(--text); }
+        /* ── Audio summary button states ── */
+        #audio-btn.playing { color: var(--accent); border-color: var(--accent);
+                             background: rgba(56,189,248,0.12); position: relative; }
+        #audio-btn.playing::after { content: ''; position: absolute; inset: -4px;
+                                    border-radius: 16px; border: 2px solid var(--accent);
+                                    opacity: 0; animation: audio-ring 1.2s ease-out infinite; }
+        @keyframes audio-ring { 0%{opacity:0.6;transform:scale(1)} 100%{opacity:0;transform:scale(1.35)} }
+        #audio-btn.unsupported { opacity: 0.35; cursor: not-allowed; }
 
         /* ── Relay/VPN banner ── */
         #relay-banner { display: none; align-items: center; gap: 10px;
@@ -395,6 +403,9 @@
             </div>
         </div>
         <div class="header-actions">
+            <button class="icon-btn" id="audio-btn" onclick="toggleAudioSummary()" title="Play weather summary">
+                <i data-lucide="volume-2" style="width:16px;height:16px;"></i>
+            </button>
             <button class="icon-btn" onclick="shareLocation()" title="Share">
                 <i data-lucide="share-2" style="width:16px;height:16px;"></i>
             </button>
@@ -768,7 +779,174 @@ document.addEventListener('pointerdown', () => { userHasInteracted = true; }, { 
 lucide.createIcons();
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
-function applyTheme(theme) {
+// ── Audio weather summary (Web Speech API — free, built into browser) ──────────
+let _speechUtterance = null;
+let _speechPlaying   = false;
+
+function buildWeatherScript() {
+    const d = weatherData;
+    if (!d || !d.city) return null;
+
+    const now  = new Date();
+    const hour = now.getHours();
+    const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+    const parts = [];
+
+    // Greeting + location
+    parts.push(`${greeting}. Here's your weather summary for ${d.city}.`);
+
+    // Current conditions
+    if (d.temp != null) {
+        let tempDesc = '';
+        if (d.temp <= 32)       tempDesc = 'freezing';
+        else if (d.temp <= 50)  tempDesc = 'cold';
+        else if (d.temp <= 65)  tempDesc = 'cool';
+        else if (d.temp <= 80)  tempDesc = 'comfortable';
+        else if (d.temp <= 90)  tempDesc = 'warm';
+        else                    tempDesc = 'hot';
+
+        let conditionDesc = '';
+        try { conditionDesc = getWeatherDesc(d.weatherCode || 1000).toLowerCase(); } catch(e) {}
+
+        parts.push(
+            `It's currently ${d.temp} degrees${conditionDesc ? ' with ' + conditionDesc : ''}, feeling like ${d.feelsLike} degrees outside. Conditions are ${tempDesc}.`
+        );
+    }
+
+    // Humidity and wind
+    if (d.humidity != null && d.wind != null) {
+        const humDesc = d.humidity >= 70 ? 'high humidity' : d.humidity <= 30 ? 'very dry air' : `${d.humidity}% humidity`;
+        const windDesc = d.wind >= 25 ? `strong winds at ${d.wind} miles per hour`
+                       : d.wind >= 12 ? `a breeze at ${d.wind} miles per hour`
+                       : d.wind > 0   ? `light winds at ${d.wind} miles per hour`
+                       : 'calm winds';
+        parts.push(`Expect ${humDesc} and ${windDesc}.`);
+    }
+
+    // Rain chance
+    if (d.precipChance != null) {
+        if (d.precipChance >= 70)       parts.push(`There is a high chance of rain today at ${d.precipChance}%. Keep an umbrella handy.`);
+        else if (d.precipChance >= 40)  parts.push(`Rain is possible today with a ${d.precipChance}% chance. Consider bringing an umbrella.`);
+        else if (d.precipChance >= 20)  parts.push(`There's a slight ${d.precipChance}% chance of rain, but conditions should mostly stay dry.`);
+        else                            parts.push(`Rain is unlikely today with only a ${d.precipChance}% chance.`);
+    }
+
+    // Today's forecast high/low from daily data
+    const todayForecast = (d.daily && d.daily[0]) ? d.daily[0] : null;
+    if (todayForecast && todayForecast.tempHigh != null) {
+        parts.push(`Today's forecast high is ${todayForecast.tempHigh} degrees, with a low of ${todayForecast.tempLow} degrees.`);
+    }
+
+    // NWS alerts — read from the live alert bar if visible
+    const alertBar = document.getElementById('nws-alert-bar');
+    if (alertBar && alertBar.classList.contains('visible')) {
+        const tags = alertBar.querySelectorAll('.nws-bar-tag');
+        const headlines = alertBar.querySelectorAll('.nws-bar-headline');
+        if (headlines.length > 0) {
+            parts.push(`Attention: The National Weather Service has issued the following alert${headlines.length > 1 ? 's' : ''} for your area.`);
+            headlines.forEach((h, i) => {
+                const tag = tags[i] ? tags[i].innerText.replace(/[·🚨👀🔵ℹ️]/g, '').trim() : '';
+                parts.push(`${tag ? tag + ': ' : ''}${h.innerText.trim()}`);
+            });
+        }
+    }
+
+    // Closing
+    parts.push(`Stay safe and have a great day.`);
+
+    return parts.join(' ');
+}
+
+function toggleAudioSummary() {
+    const btn = document.getElementById('audio-btn');
+
+    // Check support
+    if (!('speechSynthesis' in window)) {
+        btn.classList.add('unsupported');
+        btn.title = 'Audio not supported in this browser';
+        return;
+    }
+
+    // If currently playing — stop
+    if (_speechPlaying) {
+        window.speechSynthesis.cancel();
+        _speechPlaying = false;
+        btn.classList.remove('playing');
+        btn.innerHTML = '<i data-lucide="volume-2" style="width:16px;height:16px;"></i>';
+        lucide.createIcons();
+        return;
+    }
+
+    // Build script — require data to be loaded
+    const script = buildWeatherScript();
+    if (!script) {
+        btn.title = 'Weather data not loaded yet';
+        return;
+    }
+
+    // Create utterance
+    _speechUtterance = new SpeechSynthesisUtterance(script);
+    _speechUtterance.rate   = 0.95;  // slightly slower than default for clarity
+    _speechUtterance.pitch  = 1.0;
+    _speechUtterance.volume = 1.0;
+
+    // Try to pick a natural-sounding English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v =>
+        v.lang.startsWith('en') && (
+            v.name.includes('Samantha') ||   // iOS default — excellent quality
+            v.name.includes('Karen') ||
+            v.name.includes('Daniel') ||
+            v.name.includes('Google US') ||
+            v.name.includes('Google UK') ||
+            v.name.includes('Natural')
+        )
+    ) || voices.find(v => v.lang === 'en-US') || voices[0];
+    if (preferred) _speechUtterance.voice = preferred;
+
+    _speechUtterance.onstart = () => {
+        _speechPlaying = true;
+        btn.classList.add('playing');
+        btn.innerHTML = '<i data-lucide="volume-x" style="width:16px;height:16px;"></i>';
+        lucide.createIcons();
+    };
+    _speechUtterance.onend = _speechUtterance.onerror = () => {
+        _speechPlaying = false;
+        btn.classList.remove('playing');
+        btn.innerHTML = '<i data-lucide="volume-2" style="width:16px;height:16px;"></i>';
+        lucide.createIcons();
+    };
+
+    // iOS Safari requires voices to be loaded async — retry if empty
+    if (voices.length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+            const v2 = window.speechSynthesis.getVoices();
+            const pick = v2.find(v => v.lang.startsWith('en') && v.name.includes('Samantha'))
+                      || v2.find(v => v.lang === 'en-US') || v2[0];
+            if (pick) _speechUtterance.voice = pick;
+            window.speechSynthesis.speak(_speechUtterance);
+        };
+    } else {
+        window.speechSynthesis.speak(_speechUtterance);
+    }
+}
+
+// Stop speech if page is hidden (tab switch, lock screen)
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && _speechPlaying) {
+        window.speechSynthesis.cancel();
+        _speechPlaying = false;
+        const btn = document.getElementById('audio-btn');
+        if (btn) {
+            btn.classList.remove('playing');
+            btn.innerHTML = '<i data-lucide="volume-2" style="width:16px;height:16px;"></i>';
+            lucide.createIcons();
+        }
+    }
+});
+
+
     document.documentElement.setAttribute('data-theme', theme);
     document.getElementById('theme-meta').content = theme === 'dark' ? '#0b1120' : '#f0f4f8';
     const btn = document.getElementById('theme-btn');
