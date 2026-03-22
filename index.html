@@ -762,7 +762,30 @@
 <script>
 // ── PWA service worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').then(reg => {
+        // Check for updates every time the page loads
+        reg.update();
+
+        // A new SW is waiting (update downloaded but not yet active)
+        reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            newWorker.addEventListener('statechange', () => {
+                // New SW installed and a previous one was controlling the page
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    // Tell the new SW to skip waiting and take over immediately
+                    newWorker.postMessage('skipWaiting');
+                }
+            });
+        });
+    }).catch(() => {});
+
+    // When a new SW takes control, reload automatically — no toast, no tap required
+    // This is the key fix for iOS home screen users: they get the new version
+    // on their very next visit without any manual action
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) { refreshing = true; location.reload(); }
+    });
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
