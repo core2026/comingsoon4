@@ -41,6 +41,48 @@
 ║    widgets (sun, radar, pollen, NWS alerts) continue to work.              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  EXTERNAL URLs REFERENCED BY THIS PAGE                                      ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                             ║
+║  STYLESHEETS & SCRIPTS (loaded in <head>):                                  ║
+║    • https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans             ║
+║        → Google Fonts — Plus Jakarta Sans typeface                          ║
+║    • https://unpkg.com/lucide@latest                                        ║
+║        → Lucide icon library (CDN)                                          ║
+║    • //www.pollenapps.com/df/tools/aa/css/load.css                          ║
+║        → PollenApps widget stylesheet                                       ║
+║    • https://www.googletagmanager.com/gtag/js?id=G-1JDFZW3STH              ║
+║        → Google Analytics (gtag.js)                                         ║
+║                                                                             ║
+║  API CALLS (runtime fetch):                                                 ║
+║    • https://pollen-data.acekallas.com/                                     ║
+║        → Cloudflare Worker — main weather data (Tomorrow.io proxy)          ║
+║    • https://api.weather.gov/alerts/active?point={lat},{lon}                ║
+║        → NWS active weather alerts (no API key required)                    ║
+║    • https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}        ║
+║        → OpenStreetMap reverse geocoding (no API key required)              ║
+║    • https://api.zippopotam.us/us/{zip}                                     ║
+║        → ZIP code to lat/lon lookup (no API key required)                   ║
+║                                                                             ║
+║  IFRAMES (embedded content):                                                ║
+║    • https://www.rainviewer.com/map.html?loc={lat},{lon},...                ║
+║        → RainViewer radar map embed (no API key required)                   ║
+║    • pollen-test.html?zip={zip}                                             ║
+║        → Local pollen widget (loads PollenApps iframe internally)           ║
+║                                                                             ║
+║  LINKS (user-facing anchor tags):                                           ║
+║    • https://alerts.weather.gov                                             ║
+║        → NWS alerts portal (shown in NWS card footer)                      ║
+║                                                                             ║
+║  SERVICE WORKER:                                                            ║
+║    • sw.js  — registered via navigator.serviceWorker.register('sw.js')      ║
+║                                                                             ║
+║  COMMENTED-OUT / DISABLED:                                                  ║
+║    • https://www.airnowapi.org/aq/observation/... (AQI — needs API key)     ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -579,22 +621,7 @@
             <div class="card-info" id="vis-info"><div class="card-info-inner" id="vis-info-text"></div></div>
         </div>
 
-        <!-- Car Wash -->
-        <div class="card" id="card-wash" style="grid-column:span 2; display:flex; align-items:flex-start; gap:12px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2); flex-direction:column; padding:20px;">
-            <div style="display:flex; align-items:center; gap:12px; width:100%; position:relative;">
-                <i data-lucide="car" style="color:var(--accent); width:28px; height:28px; flex-shrink:0;"></i>
-                <div style="flex:1;">
-                    <span class="label" style="color:var(--accent);">Car Wash Forecast</span>
-                    <span id="wash-text" style="display:block; font-weight:800; font-size:1.2rem;">Analyzing...</span>
-                </div>
-                <button class="card-toggle" style="position:relative; top:auto; right:auto; flex-shrink:0;" onclick="toggleInfo('wash-info', this)">
-                    <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-                </button>
-            </div>
-            <div class="card-info" id="wash-info" style="width:100%; margin-top:0;">
-                <div class="card-info-inner" id="wash-info-text"></div>
-            </div>
-        </div>
+
 
         <!-- AQI — commented out until API key is configured
         <div class="aqi-card">
@@ -1267,11 +1294,7 @@ function getVisibilityInfo(vis) {
     else                { badge='🌁 Poor';           color='#f87171'; desc='Low visibility. Exercise caution when driving. Fog or heavy conditions possible.'; }
     return `<span class="info-badge" style="background:${color}22;color:${color};">${badge}</span><br>${desc}`;
 }
-function getWashInfo(uv, wind) {
-    if (uv > 1 && wind < 18) return `<span class="info-badge" style="background:#38bdf822;color:#38bdf8;">✨ Great Conditions</span><br>Low wind and good sun means your car will dry quickly and evenly without water spots. Perfect time to wash.`;
-    if (wind >= 18) return `<span class="info-badge" style="background:#f9731622;color:#f97316;">💨 Too Windy</span><br>Wind above 18 mph will blow dust and debris back onto a freshly washed car. Wait for calmer conditions.`;
-    return `<span class="info-badge" style="background:#94a3b822;color:#94a3b8;">🌙 Low UV</span><br>Low UV means slow drying and potential water spots. Better to wash on a sunnier day.`;
-}
+
 function getSunInfo(sunrise, sunset, daylight) {
     const hrs = parseFloat(daylight);
     let desc = '';
@@ -1865,7 +1888,7 @@ async function updateNWSAlerts(lat, lon, cityName) {
 // ── API limit: hide Tomorrow.io cards, run independent widgets ────────────────
 // Cards that depend entirely on Tomorrow.io realtime data
 const TOMORROW_CARD_IDS = [
-    'card-temp','card-hum','card-dew','card-uv','card-wind','card-precip','card-vis','card-wash',
+    'card-temp','card-hum','card-dew','card-uv','card-wind','card-precip','card-vis',
     'card-besttime'
 ];
 // Hourly/forecast/outdoor cards — also Tomorrow.io, identified by class
@@ -1959,8 +1982,7 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         const cacheLabel = (r.headers.get('X-Cache')==='HIT'||r.headers.get('cf-cache-status')==='HIT') ? ' · ⚡ Cached' : '';
         const relayDebug = d.asOrg ? ` · ASN: ${d.asOrg}` : '';
         document.getElementById('updated').innerText = `Updated: ${d.updated}${cacheLabel}${relayDebug}`;
-        document.getElementById('wash-text').innerText = (d.uv>1&&d.wind<18) ? "✨ Perfect Day for a Wash" : "⚠️ Skip the Wash Today";
-        if (lat) {
+if (lat) {
             const src = localStorage.getItem('lastSource');
             const savedZipLabel = localStorage.getItem('lastZip');
             if (src === 'zip' && savedZipLabel) {
@@ -1977,7 +1999,6 @@ async function update(lat=null, lon=null, name=null, zip=null) {
         document.getElementById('wind-info-text').innerHTML     = getWindInfo(d.wind);
         document.getElementById('precip-info-text').innerHTML   = getPrecipInfo(d.precipChance ?? 0);
         document.getElementById('vis-info-text').innerHTML      = getVisibilityInfo(d.visibility ?? 10);
-        document.getElementById('wash-info-text').innerHTML     = getWashInfo(d.uv, d.wind);
         document.getElementById('triggers-info-text').innerHTML = getTriggersInfo(d.humidity, d.wind, d.precipChance ?? 0);
         // Sun info populated after sun widget updates below
 
