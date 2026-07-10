@@ -1,40 +1,31 @@
-<!-- Acekallas — Cloudflare Zero Trust Block Page — v1.0 -->
+<!-- Acekallas — Cloudflare Zero Trust Block Page — v1.1 -->
 <!--
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║  CLOUDFLARE ZERO TRUST BLOCK PAGE                                           ║
-║  Deploy to: acekallas.com/blocked  (or any path you point CF Gateway to)   ║
+║  Deploy to: acekallas.com/blocked.html                                      ║
 ╠══════════════════════════════════════════════════════════════════════════════╣
 ║                                                                             ║
 ║  HOW TO USE WITH CLOUDFLARE GATEWAY:                                        ║
-║    In your HTTP policy → Block action → "Override account setting with      ║
-║    URL redirect" → enter:                                                   ║
-║      https://acekallas.com/blocked                                          ║
+║    HTTP policy → Block → "Override account setting with URL redirect"       ║
+║    URL: https://acekallas.com/blocked.html                                  ║
+║    Toggle ON: "Send policy context"                                         ║
 ║                                                                             ║
-║    Then toggle ON "Send policy context" so Cloudflare appends these         ║
-║    query parameters automatically:                                          ║
-║                                                                             ║
-║  QUERY PARAMETERS SENT BY CLOUDFLARE (when "Send policy context" is ON):   ║
-║    • user-id          — CF user identity UUID                               ║
-║    • policy-id        — Gateway policy UUID that triggered the block        ║
-║    • host             — The destination hostname that was blocked           ║
-║    • rule-id          — The specific rule ID within the policy              ║
-║    • account-id       — Your CF account ID                                  ║
-║    • client-ip        — End user's source IP address                        ║
-║    • user-email       — Authenticated user's email (if WARP/IdP connected) ║
-║    • display-name     — User's display name (if IdP connected)             ║
-║    • src-ip           — Alias for client-ip in some CF versions            ║
-║    • timestamp        — ISO timestamp of when the block occurred            ║
-║                                                                             ║
-║  EXAMPLE REDIRECT URL WITH CONTEXT:                                         ║
-║    https://acekallas.com/blocked?host=reddit.com&policy-id=abc123           ║
-║      &user-id=xyz&user-email=user@domain.com&client-ip=10.0.0.5            ║
-║                                                                             ║
-║  STATIC FALLBACK:                                                           ║
-║    If no query params are present (direct visit), the page shows a         ║
-║    generic block message with no sensitive details exposed.                 ║
+║  ACTUAL QUERY PARAMETERS SENT BY CLOUDFLARE (confirmed from live traffic):  ║
+║    • cf_user_email              — Authenticated user's email                ║
+║    • cf_site_uri                — Full blocked URL (e.g. https://guns.com/) ║
+║    • cf_request_category_names  — Content categories (repeating param)      ║
+║                                   e.g. Weapons, Shopping & Auctions, CIPA  ║
+║    • cf_rule_id                 — Rule UUID that triggered the block        ║
+║    • cf_source_ip               — End user's source IP address              ║
+║    • cf_device_id               — WARP device UUID                         ║
+║    • cf_filter                  — Filter type (e.g. "http")                ║
+║    • cf_account_id              — Your Cloudflare account ID                ║
+║    • cf_connection_id           — Connection UUID                           ║
+║    • cf_request_id              — Request UUID                              ║
+║    • cf_timestamp               — Unix timestamp (seconds, not ISO)         ║
 ║                                                                             ║
 ║  ADMIN CONTACT:                                                             ║
-║    Update ADMIN_EMAIL below to your real contact address.                   ║
+║    Update ADMIN_EMAIL in the <script> block below.                          ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 -->
 <!DOCTYPE html>
@@ -325,7 +316,7 @@
            If you believe this is a mistake, contact your administrator.</p>
     </div>
 
-    <!-- Blocked host (shown when ?host= is present) -->
+    <!-- Blocked host (shown when ?cf_site_uri= is present) -->
     <div id="host-banner">
         <span class="badge badge-red">🚫 Blocked Destination</span>
         <strong id="host-val"></strong>
@@ -335,12 +326,6 @@
     <div>
         <div class="section-label">Block details</div>
         <div class="detail-card" id="detail-card">
-
-            <div class="detail-row">
-                <span class="detail-icon">👤</span>
-                <span class="detail-key">User</span>
-                <span class="detail-val empty" id="d-user">—</span>
-            </div>
 
             <div class="detail-row">
                 <span class="detail-icon">📧</span>
@@ -355,9 +340,9 @@
             </div>
 
             <div class="detail-row">
-                <span class="detail-icon">📋</span>
-                <span class="detail-key">Policy ID</span>
-                <span class="detail-val empty" id="d-policy">—</span>
+                <span class="detail-icon">🏷️</span>
+                <span class="detail-key">Categories</span>
+                <span class="detail-val empty" id="d-categories">—</span>
             </div>
 
             <div class="detail-row">
@@ -368,8 +353,14 @@
 
             <div class="detail-row">
                 <span class="detail-icon">📡</span>
-                <span class="detail-key">Client IP</span>
+                <span class="detail-key">Source IP</span>
                 <span class="detail-val empty" id="d-ip">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">💻</span>
+                <span class="detail-key">Device ID</span>
+                <span class="detail-val empty" id="d-device">—</span>
             </div>
 
             <div class="detail-row">
@@ -411,38 +402,41 @@
 
 <script>
 // ── CONFIGURATION ─────────────────────────────────────────────────────────────
-// Update this to your real admin contact email
-const ADMIN_EMAIL = 'admin@acekallas.com';
+const ADMIN_EMAIL = 'acekallas@gmail.com';
 
-// ── Parse all Cloudflare Gateway query params ─────────────────────────────────
-// Cloudflare sends these when "Send policy context" is enabled on the policy:
-//   user-id        — CF Zero Trust user UUID
-//   policy-id      — Gateway policy UUID that fired
-//   rule-id        — Rule ID within that policy
-//   host           — Destination hostname that was blocked
-//   account-id     — Your Cloudflare account ID
-//   client-ip      — End user source IP (also sent as src-ip in some versions)
-//   user-email     — User email if IdP / WARP identity is available
-//   display-name   — User display name from IdP
-//   timestamp      — ISO 8601 timestamp of the block event
+// ── Parse Cloudflare Gateway query params (confirmed cf_ prefix from live traffic) ──
+//   cf_user_email             — Authenticated user email
+//   cf_site_uri               — Full blocked URL (e.g. https://www.guns.com/)
+//   cf_request_category_names — Repeating param: content categories (Weapons, CIPA, etc.)
+//   cf_rule_id                — Rule UUID that triggered this block
+//   cf_source_ip              — End user source IP
+//   cf_device_id              — WARP device UUID
+//   cf_filter                 — Filter type ("http")
+//   cf_account_id             — Cloudflare account ID
+//   cf_connection_id          — Connection UUID
+//   cf_request_id             — Request UUID
+//   cf_timestamp              — Unix timestamp in seconds (not ISO — must multiply by 1000)
 const p = new URLSearchParams(location.search);
 
 const params = {
-    userId:      p.get('user-id')      || p.get('userId')      || '',
-    policyId:    p.get('policy-id')    || p.get('policyId')    || '',
-    ruleId:      p.get('rule-id')      || p.get('ruleId')      || '',
-    host:        p.get('host')         || '',
-    accountId:   p.get('account-id')   || p.get('accountId')   || '',
-    clientIp:    p.get('client-ip')    || p.get('src-ip')       || p.get('clientIp') || '',
-    userEmail:   p.get('user-email')   || p.get('userEmail')    || '',
-    displayName: p.get('display-name') || p.get('displayName') || '',
-    timestamp:   p.get('timestamp')    || '',
+    userEmail:    p.get('cf_user_email')   || '',
+    siteUri:      p.get('cf_site_uri')     || '',
+    ruleId:       p.get('cf_rule_id')      || '',
+    sourceIp:     p.get('cf_source_ip')    || '',
+    deviceId:     p.get('cf_device_id')    || '',
+    filter:       p.get('cf_filter')       || '',
+    accountId:    p.get('cf_account_id')   || '',
+    connectionId: p.get('cf_connection_id')|| '',
+    requestId:    p.get('cf_request_id')   || '',
+    timestamp:    p.get('cf_timestamp')    || '',
+    // cf_request_category_names is a repeating param — getAll() returns an array
+    categories:   p.getAll('cf_request_category_names'),
 };
 
-const hasContext = Object.values(params).some(v => v !== '');
+const hasContext = Object.values(params).some(v => Array.isArray(v) ? v.length > 0 : v !== '');
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fill(id, val, fallback='—') {
+function fill(id, val, fallback = '—') {
     const el = document.getElementById(id);
     if (!el) return;
     if (val) {
@@ -454,10 +448,12 @@ function fill(id, val, fallback='—') {
     }
 }
 
+// cf_timestamp is Unix seconds — multiply by 1000 for JS Date
 function fmtTime(ts) {
     if (!ts) return '';
     try {
-        const d = new Date(ts);
+        const ms = ts.length <= 10 ? parseInt(ts) * 1000 : parseInt(ts);
+        const d  = new Date(ms);
         if (isNaN(d)) return ts;
         return d.toLocaleString('en-US', {
             month: 'short', day: 'numeric', year: 'numeric',
@@ -467,44 +463,59 @@ function fmtTime(ts) {
     } catch { return ts; }
 }
 
+// Extract just the hostname from the full URI for the banner
+function hostFromUri(uri) {
+    try { return new URL(uri).hostname.replace(/^www\./, ''); } catch { return uri; }
+}
+
 // ── Populate detail rows ──────────────────────────────────────────────────────
-// User display: prefer display-name, fall back to user-id
-const userDisplay = params.displayName || params.userId || '';
-fill('d-user',   userDisplay);
 fill('d-email',  params.userEmail);
-fill('d-host',   params.host);
-fill('d-policy', params.policyId);
+fill('d-host',   params.siteUri);
 fill('d-rule',   params.ruleId);
-fill('d-ip',     params.clientIp);
-fill('d-time',   fmtTime(params.timestamp) || params.timestamp);
+fill('d-ip',     params.sourceIp);
+fill('d-device', params.deviceId);
+fill('d-time',   fmtTime(params.timestamp));
+
+// Categories — render as inline badge pills
+const catEl = document.getElementById('d-categories');
+if (params.categories.length > 0) {
+    catEl.innerHTML = params.categories
+        .map(c => `<span class="badge badge-amber" style="margin:2px 3px 2px 0;">${c}</span>`)
+        .join('');
+    catEl.classList.remove('empty');
+} else {
+    catEl.textContent = '—';
+    catEl.classList.add('empty');
+}
 
 // ── Blocked host banner ───────────────────────────────────────────────────────
-if (params.host) {
-    document.getElementById('host-val').textContent = params.host;
+const blockedHost = hostFromUri(params.siteUri) || params.siteUri;
+if (blockedHost) {
+    document.getElementById('host-val').textContent = blockedHost;
     document.getElementById('host-banner').classList.add('visible');
 }
 
-// ── Contact link — pre-fill subject with policy context ──────────────────────
+// ── Contact mailto — pre-filled with all context ──────────────────────────────
 document.getElementById('contact-link').href = ADMIN_EMAIL
-    ? `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent('Access request: ' + (params.host || 'blocked site'))}&body=${encodeURIComponent(
-        'Hi,\n\nI was blocked from accessing: ' + (params.host || '(unknown)') + '\n\n' +
-        'Policy ID : ' + (params.policyId || 'N/A') + '\n' +
-        'Rule ID   : ' + (params.ruleId   || 'N/A') + '\n' +
-        'User ID   : ' + (params.userId   || 'N/A') + '\n' +
-        'Client IP : ' + (params.clientIp || 'N/A') + '\n' +
-        'Time      : ' + (params.timestamp || new Date().toISOString()) + '\n\n' +
+    ? `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent('Access request: ' + (blockedHost || 'blocked site'))}&body=${encodeURIComponent(
+        'Hi,\n\nI was blocked from accessing: ' + (params.siteUri || '(unknown)') + '\n\n' +
+        'Categories : ' + (params.categories.join(', ') || 'N/A') + '\n' +
+        'Rule ID    : ' + (params.ruleId    || 'N/A') + '\n' +
+        'Device ID  : ' + (params.deviceId  || 'N/A') + '\n' +
+        'Source IP  : ' + (params.sourceIp  || 'N/A') + '\n' +
+        'Time       : ' + (fmtTime(params.timestamp) || 'N/A') + '\n\n' +
         'Please review my access request.\n\nThank you.'
       )}`
     : '#';
 
-// ── Raw params debug section ──────────────────────────────────────────────────
+// ── Raw params debug toggle ───────────────────────────────────────────────────
 if (hasContext) {
     document.getElementById('raw-section').classList.add('visible');
-    const lines = Object.entries(params)
-        .filter(([,v]) => v)
-        .map(([k,v]) => `${k.padEnd(14)}: ${v}`)
+    // Show all raw params directly from the URL for full transparency
+    const rawLines = [...p.entries()]
+        .map(([k, v]) => `${k.padEnd(32)}: ${v}`)
         .join('\n');
-    document.getElementById('raw-pre').textContent = lines || '(no params)';
+    document.getElementById('raw-pre').textContent = rawLines || '(no params)';
 }
 
 function toggleRaw() {
