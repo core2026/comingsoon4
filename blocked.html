@@ -484,10 +484,18 @@ function parseUri(uri) {
 const INTERNAL_CATEGORIES = ['cipa', 'cipa filter'];
 function isInternalCat(c) { return INTERNAL_CATEGORIES.includes(c.toLowerCase()); }
 
-// Pick the single most meaningful category for the plain-English reason sentence
-// Priority: anything that isn't internal CF flags first, otherwise fall back to first
+// Generic catch-all categories that are less meaningful than specific ones.
+// When a more specific category is also present, these should be deprioritized.
+const GENERIC_CATEGORIES = ['shopping & auctions', 'ecommerce', 'business & economy', 'content servers'];
+
+// Pick the single most meaningful category for the plain-English reason sentence.
+// Priority order: specific non-generic non-internal → generic non-internal → internal → first
 function primaryCategory(cats) {
-    return cats.find(c => !isInternalCat(c)) || cats[0] || '';
+    const specific = cats.find(c => !isInternalCat(c) && !GENERIC_CATEGORIES.includes(c.toLowerCase()));
+    if (specific) return specific;
+    const generic = cats.find(c => !isInternalCat(c));
+    if (generic) return generic;
+    return cats[0] || '';
 }
 
 // ── Populate detail rows ──────────────────────────────────────────────────────
