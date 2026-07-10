@@ -314,6 +314,7 @@
         <h1>Access Blocked</h1>
         <p>This site was blocked by your network's security policy.<br>
            If you believe this is a mistake, contact your administrator.</p>
+        <p id="reason-summary" style="display:none; margin-top:10px; font-size:0.85rem; font-weight:700; color:var(--red);"></p>
     </div>
 
     <!-- Blocked host (shown when ?cf_site_uri= is present) -->
@@ -337,6 +338,12 @@
                 <span class="detail-icon">🌐</span>
                 <span class="detail-key">Destination</span>
                 <span class="detail-val empty" id="d-host">—</span>
+            </div>
+
+            <div class="detail-row" id="row-path" style="display:none;">
+                <span class="detail-icon">📂</span>
+                <span class="detail-key">Path</span>
+                <span class="detail-val empty" id="d-path">—</span>
             </div>
 
             <div class="detail-row">
@@ -463,33 +470,69 @@ function fmtTime(ts) {
     } catch { return ts; }
 }
 
-// Extract just the hostname from the full URI for the banner
-function hostFromUri(uri) {
-    try { return new URL(uri).hostname.replace(/^www\./, ''); } catch { return uri; }
+// Extract hostname and path separately from the full URI
+function parseUri(uri) {
+    try {
+        const u = new URL(uri);
+        const host = u.hostname.replace(/^www\./, '');
+        const path = (u.pathname !== '/' ? u.pathname : '') + (u.search || '');
+        return { host, path };
+    } catch { return { host: uri, path: '' }; }
+}
+
+// Internal CF compliance flags — not meaningful to end users, strip from display
+const INTERNAL_CATEGORIES = ['cipa', 'cipa filter'];
+function isInternalCat(c) { return INTERNAL_CATEGORIES.includes(c.toLowerCase()); }
+
+// Pick the single most meaningful category for the plain-English reason sentence
+// Priority: anything that isn't internal CF flags first, otherwise fall back to first
+function primaryCategory(cats) {
+    return cats.find(c => !isInternalCat(c)) || cats[0] || '';
 }
 
 // ── Populate detail rows ──────────────────────────────────────────────────────
 fill('d-email',  params.userEmail);
-fill('d-host',   params.siteUri);
 fill('d-rule',   params.ruleId);
 fill('d-ip',     params.sourceIp);
 fill('d-device', params.deviceId);
 fill('d-time',   fmtTime(params.timestamp));
 
-// Categories — render as inline badge pills
+// Step 3 — Destination row shows just the hostname; path gets its own row if present
+const { host: parsedHost, path: parsedPath } = parseUri(params.siteUri);
+fill('d-host', parsedHost || params.siteUri);
+if (parsedPath) {
+    document.getElementById('d-path').textContent = parsedPath;
+    document.getElementById('d-path').classList.remove('empty');
+    document.getElementById('row-path').style.display = '';
+}
+
+// Step 2 — Filter out internal CF compliance categories before displaying
+const displayCats = params.categories.filter(c => !isInternalCat(c));
 const catEl = document.getElementById('d-categories');
-if (params.categories.length > 0) {
-    catEl.innerHTML = params.categories
+if (displayCats.length > 0) {
+    catEl.innerHTML = displayCats
         .map(c => `<span class="badge badge-amber" style="margin:2px 3px 2px 0;">${c}</span>`)
         .join('');
+    catEl.classList.remove('empty');
+} else if (params.categories.length > 0) {
+    // All categories were internal — show a generic label rather than nothing
+    catEl.innerHTML = `<span class="badge badge-amber" style="margin:2px 3px 2px 0;">Content Policy</span>`;
     catEl.classList.remove('empty');
 } else {
     catEl.textContent = '—';
     catEl.classList.add('empty');
 }
 
+// Step 1 — Plain-English reason summary below the heading
+const primary = primaryCategory(params.categories);
+if (primary) {
+    const reasonEl = document.getElementById('reason-summary');
+    reasonEl.textContent = `This site was blocked because it is categorized as: ${primary}.`;
+    reasonEl.style.display = 'block';
+}
+
 // ── Blocked host banner ───────────────────────────────────────────────────────
-const blockedHost = hostFromUri(params.siteUri) || params.siteUri;
+const blockedHost = parsedHost || params.siteUri;
 if (blockedHost) {
     document.getElementById('host-val').textContent = blockedHost;
     document.getElementById('host-banner').classList.add('visible');
