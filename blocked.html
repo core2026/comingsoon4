@@ -1,0 +1,523 @@
+<!-- Acekallas — Cloudflare Zero Trust Block Page — v1.0 -->
+<!--
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  CLOUDFLARE ZERO TRUST BLOCK PAGE                                           ║
+║  Deploy to: acekallas.com/blocked  (or any path you point CF Gateway to)   ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                             ║
+║  HOW TO USE WITH CLOUDFLARE GATEWAY:                                        ║
+║    In your HTTP policy → Block action → "Override account setting with      ║
+║    URL redirect" → enter:                                                   ║
+║      https://acekallas.com/blocked                                          ║
+║                                                                             ║
+║    Then toggle ON "Send policy context" so Cloudflare appends these         ║
+║    query parameters automatically:                                          ║
+║                                                                             ║
+║  QUERY PARAMETERS SENT BY CLOUDFLARE (when "Send policy context" is ON):   ║
+║    • user-id          — CF user identity UUID                               ║
+║    • policy-id        — Gateway policy UUID that triggered the block        ║
+║    • host             — The destination hostname that was blocked           ║
+║    • rule-id          — The specific rule ID within the policy              ║
+║    • account-id       — Your CF account ID                                  ║
+║    • client-ip        — End user's source IP address                        ║
+║    • user-email       — Authenticated user's email (if WARP/IdP connected) ║
+║    • display-name     — User's display name (if IdP connected)             ║
+║    • src-ip           — Alias for client-ip in some CF versions            ║
+║    • timestamp        — ISO timestamp of when the block occurred            ║
+║                                                                             ║
+║  EXAMPLE REDIRECT URL WITH CONTEXT:                                         ║
+║    https://acekallas.com/blocked?host=reddit.com&policy-id=abc123           ║
+║      &user-id=xyz&user-email=user@domain.com&client-ip=10.0.0.5            ║
+║                                                                             ║
+║  STATIC FALLBACK:                                                           ║
+║    If no query params are present (direct visit), the page shows a         ║
+║    generic block message with no sensitive details exposed.                 ║
+║                                                                             ║
+║  ADMIN CONTACT:                                                             ║
+║    Update ADMIN_EMAIL below to your real contact address.                   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0b1120">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Site Blocked — Acekallas Network</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Design tokens — mirrors main site exactly ── */
+        :root {
+            --bg:          #0b1120;
+            --text:        #f8fafc;
+            --card:        rgba(30,41,59,0.55);
+            --card-solid:  #1e293b;
+            --label:       #94a3b8;
+            --accent:      #38bdf8;
+            --border:      rgba(255,255,255,0.07);
+            --red:         #f87171;
+            --red-bg:      rgba(248,113,113,0.10);
+            --red-border:  rgba(248,113,113,0.35);
+            --amber:       #fbbf24;
+            --amber-bg:    rgba(251,191,36,0.08);
+            --green:       #4ade80;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            padding-top: max(24px, env(safe-area-inset-top));
+            padding-bottom: max(24px, env(safe-area-inset-bottom));
+        }
+
+        /* ── Subtle background grid ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrap {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* ── Shield icon ── */
+        .shield-wrap {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 4px;
+        }
+        .shield {
+            width: 72px;
+            height: 72px;
+            background: var(--red-bg);
+            border: 2px solid var(--red-border);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            animation: shield-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes shield-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.25); }
+            50%      { box-shadow: 0 0 0 10px rgba(248,113,113,0); }
+        }
+
+        /* ── Heading ── */
+        .heading {
+            text-align: center;
+        }
+        .heading h1 {
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--red);
+            line-height: 1.2;
+            margin-bottom: 6px;
+        }
+        .heading p {
+            font-size: 0.82rem;
+            color: var(--label);
+            line-height: 1.6;
+        }
+
+        /* ── Blocked host banner ── */
+        #host-banner {
+            display: none;
+            background: var(--red-bg);
+            border: 1px solid var(--red-border);
+            border-left: 4px solid var(--red);
+            border-radius: 16px;
+            padding: 14px 18px;
+            font-size: 0.82rem;
+            color: var(--label);
+        }
+        #host-banner strong {
+            display: block;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--text);
+            word-break: break-all;
+            margin-top: 3px;
+        }
+        #host-banner.visible { display: block; }
+
+        /* ── Detail card ── */
+        .detail-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .detail-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; margin-top: 1px; }
+        .detail-key {
+            font-size: 0.68rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--label);
+            flex-shrink: 0;
+            width: 100px;
+            padding-top: 1px;
+        }
+        .detail-val {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text);
+            word-break: break-all;
+            flex: 1;
+        }
+        .detail-val.empty { color: var(--label); font-style: italic; font-weight: 400; }
+
+        /* ── Badges ── */
+        .badge {
+            display: inline-block;
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.04em;
+        }
+        .badge-red    { background: var(--red-bg);   color: var(--red);   border: 1px solid var(--red-border); }
+        .badge-amber  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(251,191,36,0.3); }
+        .badge-accent { background: rgba(56,189,248,0.1); color: var(--accent); border: 1px solid rgba(56,189,248,0.25); }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 0.65rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--label);
+            margin-bottom: 8px;
+            padding-left: 2px;
+        }
+
+        /* ── Contact card ── */
+        .contact-card {
+            background: rgba(56,189,248,0.06);
+            border: 1px solid rgba(56,189,248,0.18);
+            border-radius: 16px;
+            padding: 16px 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .contact-icon { font-size: 1.2rem; flex-shrink: 0; }
+        .contact-body { flex: 1; }
+        .contact-title {
+            font-size: 0.82rem;
+            font-weight: 800;
+            color: var(--accent);
+            display: block;
+            margin-bottom: 4px;
+        }
+        .contact-sub {
+            font-size: 0.72rem;
+            color: var(--label);
+            line-height: 1.55;
+        }
+        .contact-sub a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+        }
+        .contact-sub a:hover { text-decoration: underline; }
+
+        /* ── Timestamp footer ── */
+        .footer {
+            text-align: center;
+            font-size: 0.65rem;
+            color: var(--label);
+            padding-top: 4px;
+        }
+        .footer a {
+            color: var(--label);
+            text-decoration: none;
+        }
+        .footer a:hover { color: var(--accent); }
+
+        /* ── Collapsed raw params (for admin debug) ── */
+        #raw-section { display: none; }
+        #raw-section.visible { display: block; }
+        .raw-toggle {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--label);
+            font-family: inherit;
+            font-size: 0.68rem;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 5px 12px;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .raw-toggle:hover { background: var(--card-solid); color: var(--text); }
+        #raw-pre {
+            font-family: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 0.68rem;
+            background: var(--card-solid);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+            color: var(--label);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 8px;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 400px) {
+            .detail-key { width: 80px; }
+            .heading h1 { font-size: 1.35rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="page-wrap">
+
+    <!-- Shield icon -->
+    <div class="shield-wrap">
+        <div class="shield">🛡️</div>
+    </div>
+
+    <!-- Heading -->
+    <div class="heading">
+        <h1>Access Blocked</h1>
+        <p>This site was blocked by your network's security policy.<br>
+           If you believe this is a mistake, contact your administrator.</p>
+    </div>
+
+    <!-- Blocked host (shown when ?host= is present) -->
+    <div id="host-banner">
+        <span class="badge badge-red">🚫 Blocked Destination</span>
+        <strong id="host-val"></strong>
+    </div>
+
+    <!-- Policy context details -->
+    <div>
+        <div class="section-label">Block details</div>
+        <div class="detail-card" id="detail-card">
+
+            <div class="detail-row">
+                <span class="detail-icon">👤</span>
+                <span class="detail-key">User</span>
+                <span class="detail-val empty" id="d-user">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">📧</span>
+                <span class="detail-key">Email</span>
+                <span class="detail-val empty" id="d-email">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">🌐</span>
+                <span class="detail-key">Destination</span>
+                <span class="detail-val empty" id="d-host">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">📋</span>
+                <span class="detail-key">Policy ID</span>
+                <span class="detail-val empty" id="d-policy">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">🔖</span>
+                <span class="detail-key">Rule ID</span>
+                <span class="detail-val empty" id="d-rule">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">📡</span>
+                <span class="detail-key">Client IP</span>
+                <span class="detail-val empty" id="d-ip">—</span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-icon">🕐</span>
+                <span class="detail-key">Timestamp</span>
+                <span class="detail-val empty" id="d-time">—</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Contact admin -->
+    <div class="contact-card">
+        <span class="contact-icon">📬</span>
+        <div class="contact-body">
+            <span class="contact-title">Need access to this site?</span>
+            <span class="contact-sub">
+                Contact your administrator at
+                <a href="mailto:admin@acekallas.com" id="contact-link">admin@acekallas.com</a>
+                and include the policy and rule ID shown above so they can review your request.
+            </span>
+        </div>
+    </div>
+
+    <!-- Raw params toggle (visible only when params exist — useful for admin debug) -->
+    <div id="raw-section">
+        <button class="raw-toggle" onclick="toggleRaw()" id="raw-btn">Show raw policy context ▾</button>
+        <pre id="raw-pre" style="display:none;"></pre>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <a href="https://acekallas.com">acekallas.com</a>
+        &nbsp;·&nbsp; Secured by Cloudflare Zero Trust
+        &nbsp;·&nbsp; <span id="footer-time"></span>
+    </div>
+
+</div>
+
+<script>
+// ── CONFIGURATION ─────────────────────────────────────────────────────────────
+// Update this to your real admin contact email
+const ADMIN_EMAIL = 'admin@acekallas.com';
+
+// ── Parse all Cloudflare Gateway query params ─────────────────────────────────
+// Cloudflare sends these when "Send policy context" is enabled on the policy:
+//   user-id        — CF Zero Trust user UUID
+//   policy-id      — Gateway policy UUID that fired
+//   rule-id        — Rule ID within that policy
+//   host           — Destination hostname that was blocked
+//   account-id     — Your Cloudflare account ID
+//   client-ip      — End user source IP (also sent as src-ip in some versions)
+//   user-email     — User email if IdP / WARP identity is available
+//   display-name   — User display name from IdP
+//   timestamp      — ISO 8601 timestamp of the block event
+const p = new URLSearchParams(location.search);
+
+const params = {
+    userId:      p.get('user-id')      || p.get('userId')      || '',
+    policyId:    p.get('policy-id')    || p.get('policyId')    || '',
+    ruleId:      p.get('rule-id')      || p.get('ruleId')      || '',
+    host:        p.get('host')         || '',
+    accountId:   p.get('account-id')   || p.get('accountId')   || '',
+    clientIp:    p.get('client-ip')    || p.get('src-ip')       || p.get('clientIp') || '',
+    userEmail:   p.get('user-email')   || p.get('userEmail')    || '',
+    displayName: p.get('display-name') || p.get('displayName') || '',
+    timestamp:   p.get('timestamp')    || '',
+};
+
+const hasContext = Object.values(params).some(v => v !== '');
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fill(id, val, fallback='—') {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (val) {
+        el.textContent = val;
+        el.classList.remove('empty');
+    } else {
+        el.textContent = fallback;
+        el.classList.add('empty');
+    }
+}
+
+function fmtTime(ts) {
+    if (!ts) return '';
+    try {
+        const d = new Date(ts);
+        if (isNaN(d)) return ts;
+        return d.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', second: '2-digit',
+            hour12: true, timeZoneName: 'short'
+        });
+    } catch { return ts; }
+}
+
+// ── Populate detail rows ──────────────────────────────────────────────────────
+// User display: prefer display-name, fall back to user-id
+const userDisplay = params.displayName || params.userId || '';
+fill('d-user',   userDisplay);
+fill('d-email',  params.userEmail);
+fill('d-host',   params.host);
+fill('d-policy', params.policyId);
+fill('d-rule',   params.ruleId);
+fill('d-ip',     params.clientIp);
+fill('d-time',   fmtTime(params.timestamp) || params.timestamp);
+
+// ── Blocked host banner ───────────────────────────────────────────────────────
+if (params.host) {
+    document.getElementById('host-val').textContent = params.host;
+    document.getElementById('host-banner').classList.add('visible');
+}
+
+// ── Contact link — pre-fill subject with policy context ──────────────────────
+document.getElementById('contact-link').href = ADMIN_EMAIL
+    ? `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent('Access request: ' + (params.host || 'blocked site'))}&body=${encodeURIComponent(
+        'Hi,\n\nI was blocked from accessing: ' + (params.host || '(unknown)') + '\n\n' +
+        'Policy ID : ' + (params.policyId || 'N/A') + '\n' +
+        'Rule ID   : ' + (params.ruleId   || 'N/A') + '\n' +
+        'User ID   : ' + (params.userId   || 'N/A') + '\n' +
+        'Client IP : ' + (params.clientIp || 'N/A') + '\n' +
+        'Time      : ' + (params.timestamp || new Date().toISOString()) + '\n\n' +
+        'Please review my access request.\n\nThank you.'
+      )}`
+    : '#';
+
+// ── Raw params debug section ──────────────────────────────────────────────────
+if (hasContext) {
+    document.getElementById('raw-section').classList.add('visible');
+    const lines = Object.entries(params)
+        .filter(([,v]) => v)
+        .map(([k,v]) => `${k.padEnd(14)}: ${v}`)
+        .join('\n');
+    document.getElementById('raw-pre').textContent = lines || '(no params)';
+}
+
+function toggleRaw() {
+    const pre = document.getElementById('raw-pre');
+    const btn = document.getElementById('raw-btn');
+    const open = pre.style.display !== 'none';
+    pre.style.display = open ? 'none' : 'block';
+    btn.textContent = open ? 'Show raw policy context ▾' : 'Hide raw policy context ▴';
+}
+
+// ── Footer timestamp ──────────────────────────────────────────────────────────
+document.getElementById('footer-time').textContent =
+    new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+</script>
+</body>
+</html>
